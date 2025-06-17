@@ -257,7 +257,7 @@ def Clear_all_tasks(task_id_df, base_url_param, current_access_token, logger):
         logger.error(f"Error: The following required columns are missing in the input CSV data: {missing_columns}.")
         if hasattr(task_id_df, 'columns'):
             logger.error(f"Available columns: {task_id_df.columns.tolist()}")
-        else:
+                else:
             logger.error("Input data does not appear to be a pandas DataFrame with columns.")
         return
         

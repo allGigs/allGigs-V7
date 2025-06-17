@@ -31,11 +31,12 @@ load_dotenv()
 
 # Supabase configuration
 SUPABASE_URL = "https://lfwgzoltxrfutexrjahr.supabase.co"
-SUPABASE_KEY = os.getenv('SUPABASE_KEY')
-if not SUPABASE_KEY:
-    raise ValueError("SUPABASE_KEY environment variable is not set")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+if not SUPABASE_SERVICE_ROLE_KEY:
+    raise ValueError("SUPABASE_SERVICE_ROLE_KEY environment variable is not set")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Create Supabase client with service role key to bypass RLS
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 # Constants
 BATCH_SIZE = 500  # Number of records to upload in each batch
@@ -259,10 +260,10 @@ COMPANY_MAPPINGS = {
         'Company': 'Centric'
     },
     'freelancer.com': {
-        'Title': 'Like',
+        'Title': 'Title',
         'Location': 'Remote',
         'Summary': 'Description',
-        'URL': 'Like_URL',
+        'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Price',
         'Company': 'freelancer.com'
@@ -837,14 +838,14 @@ def main():
         # Ensure directories exist
         FREELANCE_DIR.mkdir(parents=True, exist_ok=True)
         IMPORTANT_DIR.mkdir(parents=True, exist_ok=True)
-
+        
         # Fetch automation details from Supabase
         automation_details = get_automation_details_from_supabase(supabase, logging)
 
         if automation_details.empty:
             logging.error("Failed to load automation details from Supabase. Exiting.")
             return
-
+        
         # Log the number of sources loaded
         logging.info(f"Loaded automation details with {len(automation_details)} sources from Supabase")
         
@@ -921,8 +922,8 @@ def main():
                     continue # Skip to the next company if no data after cleaning
 
                 # If we reach here, company_df is not empty
-                result = pd.concat([result, company_df], ignore_index=True)
-                logging.info(f"Processed {company_name}: {len(company_df)} rows")
+                    result = pd.concat([result, company_df], ignore_index=True)
+                    logging.info(f"Processed {company_name}: {len(company_df)} rows")
                 # Add an empty line after each company
                 logging.info("")
             
