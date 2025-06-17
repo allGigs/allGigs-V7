@@ -89,6 +89,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.env
 
 # Spyder project settings
 .spyderproject
@@ -122,4 +123,4 @@ cython_debug/
 
 # Custom logs
 allgigs.log
-octoparse_script.log 
+octoparse_script.log node_modules/
