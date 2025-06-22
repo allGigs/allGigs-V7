@@ -922,8 +922,8 @@ def main():
                     continue # Skip to the next company if no data after cleaning
 
                 # If we reach here, company_df is not empty
-                result = pd.concat([result, company_df], ignore_index=True)
-                logging.info(f"Processed {company_name}: {len(company_df)} rows")
+                    result = pd.concat([result, company_df], ignore_index=True)
+                    logging.info(f"Processed {company_name}: {len(company_df)} rows")
                 # Add an empty line after each company
                 logging.info("")
             
