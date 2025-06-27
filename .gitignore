@@ -123,5 +123,12 @@ cython_debug/
 
 # Custom logs
 allgigs.log
-octoparse_script.log node_modules/
+octoparse_script.log
 node_modules/
+
+node_modules/
+*.log
+*.csv
+*.pyc
+__pycache__/
+.DS_Store
