@@ -59,7 +59,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Company': 'LinkIT'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'LinkIT',
+        'Source': 'LinkIT'
     },
     'freelance.nl': {
         'Title': 'Title',
@@ -68,7 +71,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Company': 'freelance.nl'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'freelance.nl',
+        'Source': 'freelance.nl'
     },
     'Yacht': {
         'Title': 'Field1',
@@ -77,7 +83,10 @@ COMPANY_MAPPINGS = {
         'URL': 'https://yachtfreelance.talent-pool.com/projects?openOnly=true&page=1',
         'start': 'Field3',
         'rate': 'Text',
-        'Company': 'Yacht Freelance'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Yacht Freelance',
+        'Source': 'Yacht'
     },
     'Flextender': {
         'Title': 'Field2',
@@ -86,7 +95,10 @@ COMPANY_MAPPINGS = {
         'URL': 'URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Company': 'Flextender'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Flextender',
+        'Source': 'Flextender'
     },
     'KVK': {
         'Title': 'Title',
@@ -95,7 +107,10 @@ COMPANY_MAPPINGS = {
         'URL': 'https://www.kvkhuurtin.nl/opdrachten',
         'start': 'Title1',
         'rate': 'Title3',
-        'Company': 'KVK'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'KVK',
+        'Source': 'KVK'
     },
     'Cirle8': {
         'Title': 'Title',
@@ -104,7 +119,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'Date',
         'rate': 'Not mentioned',
-        'Company': 'Circle8'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Circle8',
+        'Source': 'Cirle8'
     },
     'LinkedIn': {
         'Title': 'Title',
@@ -113,7 +131,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Company': 'LinkedIn'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'LinkedIn',
+        'Source': 'LinkedIn'
     },
     'politie': {
         'Title': 'Field1',
@@ -122,7 +143,10 @@ COMPANY_MAPPINGS = {
         'URL': 'URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Company': 'politie'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'politie',
+        'Source': 'politie'
     },
     'gelderland': {
         'Title': 'Title',
@@ -131,7 +155,10 @@ COMPANY_MAPPINGS = {
         'URL': 'https://www.werkeningelderland.nl/inhuur/',
         'start': 'vacancy_details5',
         'rate': 'Not mentioned',
-        'Company': 'gelderland'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'gelderland',
+        'Source': 'gelderland'
     },
     'werk.nl': {
         'Title': 'Title',
@@ -140,7 +167,10 @@ COMPANY_MAPPINGS = {
         'URL': 'https://www.werk.nl/werkzoekenden/vacatures/',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Company': 'Description'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Description',
+        'Source': 'werk.nl'
     },
     'indeed': {
         'Title': 'Title',
@@ -149,7 +179,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'css18z4q2i',
-        'Company': 'css1h7lukg'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'css1h7lukg',
+        'Source': 'indeed'
     },
     'Planet Interim': {
         'Title': 'Title',
@@ -158,7 +191,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Price',
-        'Company': 'Planet Interim'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Planet Interim',
+        'Source': 'Planet Interim'
     },
     'NS': {
         'Title': 'Field1',
@@ -167,7 +203,10 @@ COMPANY_MAPPINGS = {
         'URL': 'https://www.werkenbijns.nl/vacatures?keywords=Inhuur',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Company': 'NS'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'NS',
+        'Source': 'NS'
     },
     'hoofdkraan': {
         'Title': 'Title',
@@ -176,7 +215,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'fontweightbold',
-        'Company': 'hoofdkraan'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'hoofdkraan',
+        'Source': 'hoofdkraan'
     },
     'Overheid': {
         'Title': 'Title',
@@ -185,7 +227,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Content',
-        'Company': 'Description'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Description',
+        'Source': 'Overheid'
     },
     'rijkswaterstaat': {
         'Title': 'widgetheader',
@@ -194,7 +239,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'feature2',
-        'Company': 'Rijkswaterstaat'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Rijkswaterstaat',
+        'Source': 'rijkswaterstaat'
     },
     'zzp opdrachten': {
         'Title': 'Title',
@@ -203,7 +251,10 @@ COMPANY_MAPPINGS = {
         'URL': 'https://www.zzp-opdrachten.nl/alle',
         'start': 'ASAP',
         'rate': 'jobdetails',
-        'Company': 'Title2'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Title2',
+        'Source': 'zzp opdrachten'
     },
     'Harvey Nash': {
         'Title': 'Title',
@@ -212,7 +263,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'Field1',
         'rate': 'Salary',
-        'Company': 'Field2'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Field2',
+        'Source': 'Harvey Nash'
     },
     'Behance': {
         'Title': 'Title',
@@ -221,7 +275,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Company': 'Company'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Company',
+        'Source': 'Behance'
     },
     'Schiphol': {
         'Title': 'Field2',
@@ -230,7 +287,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Field1_links',
         'start': 'ASAP',
         'rate': 'Text2',
-        'Company': 'Schiphol'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Schiphol',
+        'Source': 'Schiphol'
     },
     'Jooble': {
         'Title': '_8w9ce2',
@@ -239,7 +299,10 @@ COMPANY_MAPPINGS = {
         'URL': '_8w9ce2_URL',
         'start': 'ASAP',
         'rate': 'not mentioned',
-        'Company': 'z6wlhx'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'z6wlhx',
+        'Source': 'Jooble'
     },
     'werkzoeken.nl': {
         'Title': 'Title',
@@ -248,7 +311,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'offer',
-        'Company': 'Company_name'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Company_name',
+        'Source': 'werkzoeken.nl'
     },
     'Centric': {
         'Title': 'Field1',
@@ -257,7 +323,10 @@ COMPANY_MAPPINGS = {
         'URL': 'URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Company': 'Centric'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Centric',
+        'Source': 'Centric'
     },
     'freelancer.com': {
         'Title': 'Title',
@@ -266,7 +335,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Price',
-        'Company': 'freelancer.com'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'freelancer.com',
+        'Source': 'freelancer.com'
     },
     'freelancer.nl': {
         'Title': 'Title',
@@ -275,7 +347,10 @@ COMPANY_MAPPINGS = {
         'URL': 'cardlink_URL',
         'start': 'ASAP',
         'rate': 'budget',
-        'Company': 'freelancer.nl'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'freelancer.nl',
+        'Source': 'freelancer.nl'
     },
     'Salta Group': {
         'Title': 'Keywords',
@@ -284,7 +359,10 @@ COMPANY_MAPPINGS = {
         'Summary': 'feature_spancontainsclass_text',
         'Company': 'Company',
         'rate': 'Not mentioned',
-        'start': 'ASAP'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'start': 'ASAP',
+        'Source': 'Salta Group'
     },
     'ProLinker.com': {
         'Title': 'Title',
@@ -293,7 +371,92 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Like',
-        'Company': 'ProLinker.com'
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'ProLinker.com',
+        'Source': 'ProLinker.com'
+    },
+    'Flex West-Brabant': {
+        'Title': 'Title',
+        'Location': 'org',
+        'Summary': 'See Vacancy',
+        'URL': 'Title_URL',
+        'start': 'Field3',
+        'rate': 'Not mentioned',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Flex West-Brabant',
+        'Source': 'Flex West-Brabant'
+    },
+    'Amstelveenhuurtin': {
+        'Title': 'Title',
+        'Location': 'searchresultorganisation',
+        'Summary': 'See Vacancy',
+        'URL': 'https://www.amstelveenhuurtin.nl/opdrachten',
+        'start': 'Title5',
+        'rate': 'Title3',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Amstelveenhuurtin',
+        'Source': 'Amstelveenhuurtin'
+    },
+    'noordoostbrabant': {
+        'Title': 'Field1',
+        'Location': 'Field2',
+        'Summary': 'See Vacancy',
+        'URL': 'https://inhuurdesk.werkeninnoordoostbrabant.nl/opdrachten#',
+        'start': 'Field11',
+        'rate': 'Field8',
+        'Hours': 'Not mentioned',
+        'Company': 'noordoostbrabant',
+        'Source': 'noordoostbrabant'
+    },
+    'flevoland': {
+        'Title': 'Field1',
+        'Location': 'Field2',
+        'Summary': 'Field8',
+        'URL': 'Field9_links',
+        'start': 'Field3',
+        'rate': 'Not mentioned',
+        'Hours': 'Field5',
+        'Company': 'Field6',
+        'Source': 'flevoland'
+    },
+    'Noord-Holland': {
+        'Title': 'Title',
+        'Location': 'Not mentioned',
+        'Summary': 'See Vacancy',
+        'URL': 'https://inhuur.werkeninnoordhollandnoord.nl/opdrachten',
+        'start': 'Title5',
+        'rate': 'Title3',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'searchresultorganisation',
+        'Source': 'Noord-Holland'
+    },
+    'groningenhuurtin': {
+        'Title': 'Title',
+        'Location': 'Not mentioned',
+        'Summary': 'See Vacancy',
+        'URL': 'https://www.groningenhuurtin.nl/opdrachten',
+        'start': 'Title5',
+        'rate': 'Title3',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'searchresultorganisation',
+        'Source': 'groningenhuurtin'
+    },
+    'TalentenRegio': {
+        'Title': 'Title',
+        'Location': 'Title1',
+        'Summary': 'See Vacancy',
+        'URL': 'hiddenmobile_URL',
+        'start': 'csscolumnflexer12',
+        'rate': 'Not mentioned',
+        'Hours': 'csscolumnflexer8',
+        'Duration': 'searchresultorganisation',
+        'Company': 'TalentenRegio',
+        'Source': 'TalentenRegio'
     }
 }
 
@@ -310,51 +473,23 @@ def validate_dataframe(df, required_columns):
     """Validate that DataFrame has required columns and data."""
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
-        raise ValueError(f"Missing required columns: {missing_columns}")
+        logging.warning(f"Missing required columns: {missing_columns}")
     
     if df.empty:
-        raise ValueError("DataFrame is empty")
+        logging.warning("DataFrame is empty")
     
     return True
 
 def validate_data_quality(df, required_columns):
     """
-    Enhanced data validation with quality checks and detailed reporting.
-    Returns a tuple (is_valid, issues_dict) where is_valid is a boolean and 
-    issues_dict contains detailed information about any data quality issues.
+    Simplified data validation without URL, special character, or data quality checks.
+    Returns a boolean indicating if the DataFrame is valid.
     """
-    issues = {
-        'empty_values': {},
-        'invalid_urls': [],
-        'special_chars': {},
-        'data_type_issues': {}
-    }
-    
     try:
         # Basic validation first
         validate_dataframe(df, required_columns)
         
-        # Check for empty or whitespace-only values
-        for col in required_columns:
-            empty_count = df[col].astype(str).str.strip().eq('').sum()
-            if empty_count > 0:
-                issues['empty_values'][col] = empty_count
-        
-        # URL format validation
-        if 'URL' in df.columns:
-            invalid_urls = df[~df['URL'].str.match(r'^https?://', na=False)]
-            if not invalid_urls.empty:
-                issues['invalid_urls'] = invalid_urls.index.tolist()
-        
-        # Check for potentially problematic special characters
-        special_chars_pattern = r'[<>{}\"]'
-        for col in ['Title', 'Summary', 'Location']:
-            if col in df.columns:
-                special_chars = df[df[col].str.contains(special_chars_pattern, na=False, regex=True)]
-                if not special_chars.empty:
-                    issues['special_chars'][col] = special_chars.index.tolist()
-        
-        # Data type validation
+        # Data type validation (log issues but do not cause errors)
         expected_types = {
             'Title': str,
             'Location': str,
@@ -367,33 +502,14 @@ def validate_data_quality(df, required_columns):
         
         for col, expected_type in expected_types.items():
             if col in df.columns:
-                if not all(isinstance(val, expected_type) for val in df[col].dropna()):
-                    issues['data_type_issues'][col] = expected_type.__name__
+                mismatched_types = [val for val in df[col].dropna() if not isinstance(val, expected_type)]
+                if mismatched_types:
+                    logging.warning(f"Data type mismatch in column {col}: {mismatched_types}")
         
-        # Calculate if there are any issues
-        has_issues = any(
-            issue_dict for issue_dict in issues.values()
-            if issue_dict and (isinstance(issue_dict, dict) or isinstance(issue_dict, list))
-        )
-        
-        # Log validation results
-        # (Suppress detailed warnings/info about data quality issues)
-        # if has_issues:
-        #     logging.warning("Data quality issues found:")
-        #     if issues['empty_values']:
-        #         logging.warning(f"Empty values found: {issues['empty_values']}")
-        #     if issues['invalid_urls']:
-        #         logging.warning(f"Invalid URLs found in rows: {issues['invalid_urls']}")
-        #     if issues['data_type_issues']:
-        #         logging.warning(f"Data type issues found: {issues['data_type_issues']}")
-        # else:
-        #     logging.info("Data validation passed successfully")
-        
-        return not has_issues, issues
-    
+        return True
     except Exception as e:
         logging.error(f"Data validation error: {str(e)}")
-        return False, {'error': str(e)}
+        return False
 
 def freelance_directory(files_read, company_name):
     """Process and standardize job listings from different sources."""
@@ -502,7 +618,7 @@ def freelance_directory(files_read, company_name):
         }
         for col_name, fallback_value in fallback_map.items():
             if col_name in result.columns:
-                result.loc[result[col_name] == '', col_name] = fallback_value
+                result[col_name] = result[col_name].fillna(fallback_value)
         
         # Apply fallback for Company column using the company_name variable
         if 'Company' in result.columns:
@@ -523,55 +639,8 @@ def freelance_directory(files_read, company_name):
         if duplicates_removed > 0:
             logging.info(f"Removed {duplicates_removed} duplicate entries from {company_name}")
         
-        # Perform enhanced data validation
-        is_valid, issues = validate_data_quality(result, standard_columns)
-        
-        if not is_valid:
-            # Fix URL issues if possible
-            if issues['invalid_urls']:
-                for idx in issues['invalid_urls']:
-                    url = result.loc[idx, 'URL']
-                    if not url.startswith(('http://', 'https://')):
-                        result.loc[idx, 'URL'] = f'https://{url.lstrip("/")}'
-            
-            # Remove problematic special characters
-            special_chars_cleaned = False
-            if issues['special_chars']:
-                import re
-                for col, indices in issues['special_chars'].items():
-                    for idx in indices:
-                        old_val = result.loc[idx, col]
-                        new_val = re.sub(r'[<>{}\"]', '', old_val)
-                        result.loc[idx, col] = new_val
-                        if old_val != new_val:
-                            special_chars_cleaned = True
-            
-            # Handle empty values
-            if issues['empty_values']:
-                for col, count in issues['empty_values'].items():
-                    if col in ['Title', 'URL', 'Company']:  # Required fields
-                        result = result.dropna(subset=[col])
-                    else:  # Optional fields
-                        default_values = {
-                            'Location': 'Not specified',
-                            'Summary': 'No description available',
-                            'start': 'ASAP',
-                            'rate': 'Not mentioned'
-                        }
-                        if col in default_values:
-                            result[col] = result[col].fillna(default_values[col])
-            
-            # Re-run validation after cleaning
-            final_valid, final_issues = validate_data_quality(result, standard_columns)
-            if not final_valid:
-                if final_issues.get('special_chars'):
-                    logging.warning(f"Special characters remain in {company_name} after cleaning: {final_issues['special_chars']}")
-                # logging.warning(f"Some data quality issues remain for {company_name} after attempted fixes")
-            else:
-                logging.info(f"Successfully validated and cleaned data for {company_name}")
-        else:
-            logging.info(f"Successfully validated and cleaned data for {company_name}")
-        
+        # Remove validation and cleaning logic - just return the processed data
+        logging.info(f"Successfully processed data for {company_name}")
         return result
     
     except Exception as e:
@@ -740,6 +809,12 @@ def supabase_upload(df, table_name, is_historical=False):
             else:
                 logging.info(f"No stale records to delete from {table_name}.")
 
+        # Handle NaN values before converting to records
+        df = df.fillna('')
+        # Replace any remaining NaN values with empty strings
+        for col in df.columns:
+            df[col] = df[col].astype(str).replace(['nan', 'NaN', 'None', 'none', 'NULL', 'null'], '')
+        
         # Convert DataFrame to list of dictionaries
         records = df.to_dict('records')
         total_records = len(records)
@@ -922,8 +997,8 @@ def main():
                     continue # Skip to the next company if no data after cleaning
 
                 # If we reach here, company_df is not empty
-                    result = pd.concat([result, company_df], ignore_index=True)
-                    logging.info(f"Processed {company_name}: {len(company_df)} rows")
+                result = pd.concat([result, company_df], ignore_index=True)
+                logging.info(f"Processed {company_name}: {len(company_df)} rows")
                 # Add an empty line after each company
                 logging.info("")
             
@@ -999,3 +1074,4 @@ def main():
 
 if __name__ == "__main__":
     main() 
+    
