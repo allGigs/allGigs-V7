@@ -21,6 +21,8 @@ if not SUPABASE_KEY:
     # For now, we'll let it proceed and the logger will catch it if supabase client fails.
     pass
 
+print(f"SUPABASE_KEY: {SUPABASE_KEY}")
+
 supabase_client: Client = None
 try:
     if SUPABASE_KEY:
@@ -257,7 +259,7 @@ def Clear_all_tasks(task_id_df, base_url_param, current_access_token, logger):
         logger.error(f"Error: The following required columns are missing in the input CSV data: {missing_columns}.")
         if hasattr(task_id_df, 'columns'):
             logger.error(f"Available columns: {task_id_df.columns.tolist()}")
-                else:
+        else:
             logger.error("Input data does not appear to be a pandas DataFrame with columns.")
         return
         

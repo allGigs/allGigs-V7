@@ -167,9 +167,9 @@ COMPANY_MAPPINGS = {
         'URL': 'https://www.werk.nl/werkzoekenden/vacatures/',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Title3',
         'Duration': 'Not mentioned',
-        'Company': 'Description',
+        'Company': 'Description_split',  # Will be split on "-" and use first part
         'Source': 'werk.nl'
     },
     'indeed': {
@@ -556,7 +556,11 @@ def freelance_directory(files_read, company_name):
         # Map the columns according to the mapping
         for std_col, src_col_mapping_value in mapping.items():
             if src_col_mapping_value in files_read.columns:
-                result[std_col] = files_read[src_col_mapping_value]
+                if company_name == 'werk.nl' and std_col == 'Company' and src_col_mapping_value == 'Description_split':
+                    # Special handling for werk.nl: split Description on "-" and use first part as Company
+                    result[std_col] = files_read['Description'].str.split('-').str[0].str.strip()
+                else:
+                    result[std_col] = files_read[src_col_mapping_value]
             else:
                 # If the mapping value is not a column name, assign the mapping value itself.
                 # This handles literal defaults like 'Company': 'LinkIT' or 'start': 'ASAP'.
@@ -590,7 +594,7 @@ def freelance_directory(files_read, company_name):
 
                 if std_col == 'URL': # If it's the URL column, we don't apply the placeholder blanking based on this user request.
                     pass # Do nothing, leave URL as is from the mapping.
-                elif not is_intentional_literal:
+                elif not is_intentional_literal and not (std_col == 'Location' and src_col_mapping_value == 'Remote'):
                     # If it's not an intentional literal (and not 'URL'), check if data matches the mapping value (placeholder scenario)
                     condition = result[std_col].astype(str) == src_col_mapping_value
                     if condition.any():
@@ -638,6 +642,11 @@ def freelance_directory(files_read, company_name):
         
         if duplicates_removed > 0:
             logging.info(f"Removed {duplicates_removed} duplicate entries from {company_name}")
+        
+        # Specific filtering for freelancer.com
+        if company_name == 'freelancer.com':
+            if 'Title' in result.columns:
+                result = result[~result['Title'].str.contains('--', na=False)]
         
         # Remove validation and cleaning logic - just return the processed data
         logging.info(f"Successfully processed data for {company_name}")
