@@ -108,7 +108,7 @@ COMPANY_MAPPINGS = {
         'start': 'Title1',
         'rate': 'Title3',
         'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
+        'Duration': 'Title1',
         'Company': 'KVK',
         'Source': 'KVK'
     },
@@ -122,7 +122,7 @@ COMPANY_MAPPINGS = {
         'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Circle8',
-        'Source': 'Cirle8'
+        'Source': 'Circle8'
     },
     'LinkedIn': {
         'Title': 'Title',
@@ -133,7 +133,7 @@ COMPANY_MAPPINGS = {
         'rate': 'Not mentioned',
         'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
-        'Company': 'LinkedIn',
+        'Company': 'Company',
         'Source': 'LinkedIn'
     },
     'politie': {
@@ -223,11 +223,11 @@ COMPANY_MAPPINGS = {
     'Overheid': {
         'Title': 'Title',
         'Location': 'Content3',
-        'Summary': 'See Vacancy',
+        'Summary': 'Keywords',
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Content',
-        'Hours': 'Not mentioned',
+        'Hours': 'Content2',
         'Duration': 'Not mentioned',
         'Company': 'Description',
         'Source': 'Overheid'
@@ -286,8 +286,8 @@ COMPANY_MAPPINGS = {
         'Summary': 'Text5',
         'URL': 'Field1_links',
         'start': 'ASAP',
-        'rate': 'Text2',
-        'Hours': 'Not mentioned',
+        'rate': 'Text2',  # Will be processed to check Text2 and Text4
+        'Hours': '36',
         'Duration': 'Not mentioned',
         'Company': 'Schiphol',
         'Source': 'Schiphol'
@@ -310,10 +310,10 @@ COMPANY_MAPPINGS = {
         'Summary': 'See Vacancy',
         'URL': 'Title_URL',
         'start': 'ASAP',
-        'rate': 'offer',
-        'Hours': 'Not mentioned',
+        'rate': 'offer',  # Will be processed to remove entries with "p/m"
+        'Hours': 'requestedwrapper',
         'Duration': 'Not mentioned',
-        'Company': 'Company_name',
+        'Company': 'Company_name',  # Will be processed to remove everything before "• "
         'Source': 'werkzoeken.nl'
     },
     'Centric': {
@@ -457,6 +457,78 @@ COMPANY_MAPPINGS = {
         'Duration': 'searchresultorganisation',
         'Company': 'TalentenRegio',
         'Source': 'TalentenRegio'
+    },
+    'HintTech': {
+        'Title': 'Title',
+        'URL': 'Title_URL',
+        'Company': 'vc_colmd6',
+        'Hours': 'vc_colmd62',
+        'rate': 'vc_colmd63',
+        'Duration': 'vc_colmd64',
+        'Location': 'vc_colmd61',
+        'Summary': 'See Vacancy',
+        'start': 'ASAP',
+        'Source': 'HintTech'
+    },
+    'Haarlemmermeerhuurtin': {
+        'Title': 'Title',
+        'rate': 'Title3',
+        'Duration': 'Title5',
+        'URL': 'https://www.haarlemmermeerhuurtin.nl/opdrachten',
+        'Location': 'Not mentioned',
+        'Summary': 'See Vacancy',
+        'start': 'ASAP',
+        'Hours': 'Not mentioned',
+        'Company': 'Gemeente Haarlemmermeer',
+        'Source': 'Haarlemmermeerhuurtin'
+    },
+    'hoofdkraan': {
+        'Title': 'Title',
+        'Location': 'colmd4',
+        'Summary': 'See Vacancy',
+        'URL': 'Title_URL',
+        'start': 'ASAP',
+        'rate': 'Not mentioned',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'hoofdkraan',
+        'Source': 'hoofdkraan'
+    },
+    'Harvey Nash': {
+        'Title': 'Title',
+        'Location': 'Not mentioned',
+        'Summary': 'See Vacancy',
+        'URL': 'Title_URL',
+        'start': 'ASAP',
+        'rate': 'Not mentioned',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Harvey Nash',
+        'Source': 'Harvey Nash'
+    },
+    'Behance': {
+        'Title': 'Title',
+        'Location': 'Not mentioned',
+        'Summary': 'Text4',
+        'URL': 'Title_URL',
+        'start': 'ASAP',
+        'rate': 'Not mentioned',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Behance',
+        'Source': 'Behance'
+    },
+    'Cirle8': {
+        'Title': 'Title',
+        'Location': 'Not mentioned',
+        'Summary': 'See Vacancy',
+        'URL': 'Title_URL',
+        'start': 'ASAP',
+        'rate': 'Not mentioned',
+        'Hours': 'cvacancygridcard_usp2',
+        'Duration': 'cvacancygridcard_usp1',
+        'Company': 'Circle8',
+        'Source': 'Circle8'
     }
 }
 
@@ -467,6 +539,11 @@ def timestamp():
 def generate_unique_id(title, url, company):
     """Generate a unique ID based on the combination of title, URL, and company."""
     combined = f"{title}|{url}|{company}".encode('utf-8')
+    return hashlib.md5(combined).hexdigest()
+
+def generate_group_id(title):
+    """Generate a group ID based on title for grouping similar jobs."""
+    combined = f"{title}".encode('utf-8')
     return hashlib.md5(combined).hexdigest()
 
 def validate_dataframe(df, required_columns):
@@ -549,6 +626,44 @@ def freelance_directory(files_read, company_name):
                     logging.info(f"werkzoeken.nl pre-mapping filter: 'requestedwrapper2' column checked for 'Freelance', no rows removed from {initial_count} rows.")
             else:
                 logging.warning(f"werkzoeken.nl pre-mapping filter: 'requestedwrapper2' column not found in the input CSV for {company_name}. Skipping filter.")
+        elif company_name == 'HintTech':
+            if 'Title' in files_read.columns:
+                initial_count = len(files_read)
+                # Filter out rows where 'Title' column contains "gesloten" (case-insensitive)
+                files_read = files_read[~files_read['Title'].astype(str).str.contains("gesloten", case=False, na=False)]
+                filtered_count = len(files_read)
+                if initial_count > filtered_count:
+                    logging.info(f"Applied HintTech pre-mapping filter on 'Title' column to remove 'gesloten', rows changed from {initial_count} to {filtered_count}")
+                elif initial_count == filtered_count and initial_count > 0:
+                    logging.info(f"HintTech pre-mapping filter: 'Title' column checked for 'gesloten', no rows removed from {initial_count} rows.")
+            else:
+                logging.warning(f"HintTech pre-mapping filter: 'Title' column not found in the input CSV for {company_name}. Skipping filter.")
+        elif company_name == 'Behance':
+            if 'Text4' in files_read.columns:
+                initial_count = len(files_read)
+                # Filter out rows where 'Text4' column is empty or contains only whitespace
+                files_read = files_read[files_read['Text4'].astype(str).str.strip() != '']
+                # Also filter out rows where Text4 is NaN or 'nan' string
+                files_read = files_read[~files_read['Text4'].astype(str).str.lower().isin(['nan', 'none', ''])]
+                filtered_count = len(files_read)
+                if initial_count > filtered_count:
+                    logging.info(f"Applied Behance pre-mapping filter on 'Text4' column to remove empty rows, rows changed from {initial_count} to {filtered_count}")
+                elif initial_count == filtered_count and initial_count > 0:
+                    logging.info(f"Behance pre-mapping filter: 'Text4' column checked for empty content, no rows removed from {initial_count} rows.")
+            else:
+                logging.warning(f"Behance pre-mapping filter: 'Text4' column not found in the input CSV for {company_name}. Skipping filter.")
+        elif company_name == 'Overheid':
+            if 'Keywords' in files_read.columns:
+                initial_count = len(files_read)
+                # Filter out rows where 'Keywords' column contains "Loondienst" (case-insensitive)
+                files_read = files_read[~files_read['Keywords'].astype(str).str.contains("Loondienst", case=False, na=False)]
+                filtered_count = len(files_read)
+                if initial_count > filtered_count:
+                    logging.info(f"Applied Overheid pre-mapping filter on 'Keywords' column to remove 'Loondienst', rows changed from {initial_count} to {filtered_count}")
+                elif initial_count == filtered_count and initial_count > 0:
+                    logging.info(f"Overheid pre-mapping filter: 'Keywords' column checked for 'Loondienst', no rows removed from {initial_count} rows.")
+            else:
+                logging.warning(f"Overheid pre-mapping filter: 'Keywords' column not found in the input CSV for {company_name}. Skipping filter.")
         
         # Create a new DataFrame with standardized columns
         result = pd.DataFrame()
@@ -576,9 +691,11 @@ def freelance_directory(files_read, company_name):
             if std_col in result.columns and isinstance(src_col_mapping_value, str) and not result[std_col].empty:
                 # Determine if src_col_mapping_value is an intentional literal that should be preserved
                 is_intentional_literal = (
-                    src_col_mapping_value in {'ASAP', 'Not mentioned', 'See Vacancy'} or \
+                    src_col_mapping_value in {'ASAP', 'Not mentioned', 'See Vacancy', '36', 'Title3', 'Text2', 'Field2', 'Hybrid', 'Text5', 'Title', 'Amsterdam', 'Title1', 'Location', 'About_the_job', 'Title5', 'Field8', 'Field3', 'Field5', 'searchresultorganisation'} or \
                     (std_col == 'URL' and (src_col_mapping_value.startswith('http://') or src_col_mapping_value.startswith('https://'))) or \
-                    std_col == 'Company' # Value for 'Company' mapping is always an intended literal.
+                    std_col == 'Company' or \
+                    std_col == 'Source' or \
+                    std_col == 'Hours'  # Hours field values are always intentional literals (like '36')
                 )
                 
                 # If the current column IS 'URL', we give it special treatment: 
@@ -648,6 +765,400 @@ def freelance_directory(files_read, company_name):
             if 'Title' in result.columns:
                 result = result[~result['Title'].str.contains('--', na=False)]
         
+        # COMPANY-SPECIFIC POST-MAPPING PROCESSING
+        if company_name == 'HintTech':
+            # Process Hours field - remove "per week" and keep only numbers
+            if 'Hours' in result.columns:
+                def process_hours(hours_str):
+                    if pd.isna(hours_str) or hours_str == '':
+                        return 'Not mentioned'
+                    # Remove "per week" (case insensitive) and extract numbers
+                    hours_clean = str(hours_str).lower().replace('per week', '').replace('perweek', '').strip()
+                    # Extract numbers using regex
+                    import re
+                    numbers = re.findall(r'\d+', hours_clean)
+                    if numbers:
+                        return numbers[0]  # Return the first number found
+                    return 'Not mentioned'
+                
+                result['Hours'] = result['Hours'].apply(process_hours)
+                logging.info(f"HintTech post-mapping: Processed Hours field to extract numbers and remove 'per week'")
+            
+            # Process Duration field - calculate difference between start and end dates
+            if 'Duration' in result.columns:
+                def process_duration(duration_str):
+                    if pd.isna(duration_str) or duration_str == '':
+                        return 'Not mentioned'
+                    
+                    try:
+                        # Parse date range (assuming format like "2024-01-01 to 2024-06-30" or similar)
+                        duration_clean = str(duration_str).strip()
+                        
+                        # Common separators for date ranges
+                        separators = [' to ', ' - ', ' tot ', ' t/m ', ' until ', ' through ']
+                        
+                        for sep in separators:
+                            if sep in duration_clean.lower():
+                                parts = duration_clean.lower().split(sep)
+                                if len(parts) == 2:
+                                    start_date_str = parts[0].strip()
+                                    end_date_str = parts[1].strip()
+                                    
+                                    # Try to parse dates with common formats
+                                    from datetime import datetime
+                                    date_formats = ['%Y-%m-%d', '%d-%m-%Y', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d']
+                                    
+                                    start_date = None
+                                    end_date = None
+                                    
+                                    for fmt in date_formats:
+                                        try:
+                                            start_date = datetime.strptime(start_date_str, fmt)
+                                            end_date = datetime.strptime(end_date_str, fmt)
+                                            break
+                                        except ValueError:
+                                            continue
+                                    
+                                    if start_date and end_date:
+                                        # Calculate difference in days
+                                        diff_days = (end_date - start_date).days
+                                        if diff_days > 0:
+                                            # Convert to months/weeks if appropriate
+                                            if diff_days >= 30:
+                                                months = diff_days // 30
+                                                return f"{months} months"
+                                            elif diff_days >= 7:
+                                                weeks = diff_days // 7
+                                                return f"{weeks} weeks"
+                                            else:
+                                                return f"{diff_days} days"
+                                    break
+                        
+                        return duration_clean  # Return original if can't parse
+                    except Exception:
+                        return 'Not mentioned'
+                
+                result['Duration'] = result['Duration'].apply(process_duration)
+                logging.info(f"HintTech post-mapping: Processed Duration field to calculate date differences")
+        
+        # HAARLEMMERMEERHUURTIN POST-MAPPING PROCESSING
+        if company_name == 'Haarlemmermeerhuurtin':
+            # Process rate field - remove "per uur" and keep only the amount
+            if 'rate' in result.columns:
+                def process_rate(rate_str):
+                    if pd.isna(rate_str) or rate_str == '':
+                        return 'Not mentioned'
+                    # Remove "per uur" (case insensitive) and clean up
+                    rate_clean = str(rate_str).lower().replace('per uur', '').replace('peruur', '').strip()
+                    # Remove extra spaces and return
+                    rate_clean = ' '.join(rate_clean.split())
+                    return rate_clean if rate_clean else 'Not mentioned'
+                
+                result['rate'] = result['rate'].apply(process_rate)
+                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed rate field to remove 'per uur'")
+            
+            # Process Duration field - calculate difference between start and end dates
+            if 'Duration' in result.columns:
+                def process_duration_haarlemmermeer(duration_str):
+                    if pd.isna(duration_str) or duration_str == '':
+                        return 'Not mentioned'
+                    
+                    try:
+                        # Parse date range (assuming format like "01-07-2025 t/m 01-01-2026" or similar)
+                        duration_clean = str(duration_str).strip()
+                        
+                        # Common separators for date ranges (including Dutch separators)
+                        separators = [' t/m ', ' to ', ' - ', ' tot ', ' until ', ' through ', ' tm ']
+                        
+                        for sep in separators:
+                            if sep in duration_clean.lower():
+                                parts = duration_clean.lower().split(sep)
+                                if len(parts) == 2:
+                                    start_date_str = parts[0].strip()
+                                    end_date_str = parts[1].strip()
+                                    
+                                    # Try to parse dates with common formats
+                                    from datetime import datetime
+                                    date_formats = ['%d-%m-%Y', '%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d']
+                                    
+                                    start_date = None
+                                    end_date = None
+                                    
+                                    for fmt in date_formats:
+                                        try:
+                                            start_date = datetime.strptime(start_date_str, fmt)
+                                            end_date = datetime.strptime(end_date_str, fmt)
+                                            break
+                                        except ValueError:
+                                            continue
+                                    
+                                    if start_date and end_date:
+                                        # Calculate difference in days
+                                        diff_days = (end_date - start_date).days
+                                        if diff_days > 0:
+                                            # Convert to months/weeks if appropriate
+                                            if diff_days >= 365:
+                                                years = diff_days // 365
+                                                months = (diff_days % 365) // 30
+                                                if months > 0:
+                                                    return f"{years} years {months} months"
+                                                else:
+                                                    return f"{years} years"
+                                            elif diff_days >= 30:
+                                                months = diff_days // 30
+                                                return f"{months} months"
+                                            elif diff_days >= 7:
+                                                weeks = diff_days // 7
+                                                return f"{weeks} weeks"
+                                            else:
+                                                return f"{diff_days} days"
+                                    break
+                        
+                        return duration_clean  # Return original if can't parse
+                    except Exception:
+                        return 'Not mentioned'
+                
+                result['Duration'] = result['Duration'].apply(process_duration_haarlemmermeer)
+                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed Duration field to calculate date differences")
+        
+        # HOOFDKRAAN POST-MAPPING PROCESSING
+        if company_name == 'hoofdkraan':
+            # Process Location field - remove "Locatie:" prefix
+            if 'Location' in result.columns:
+                def process_location(location_str):
+                    if pd.isna(location_str) or location_str == '':
+                        return 'Not mentioned'
+                    # Remove "Locatie:" (case insensitive) and clean up
+                    location_clean = str(location_str).replace('Locatie:', '').replace('locatie:', '').strip()
+                    # Remove extra spaces and return
+                    location_clean = ' '.join(location_clean.split())
+                    return location_clean if location_clean else 'Not mentioned'
+                
+                result['Location'] = result['Location'].apply(process_location)
+                logging.info(f"hoofdkraan post-mapping: Processed Location field to remove 'Locatie:' prefix")
+        
+        # HARVEY NASH POST-MAPPING PROCESSING
+        if company_name == 'Harvey Nash':
+            # Process Title field - remove words in parentheses and words starting with "JP"
+            if 'Title' in result.columns:
+                def process_title(title_str):
+                    if pd.isna(title_str) or title_str == '':
+                        return 'Not mentioned'
+                    
+                    import re
+                    title_clean = str(title_str)
+                    
+                    # Remove everything in parentheses (including the parentheses)
+                    title_clean = re.sub(r'\([^)]*\)', '', title_clean)
+                    
+                    # Split into words and remove words starting with "JP" (case insensitive)
+                    words = title_clean.split()
+                    filtered_words = [word for word in words if not word.upper().startswith('JP')]
+                    
+                    # Join back and clean up extra spaces
+                    title_clean = ' '.join(filtered_words).strip()
+                    # Remove multiple spaces
+                    title_clean = ' '.join(title_clean.split())
+                    
+                    return title_clean if title_clean else 'Not mentioned'
+                
+                result['Title'] = result['Title'].apply(process_title)
+                logging.info(f"Harvey Nash post-mapping: Processed Title field to remove words in parentheses and words starting with 'JP'")
+        
+        # KVK POST-MAPPING PROCESSING
+        if company_name == 'KVK':
+            # Process Duration field - remove text and calculate date difference
+            if 'Duration' in result.columns:
+                def process_duration_kvk(duration_str):
+                    if pd.isna(duration_str) or duration_str == '':
+                        return 'Not mentioned'
+                    
+                    try:
+                        # Remove the specific text
+                        duration_clean = str(duration_str).replace('De looptijd van de opdracht is van', '').strip()
+                        
+                        # Extract dates using regex - look for date patterns
+                        import re
+                        from datetime import datetime
+                        
+                        # Common date patterns (DD-MM-YYYY, DD/MM/YYYY, YYYY-MM-DD, etc.)
+                        date_patterns = [
+                            r'\b(\d{1,2}[-/]\d{1,2}[-/]\d{4})\b',  # DD-MM-YYYY or DD/MM/YYYY
+                            r'\b(\d{4}[-/]\d{1,2}[-/]\d{1,2})\b',  # YYYY-MM-DD or YYYY/MM/DD
+                            r'\b(\d{1,2}\s+\w+\s+\d{4})\b',       # DD Month YYYY
+                            r'\b(\w+\s+\d{1,2},?\s+\d{4})\b'      # Month DD, YYYY
+                        ]
+                        
+                        found_dates = []
+                        for pattern in date_patterns:
+                            matches = re.findall(pattern, duration_clean)
+                            found_dates.extend(matches)
+                        
+                        if len(found_dates) >= 2:
+                            # Try to parse the first and last dates found
+                            first_date_str = found_dates[0]
+                            last_date_str = found_dates[-1]
+                            
+                            # Try different date formats
+                            date_formats = [
+                                '%d-%m-%Y', '%d/%m/%Y', '%Y-%m-%d', '%Y/%m/%d',
+                                '%d %B %Y', '%d %b %Y', '%B %d, %Y', '%b %d, %Y',
+                                '%B %d %Y', '%b %d %Y'
+                            ]
+                            
+                            start_date = None
+                            end_date = None
+                            
+                            for fmt in date_formats:
+                                try:
+                                    start_date = datetime.strptime(first_date_str, fmt)
+                                    break
+                                except ValueError:
+                                    continue
+                            
+                            for fmt in date_formats:
+                                try:
+                                    end_date = datetime.strptime(last_date_str, fmt)
+                                    break
+                                except ValueError:
+                                    continue
+                            
+                            if start_date and end_date:
+                                # Calculate difference in days
+                                diff_days = abs((end_date - start_date).days)
+                                if diff_days > 0:
+                                    # Convert to appropriate units
+                                    if diff_days >= 365:
+                                        years = diff_days // 365
+                                        months = (diff_days % 365) // 30
+                                        if months > 0:
+                                            return f"{years} years {months} months"
+                                        else:
+                                            return f"{years} years"
+                                    elif diff_days >= 30:
+                                        months = diff_days // 30
+                                        return f"{months} months"
+                                    elif diff_days >= 7:
+                                        weeks = diff_days // 7
+                                        return f"{weeks} weeks"
+                                    else:
+                                        return f"{diff_days} days"
+                        
+                        return duration_clean  # Return cleaned text if can't parse dates
+                    except Exception:
+                        return 'Not mentioned'
+                
+                result['Duration'] = result['Duration'].apply(process_duration_kvk)
+                logging.info(f"KVK post-mapping: Processed Duration field to remove text and calculate date differences")
+            
+            # Process rate field - remove "per uur"
+            if 'rate' in result.columns:
+                def process_rate_kvk(rate_str):
+                    if pd.isna(rate_str) or rate_str == '':
+                        return 'Not mentioned'
+                    # Remove "per uur" (case insensitive) and clean up
+                    rate_clean = str(rate_str).lower().replace('per uur', '').replace('peruur', '').strip()
+                    # Remove extra spaces and return
+                    rate_clean = ' '.join(rate_clean.split())
+                    return rate_clean if rate_clean else 'Not mentioned'
+                
+                result['rate'] = result['rate'].apply(process_rate_kvk)
+                logging.info(f"KVK post-mapping: Processed rate field to remove 'per uur'")
+        
+        # LINKEDIN POST-MAPPING PROCESSING
+        if company_name == 'LinkedIn':
+            # Process Summary field - remove all whitelines to make text more compact
+            if 'Summary' in result.columns:
+                def process_summary_linkedin(summary_str):
+                    if pd.isna(summary_str) or summary_str == '':
+                        return 'See Vacancy'
+                    
+                    # Convert to string and remove all types of line breaks and extra whitespace
+                    summary_clean = str(summary_str)
+                    
+                    # Remove various types of line breaks and whitespace
+                    summary_clean = summary_clean.replace('\n', ' ')  # Remove newlines
+                    summary_clean = summary_clean.replace('\r', ' ')  # Remove carriage returns
+                    summary_clean = summary_clean.replace('\t', ' ')  # Remove tabs
+                    
+                    # Remove multiple spaces and clean up
+                    summary_clean = ' '.join(summary_clean.split())
+                    
+                    return summary_clean if summary_clean else 'See Vacancy'
+                
+                result['Summary'] = result['Summary'].apply(process_summary_linkedin)
+                logging.info(f"LinkedIn post-mapping: Processed Summary field to remove whitelines and make text compact")
+        
+        # SCHIPHOL POST-MAPPING PROCESSING
+        if company_name == 'Schiphol':
+            # Process rate field - check both Text2 and Text4, use whichever contains a number
+            if 'rate' in result.columns and ('Text2' in files_read.columns or 'Text4' in files_read.columns):
+                def process_rate_schiphol(index):
+                    import re
+                    
+                    # Get values from both Text2 and Text4 columns if they exist
+                    text2_val = files_read.iloc[index]['Text2'] if 'Text2' in files_read.columns else None
+                    text4_val = files_read.iloc[index]['Text4'] if 'Text4' in files_read.columns else None
+                    
+                    # Function to extract numbers from text
+                    def extract_number(text):
+                        if pd.isna(text) or text == '':
+                            return None
+                        # Look for numbers (including decimals) in the text
+                        number_match = re.search(r'\d+(?:\.\d+)?', str(text))
+                        return number_match.group() if number_match else None
+                    
+                    # Check Text2 first
+                    if text2_val is not None:
+                        number_from_text2 = extract_number(text2_val)
+                        if number_from_text2:
+                            return str(text2_val)
+                    
+                    # Check Text4 if Text2 doesn't contain a number
+                    if text4_val is not None:
+                        number_from_text4 = extract_number(text4_val)
+                        if number_from_text4:
+                            return str(text4_val)
+                    
+                    return 'Not mentioned'
+                
+                # Apply the processing to each row
+                result['rate'] = [process_rate_schiphol(i) for i in range(len(result))]
+                logging.info(f"Schiphol post-mapping: Processed rate field to check both Text2 and Text4 columns")
+        
+        # WERKZOEKEN.NL POST-MAPPING PROCESSING
+        if company_name == 'werkzoeken.nl':
+            # Process Company field - remove everything before "• "
+            if 'Company' in result.columns:
+                def process_company_werkzoeken(company_str):
+                    if pd.isna(company_str) or company_str == '':
+                        return 'werkzoeken.nl'
+                    
+                    company_clean = str(company_str)
+                    
+                    # Find "• " and take everything after it
+                    if '• ' in company_clean:
+                        company_clean = company_clean.split('• ', 1)[1]  # Split on first occurrence and take second part
+                    
+                    # Clean up extra spaces
+                    company_clean = company_clean.strip()
+                    
+                    return company_clean if company_clean else 'werkzoeken.nl'
+                
+                result['Company'] = result['Company'].apply(process_company_werkzoeken)
+                logging.info(f"werkzoeken.nl post-mapping: Processed Company field to remove everything before '• '")
+            
+            # Remove entire rows where rate field contains "p/m" (indicates permanent employment, not freelance)
+            if 'rate' in result.columns:
+                initial_rows = len(result)
+                # Filter out rows where rate contains "p/m" (case insensitive)
+                result = result[~result['rate'].astype(str).str.contains('p/m', case=False, na=False)]
+                removed_rows = initial_rows - len(result)
+                if removed_rows > 0:
+                    logging.info(f"werkzoeken.nl post-mapping: Removed {removed_rows} rows containing 'p/m' in rate field (permanent employment jobs)")
+                else:
+                    logging.info(f"werkzoeken.nl post-mapping: No rows contained 'p/m' in rate field")
+        
         # Remove validation and cleaning logic - just return the processed data
         logging.info(f"Successfully processed data for {company_name}")
         return result
@@ -703,15 +1214,57 @@ def get_existing_records(table_name):
 
 def prepare_data_for_upload(df, historical_data=None):
     """
-    Prepare DataFrame for upload by adding date and unique ID.
+    Prepare DataFrame for upload by adding date, unique ID, and group ID.
     If historical_data is provided, preserves dates for existing records.
     """
-    # Add UNIQUE_ID and date columns
+    # Add UNIQUE_ID, group_id and date columns
     df['UNIQUE_ID'] = df.apply(
         lambda row: generate_unique_id(row['Title'], row['URL'], row['Company']),
         axis=1
     )
+    df['group_id'] = df.apply(
+        lambda row: generate_group_id(row['Title']),
+        axis=1
+    )
     df['date'] = timestamp()
+    
+    # Add detailed group_id logging
+    logging.info("=" * 80)
+    logging.info("group_id ANALYSIS")
+    logging.info("=" * 80)
+    
+    # Group by group_id and count rows per group
+    group_counts = df.groupby('group_id').size().reset_index(name='count')
+    
+    # Find groups with multiple entries (duplicate titles)
+    duplicate_groups = group_counts[group_counts['count'] > 1]
+    
+    if not duplicate_groups.empty:
+        logging.info(f"Found {len(duplicate_groups)} groups with duplicate titles:")
+        
+        # Get detailed info for duplicate groups
+        for _, group_info in duplicate_groups.head(10).iterrows():  # Show first 10 groups
+            group_id = group_info['group_id']
+            count = group_info['count']
+            
+            # Get all jobs in this group
+            group_jobs = df[df['group_id'] == group_id]
+            unique_titles = group_jobs['Title'].unique()
+            unique_locations = group_jobs['Location'].unique()
+            unique_companies = group_jobs['Company'].unique()
+            
+            logging.info(f"group_id: {group_id} ({count} jobs)")
+            logging.info(f"  Title: {unique_titles[0]}")  # All titles should be the same
+            logging.info(f"  Locations: {list(unique_locations)}")
+            logging.info(f"  Companies: {list(unique_companies)}")
+            logging.info("-" * 40)
+        
+        if len(duplicate_groups) > 10:
+            logging.info(f"... and {len(duplicate_groups) - 10} more groups")
+    else:
+        logging.info("No duplicate titles found - all jobs have unique titles")
+    
+    logging.info("=" * 80)
     
     # If we have historical data, preserve dates for existing records
     if historical_data is not None and not historical_data.empty:
@@ -818,6 +1371,11 @@ def supabase_upload(df, table_name, is_historical=False):
             else:
                 logging.info(f"No stale records to delete from {table_name}.")
 
+        # For historical table, remove group_id column if it exists
+        if is_historical and 'group_id' in df.columns:
+            logging.info(f"Removing group_id column for historical table upload to {table_name}")
+            df = df.drop(columns=['group_id'])
+        
         # Handle NaN values before converting to records
         df = df.fillna('')
         # Replace any remaining NaN values with empty strings
