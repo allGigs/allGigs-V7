@@ -153,10 +153,10 @@ COMPANY_MAPPINGS = {
         'Location': 'Gelderland',
         'Summary': 'See Vacancy',
         'URL': 'https://www.werkeningelderland.nl/inhuur/',
-        'start': 'vacancy_details5',
+        'start': 'vacancy_details1',
         'rate': 'Not mentioned',
         'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
+        'Duration': 'vacancy_details3',
         'Company': 'gelderland',
         'Source': 'gelderland'
     },
@@ -239,7 +239,7 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'feature2',
-        'Hours': 'Not mentioned',
+        'Hours': 'feature',
         'Duration': 'Not mentioned',
         'Company': 'Rijkswaterstaat',
         'Source': 'rijkswaterstaat'
@@ -407,7 +407,7 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'Field3',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Flex West-Brabant',
         'Source': 'Flex West-Brabant'
@@ -432,6 +432,7 @@ COMPANY_MAPPINGS = {
         'start': 'Field11',
         'rate': 'Field8',
         'Hours': 'Not mentioned',
+        'Duration': 'Field11',
         'Company': 'noordoostbrabant',
         'Source': 'noordoostbrabant'
     },
@@ -454,7 +455,7 @@ COMPANY_MAPPINGS = {
         'start': 'Title5',
         'rate': 'Title3',
         'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
+        'Duration': 'Title5',
         'Company': 'searchresultorganisation',
         'Source': 'Noord-Holland'
     },
@@ -466,7 +467,7 @@ COMPANY_MAPPINGS = {
         'start': 'Title5',
         'rate': 'Title3',
         'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
+        'Duration': 'Title5',
         'Company': 'searchresultorganisation',
         'Source': 'groningenhuurtin'
     },
@@ -478,7 +479,7 @@ COMPANY_MAPPINGS = {
         'start': 'csscolumnflexer12',
         'rate': 'Not mentioned',
         'Hours': 'csscolumnflexer8',
-        'Duration': 'searchresultorganisation',
+        'Duration': 'csscolumnflexer4',
         'Company': 'TalentenRegio',
         'Source': 'TalentenRegio'
     },
@@ -1358,6 +1359,621 @@ def freelance_directory(files_read, company_name):
                 
                 result['Title'] = result['Title'].apply(process_title_salta)
                 logging.info(f"Salta Group post-mapping: Processed Title field to remove the first word 'Freelance'")
+        
+        # NOORDOOSTBRABANT POST-MAPPING PROCESSING
+        if company_name == 'noordoostbrabant':
+            # Process Duration field - calculate months between first and second date
+            if 'Duration' in result.columns:
+                def process_duration_noordoostbrabant(duration_str):
+                    if pd.isna(duration_str) or duration_str == '':
+                        return 'Not mentioned'
+                    
+                    try:
+                        # Convert to string and clean up
+                        duration_clean = str(duration_str).strip()
+                        
+                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
+                        date_patterns = [
+                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
+                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
+                        ]
+                        
+                        dates_found = []
+                        for pattern in date_patterns:
+                            matches = re.findall(pattern, duration_clean)
+                            for match in matches:
+                                if len(match) == 3:
+                                    if len(match[0]) == 4:  # YYYY-MM-DD format
+                                        year, month, day = match
+                                    else:  # DD-MM-YYYY format
+                                        day, month, year = match
+                                    try:
+                                        date_obj = datetime(int(year), int(month), int(day))
+                                        dates_found.append(date_obj)
+                                    except ValueError:
+                                        continue
+                        
+                        # If we found at least 2 dates, calculate the difference in months
+                        if len(dates_found) >= 2:
+                            # Sort dates to ensure first date is earlier
+                            dates_found.sort()
+                            start_date = dates_found[0]
+                            end_date = dates_found[1]
+                            
+                            # Calculate difference in months
+                            months_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+                            
+                            if months_diff > 0:
+                                return f"{months_diff} months"
+                            else:
+                                return "Less than 1 month"
+                        else:
+                            return duration_clean
+                            
+                    except Exception as e:
+                        logging.warning(f"Error processing noordoostbrabant duration '{duration_str}': {e}")
+                        return duration_clean
+                
+                result['Duration'] = result['Duration'].apply(process_duration_noordoostbrabant)
+                logging.info(f"noordoostbrabant post-mapping: Processed Duration field to calculate months between dates")
+            
+            # Process start field - extract the first date from Field11
+            if 'start' in result.columns:
+                def process_start_noordoostbrabant(start_str):
+                    if pd.isna(start_str) or start_str == '':
+                        return 'ASAP'
+                    
+                    try:
+                        # Convert to string and clean up
+                        start_clean = str(start_str).strip()
+                        
+                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
+                        date_patterns = [
+                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
+                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
+                        ]
+                        
+                        dates_found = []
+                        for pattern in date_patterns:
+                            matches = re.findall(pattern, start_clean)
+                            for match in matches:
+                                if len(match) == 3:
+                                    if len(match[0]) == 4:  # YYYY-MM-DD format
+                                        year, month, day = match
+                                    else:  # DD-MM-YYYY format
+                                        day, month, year = match
+                                    try:
+                                        date_obj = datetime(int(year), int(month), int(day))
+                                        dates_found.append(date_obj)
+                                    except ValueError:
+                                        continue
+                        
+                        # Return the first date found, or ASAP if no dates
+                        if dates_found:
+                            # Sort dates and return the earliest one
+                            dates_found.sort()
+                            first_date = dates_found[0]
+                            return first_date.strftime('%Y-%m-%d')
+                        else:
+                            return 'ASAP'
+                            
+                    except Exception as e:
+                        logging.warning(f"Error processing noordoostbrabant start date '{start_str}': {e}")
+                        return 'ASAP'
+                
+                result['start'] = result['start'].apply(process_start_noordoostbrabant)
+                logging.info(f"noordoostbrabant post-mapping: Processed start field to extract first date from Field11")
+        
+        # GRONINGENHUURTIN POST-MAPPING PROCESSING
+        if company_name == 'groningenhuurtin':
+            # Process Duration field - calculate months between the two dates
+            if 'Duration' in result.columns:
+                def process_duration_groningenhuurtin(duration_str):
+                    if pd.isna(duration_str) or duration_str == '':
+                        return 'Not mentioned'
+                    
+                    try:
+                        # Convert to string and clean up
+                        duration_clean = str(duration_str).strip()
+                        
+                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
+                        date_patterns = [
+                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
+                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
+                        ]
+                        
+                        dates_found = []
+                        for pattern in date_patterns:
+                            matches = re.findall(pattern, duration_clean)
+                            for match in matches:
+                                if len(match) == 3:
+                                    if len(match[0]) == 4:  # YYYY-MM-DD format
+                                        year, month, day = match
+                                    else:  # DD-MM-YYYY format
+                                        day, month, year = match
+                                    try:
+                                        date_obj = datetime(int(year), int(month), int(day))
+                                        dates_found.append(date_obj)
+                                    except ValueError:
+                                        continue
+                        
+                        # If we found at least 2 dates, calculate the difference in months
+                        if len(dates_found) >= 2:
+                            # Sort dates to ensure first date is earlier
+                            dates_found.sort()
+                            start_date = dates_found[0]
+                            end_date = dates_found[1]
+                            
+                            # Calculate difference in months
+                            months_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+                            
+                            if months_diff > 0:
+                                return f"{months_diff} months"
+                            else:
+                                return "Less than 1 month"
+                        else:
+                            return duration_clean
+                            
+                    except Exception as e:
+                        logging.warning(f"Error processing groningenhuurtin duration '{duration_str}': {e}")
+                        return duration_clean
+                
+                result['Duration'] = result['Duration'].apply(process_duration_groningenhuurtin)
+                logging.info(f"groningenhuurtin post-mapping: Processed Duration field to calculate months between dates")
+            
+            # Process start field - extract the first date from Title5
+            if 'start' in result.columns:
+                def process_start_groningenhuurtin(start_str):
+                    if pd.isna(start_str) or start_str == '':
+                        return 'ASAP'
+                    
+                    try:
+                        # Convert to string and clean up
+                        start_clean = str(start_str).strip()
+                        
+                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
+                        date_patterns = [
+                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
+                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
+                        ]
+                        
+                        dates_found = []
+                        for pattern in date_patterns:
+                            matches = re.findall(pattern, start_clean)
+                            for match in matches:
+                                if len(match) == 3:
+                                    if len(match[0]) == 4:  # YYYY-MM-DD format
+                                        year, month, day = match
+                                    else:  # DD-MM-YYYY format
+                                        day, month, year = match
+                                    try:
+                                        date_obj = datetime(int(year), int(month), int(day))
+                                        dates_found.append(date_obj)
+                                    except ValueError:
+                                        continue
+                        
+                        # Return the first date found, or ASAP if no dates
+                        if dates_found:
+                            # Sort dates and return the earliest one
+                            dates_found.sort()
+                            first_date = dates_found[0]
+                            return first_date.strftime('%Y-%m-%d')
+                        else:
+                            return 'ASAP'
+                            
+                    except Exception as e:
+                        logging.warning(f"Error processing groningenhuurtin start date '{start_str}': {e}")
+                        return 'ASAP'
+                
+                result['start'] = result['start'].apply(process_start_groningenhuurtin)
+                logging.info(f"groningenhuurtin post-mapping: Processed start field to extract first date from Title5")
+        
+        # FLEVOLAND POST-MAPPING PROCESSING
+        if company_name == 'flevoland':
+            # Process Location field - remove the word "location" (case insensitive)
+            if 'Location' in result.columns:
+                def process_location_flevoland(location_str):
+                    if pd.isna(location_str) or location_str == '':
+                        return 'Not mentioned'
+                    
+                    # Convert to string and remove "location" (case insensitive)
+                    location_clean = str(location_str)
+                    location_clean = re.sub(r'\blocation\b', '', location_clean, flags=re.IGNORECASE)
+                    
+                    # Clean up extra spaces
+                    location_clean = re.sub(r'\s+', ' ', location_clean).strip()
+                    
+                    # Return "Not mentioned" if empty after cleaning
+                    if not location_clean:
+                        return 'Not mentioned'
+                    
+                    return location_clean
+                
+                result['Location'] = result['Location'].apply(process_location_flevoland)
+                logging.info(f"flevoland post-mapping: Processed Location field to remove 'location' word")
+            
+            # Process start field - remove the words "start date" (case insensitive)
+            if 'start' in result.columns:
+                def process_start_flevoland(start_str):
+                    if pd.isna(start_str) or start_str == '':
+                        return 'ASAP'
+                    
+                    # Convert to string and remove "start date" (case insensitive)
+                    start_clean = str(start_str)
+                    start_clean = re.sub(r'\bstart date\b', '', start_clean, flags=re.IGNORECASE)
+                    
+                    # Clean up extra spaces
+                    start_clean = re.sub(r'\s+', ' ', start_clean).strip()
+                    
+                    # Return "ASAP" if empty after cleaning
+                    if not start_clean:
+                        return 'ASAP'
+                    
+                    return start_clean
+                
+                result['start'] = result['start'].apply(process_start_flevoland)
+                logging.info(f"flevoland post-mapping: Processed start field to remove 'start date' words")
+            
+            # Process Hours field - remove the word "hours" (case insensitive)
+            if 'Hours' in result.columns:
+                def process_hours_flevoland(hours_str):
+                    if pd.isna(hours_str) or hours_str == '':
+                        return 'Not mentioned'
+                    
+                    # Convert to string and remove "hours" (case insensitive)
+                    hours_clean = str(hours_str)
+                    hours_clean = re.sub(r'\bhours\b', '', hours_clean, flags=re.IGNORECASE)
+                    
+                    # Clean up extra spaces
+                    hours_clean = re.sub(r'\s+', ' ', hours_clean).strip()
+                    
+                    # Return "Not mentioned" if empty after cleaning
+                    if not hours_clean:
+                        return 'Not mentioned'
+                    
+                    return hours_clean
+                
+                result['Hours'] = result['Hours'].apply(process_hours_flevoland)
+                logging.info(f"flevoland post-mapping: Processed Hours field to remove 'hours' word")
+        
+        # AMSTELVEENHUURTIN POST-MAPPING PROCESSING
+        if company_name == 'Amstelveenhuurtin':
+            # Process Title field - remove words in brackets and words starting with "SO" followed by a number
+            if 'Title' in result.columns:
+                def process_title_amstelveenhuurtin(title_str):
+                    if pd.isna(title_str) or title_str == '':
+                        return 'Not mentioned'
+                    
+                    # Convert to string and clean up
+                    title_clean = str(title_str).strip()
+                    
+                    # Remove words in brackets (including nested brackets)
+                    title_clean = re.sub(r'\([^)]*\)', '', title_clean)
+                    
+                    # Remove words that start with "SO" followed by a number
+                    title_clean = re.sub(r'\bSO\d+\b', '', title_clean, flags=re.IGNORECASE)
+                    
+                    # Clean up extra spaces
+                    title_clean = re.sub(r'\s+', ' ', title_clean).strip()
+                    
+                    # Return "Not mentioned" if empty after cleaning
+                    if not title_clean:
+                        return 'Not mentioned'
+                    
+                    return title_clean
+                
+                result['Title'] = result['Title'].apply(process_title_amstelveenhuurtin)
+                logging.info(f"Amstelveenhuurtin post-mapping: Processed Title field to remove words in brackets and SO-number patterns")
+            
+            # Process Duration field - calculate months between the first and second date from Title5
+            if 'Duration' in result.columns:
+                def process_duration_amstelveenhuurtin(duration_str):
+                    if pd.isna(duration_str) or duration_str == '':
+                        return 'Not mentioned'
+                    
+                    try:
+                        # Convert to string and clean up
+                        duration_clean = str(duration_str).strip()
+                        
+                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
+                        date_patterns = [
+                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
+                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
+                        ]
+                        
+                        dates_found = []
+                        for pattern in date_patterns:
+                            matches = re.findall(pattern, duration_clean)
+                            for match in matches:
+                                if len(match) == 3:
+                                    if len(match[0]) == 4:  # YYYY-MM-DD format
+                                        year, month, day = match
+                                    else:  # DD-MM-YYYY format
+                                        day, month, year = match
+                                    try:
+                                        date_obj = datetime(int(year), int(month), int(day))
+                                        dates_found.append(date_obj)
+                                    except ValueError:
+                                        continue
+                        
+                        # If we found at least 2 dates, calculate the difference in months
+                        if len(dates_found) >= 2:
+                            # Sort dates to ensure first date is earlier
+                            dates_found.sort()
+                            start_date = dates_found[0]
+                            end_date = dates_found[1]
+                            
+                            # Calculate difference in months
+                            months_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+                            
+                            if months_diff > 0:
+                                return f"{months_diff} months"
+                            else:
+                                return "Less than 1 month"
+                        else:
+                            return duration_clean
+                            
+                    except Exception as e:
+                        logging.warning(f"Error processing amstelveenhuurtin duration '{duration_str}': {e}")
+                        return duration_clean
+                
+                result['Duration'] = result['Duration'].apply(process_duration_amstelveenhuurtin)
+                logging.info(f"Amstelveenhuurtin post-mapping: Processed Duration field to calculate months between dates from Title5")
+            
+            # Process start field - extract the first date from Title5
+            if 'start' in result.columns:
+                def process_start_amstelveenhuurtin(start_str):
+                    if pd.isna(start_str) or start_str == '':
+                        return 'ASAP'
+                    
+                    try:
+                        # Convert to string and clean up
+                        start_clean = str(start_str).strip()
+                        
+                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
+                        date_patterns = [
+                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
+                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
+                        ]
+                        
+                        dates_found = []
+                        for pattern in date_patterns:
+                            matches = re.findall(pattern, start_clean)
+                            for match in matches:
+                                if len(match) == 3:
+                                    if len(match[0]) == 4:  # YYYY-MM-DD format
+                                        year, month, day = match
+                                    else:  # DD-MM-YYYY format
+                                        day, month, year = match
+                                    try:
+                                        date_obj = datetime(int(year), int(month), int(day))
+                                        dates_found.append(date_obj)
+                                    except ValueError:
+                                        continue
+                        
+                        # Return the first date found, or ASAP if no dates
+                        if dates_found:
+                            # Sort dates and return the earliest one
+                            dates_found.sort()
+                            first_date = dates_found[0]
+                            return first_date.strftime('%Y-%m-%d')
+                        else:
+                            return 'ASAP'
+                            
+                    except Exception as e:
+                        logging.warning(f"Error processing amstelveenhuurtin start date '{start_str}': {e}")
+                        return 'ASAP'
+                
+                result['start'] = result['start'].apply(process_start_amstelveenhuurtin)
+                logging.info(f"Amstelveenhuurtin post-mapping: Processed start field to extract first date from Title5")
+        
+        # NOORD-HOLLAND POST-MAPPING PROCESSING
+        if company_name == 'Noord-Holland':
+            # Process Duration field - calculate months between the first and second date from Title5
+            if 'Duration' in result.columns:
+                def process_duration_noordholland(duration_str):
+                    if pd.isna(duration_str) or duration_str == '':
+                        return 'Not mentioned'
+                    
+                    try:
+                        # Convert to string and clean up
+                        duration_clean = str(duration_str).strip()
+                        
+                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
+                        date_patterns = [
+                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
+                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
+                        ]
+                        
+                        dates_found = []
+                        for pattern in date_patterns:
+                            matches = re.findall(pattern, duration_clean)
+                            for match in matches:
+                                if len(match) == 3:
+                                    if len(match[0]) == 4:  # YYYY-MM-DD format
+                                        year, month, day = match
+                                    else:  # DD-MM-YYYY format
+                                        day, month, year = match
+                                    try:
+                                        date_obj = datetime(int(year), int(month), int(day))
+                                        dates_found.append(date_obj)
+                                    except ValueError:
+                                        continue
+                        
+                        # If we found at least 2 dates, calculate the difference in months
+                        if len(dates_found) >= 2:
+                            # Sort dates to ensure first date is earlier
+                            dates_found.sort()
+                            start_date = dates_found[0]
+                            end_date = dates_found[1]
+                            
+                            # Calculate difference in months
+                            months_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+                            
+                            if months_diff > 0:
+                                return f"{months_diff} months"
+                            else:
+                                return "Less than 1 month"
+                        else:
+                            return duration_clean
+                            
+                    except Exception as e:
+                        logging.warning(f"Error processing Noord-Holland duration '{duration_str}': {e}")
+                        return duration_clean
+                
+                result['Duration'] = result['Duration'].apply(process_duration_noordholland)
+                logging.info(f"Noord-Holland post-mapping: Processed Duration field to calculate months between dates from Title5")
+            
+            # Process start field - extract the first date from Title5
+            if 'start' in result.columns:
+                def process_start_noordholland(start_str):
+                    if pd.isna(start_str) or start_str == '':
+                        return 'ASAP'
+                    
+                    try:
+                        # Convert to string and clean up
+                        start_clean = str(start_str).strip()
+                        
+                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
+                        date_patterns = [
+                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
+                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
+                        ]
+                        
+                        dates_found = []
+                        for pattern in date_patterns:
+                            matches = re.findall(pattern, start_clean)
+                            for match in matches:
+                                if len(match) == 3:
+                                    if len(match[0]) == 4:  # YYYY-MM-DD format
+                                        year, month, day = match
+                                    else:  # DD-MM-YYYY format
+                                        day, month, year = match
+                                    try:
+                                        date_obj = datetime(int(year), int(month), int(day))
+                                        dates_found.append(date_obj)
+                                    except ValueError:
+                                        continue
+                        
+                        # Return the first date found, or ASAP if no dates
+                        if dates_found:
+                            # Sort dates and return the earliest one
+                            dates_found.sort()
+                            first_date = dates_found[0]
+                            return first_date.strftime('%Y-%m-%d')
+                        else:
+                            return 'ASAP'
+                            
+                    except Exception as e:
+                        logging.warning(f"Error processing Noord-Holland start date '{start_str}': {e}")
+                        return 'ASAP'
+                
+                result['start'] = result['start'].apply(process_start_noordholland)
+                logging.info(f"Noord-Holland post-mapping: Processed start field to extract first date from Title5")
+        
+        # HAARLEMMERMEERHUURTIN POST-MAPPING PROCESSING
+        if company_name == 'Haarlemmermeerhuurtin':
+            # Process Duration field - calculate months between the first and second date from Title5
+            if 'Duration' in result.columns:
+                def process_duration_haarlemmermeerhuurtin(duration_str):
+                    if pd.isna(duration_str) or duration_str == '':
+                        return 'Not mentioned'
+                    
+                    try:
+                        # Convert to string and clean up
+                        duration_clean = str(duration_str).strip()
+                        
+                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
+                        date_patterns = [
+                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
+                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
+                        ]
+                        
+                        dates_found = []
+                        for pattern in date_patterns:
+                            matches = re.findall(pattern, duration_clean)
+                            for match in matches:
+                                if len(match) == 3:
+                                    if len(match[0]) == 4:  # YYYY-MM-DD format
+                                        year, month, day = match
+                                    else:  # DD-MM-YYYY format
+                                        day, month, year = match
+                                    try:
+                                        date_obj = datetime(int(year), int(month), int(day))
+                                        dates_found.append(date_obj)
+                                    except ValueError:
+                                        continue
+                        
+                        # If we found at least 2 dates, calculate the difference in months
+                        if len(dates_found) >= 2:
+                            # Sort dates to ensure first date is earlier
+                            dates_found.sort()
+                            start_date = dates_found[0]
+                            end_date = dates_found[1]
+                            
+                            # Calculate difference in months
+                            months_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+                            
+                            if months_diff > 0:
+                                return f"{months_diff} months"
+                            else:
+                                return "Less than 1 month"
+                        else:
+                            return duration_clean
+                            
+                    except Exception as e:
+                        logging.warning(f"Error processing Haarlemmermeerhuurtin duration '{duration_str}': {e}")
+                        return duration_clean
+                
+                result['Duration'] = result['Duration'].apply(process_duration_haarlemmermeerhuurtin)
+                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed Duration field to calculate months between dates from Title5")
+            
+            # Process start field - extract the first date from Title5
+            if 'start' in result.columns:
+                def process_start_haarlemmermeerhuurtin(start_str):
+                    if pd.isna(start_str) or start_str == '':
+                        return 'ASAP'
+                    
+                    try:
+                        # Convert to string and clean up
+                        start_clean = str(start_str).strip()
+                        
+                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
+                        date_patterns = [
+                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
+                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
+                        ]
+                        
+                        dates_found = []
+                        for pattern in date_patterns:
+                            matches = re.findall(pattern, start_clean)
+                            for match in matches:
+                                if len(match) == 3:
+                                    if len(match[0]) == 4:  # YYYY-MM-DD format
+                                        year, month, day = match
+                                    else:  # DD-MM-YYYY format
+                                        day, month, year = match
+                                    try:
+                                        date_obj = datetime(int(year), int(month), int(day))
+                                        dates_found.append(date_obj)
+                                    except ValueError:
+                                        continue
+                        
+                        # Return the first date found, or ASAP if no dates
+                        if dates_found:
+                            # Sort dates and return the earliest one
+                            dates_found.sort()
+                            first_date = dates_found[0]
+                            return first_date.strftime('%Y-%m-%d')
+                        else:
+                            return 'ASAP'
+                            
+                    except Exception as e:
+                        logging.warning(f"Error processing Haarlemmermeerhuurtin start date '{start_str}': {e}")
+                        return 'ASAP'
+                
+                result['start'] = result['start'].apply(process_start_haarlemmermeerhuurtin)
+                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed start field to extract first date from Title5")
         
         # Remove validation and cleaning logic - just return the processed data
         logging.info(f"Successfully processed data for {company_name}")
