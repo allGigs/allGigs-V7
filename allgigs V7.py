@@ -247,12 +247,12 @@ COMPANY_MAPPINGS = {
     'zzp opdrachten': {
         'Title': 'Title',
         'Location': 'jobdetails6',
-        'Summary': 'See Vacancy',
-        'URL': 'https://www.zzp-opdrachten.nl/alle',
+        'Summary': '_Text',
+        'URL': '_Link',
         'start': 'ASAP',
         'rate': 'jobdetails',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
+        'Hours': 'jobdetails4',
+        'Duration': 'jobdetails4',
         'Company': 'Title2',
         'Source': 'zzp opdrachten'
     },
@@ -315,6 +315,30 @@ COMPANY_MAPPINGS = {
         'Duration': 'Not mentioned',
         'Company': 'Company_name',  # Will be processed to remove everything before "• "
         'Source': 'werkzoeken.nl'
+    },
+    'UMC': {
+        'Title': 'Text',
+        'Location': 'Text2',
+        'Summary': 'See Vacancy',
+        'URL': 'Field2_links',
+        'start': 'ASAP',
+        'rate': 'Not mentioned',
+        'Hours': 'Text3',  # Will be processed to remove "p.w."
+        'Duration': 'Not mentioned',
+        'Company': 'Text1',
+        'Source': 'UMC'
+    },
+    'FlexValue_B.V.': {
+        'Title': 'Title',
+        'Location': 'scjnlklf',
+        'Summary': 'See Vacancy',
+        'URL': 'Title_URL',
+        'start': 'Date1',
+        'rate': 'Not mentioned',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'FlexValue_B.V.',
+        'Source': 'FlexValue_B.V.'
     },
     'Centric': {
         'Title': 'Field1',
@@ -689,14 +713,30 @@ def freelance_directory(files_read, company_name):
         # NEW SAFEGUARD: If data matches the mapping key string, blank it, unless it's an intentional literal.
         for std_col, src_col_mapping_value in mapping.items():
             if std_col in result.columns and isinstance(src_col_mapping_value, str) and not result[std_col].empty:
-                # Determine if src_col_mapping_value is an intentional literal that should be preserved
-                is_intentional_literal = (
-                    src_col_mapping_value in {'ASAP', 'Not mentioned', 'See Vacancy', '36', 'Title3', 'Text2', 'Field2', 'Hybrid', 'Text5', 'Title', 'Amsterdam', 'Title1', 'Location', 'About_the_job', 'Title5', 'Field8', 'Field3', 'Field5', 'searchresultorganisation'} or \
+                # Determine if src_col_mapping_value should be preserved (not blanked out)
+                # Check if it's a column name in the original CSV
+                is_column_name = src_col_mapping_value in files_read.columns
+                
+                # Also check for common column names that should be preserved
+                common_column_names = {'Text2', 'Location', 'searchresultorganisation'}
+                is_common_column = src_col_mapping_value in common_column_names
+                
+                # Check if it's a common literal value
+                is_literal_value = src_col_mapping_value in {'ASAP', 'Not mentioned', 'See Vacancy', '36', 'Hybrid', 'Remote', 'Hilversum', 'Gelderland', 'Amsterdam', 'not mentioned'}
+                
+                # Check if it's a special case
+                is_special_case = (
                     (std_col == 'URL' and (src_col_mapping_value.startswith('http://') or src_col_mapping_value.startswith('https://'))) or \
                     std_col == 'Company' or \
                     std_col == 'Source' or \
-                    std_col == 'Hours'  # Hours field values are always intentional literals (like '36')
+                    std_col == 'Hours'  # Hours field values are always intentional literals
                 )
+                
+                # Don't blank out if it's a column name, literal value, or special case
+                is_intentional_literal = is_column_name or is_common_column or is_literal_value or is_special_case
+                # Special case: For freelancer.com, treat 'Price' as intentional literal
+                if company_name == 'freelancer.com' and src_col_mapping_value == 'Price':
+                    is_intentional_literal = True
                 
                 # If the current column IS 'URL', we give it special treatment: 
                 # it should NOT be blanked if its mapping value is a placeholder like 'Title_URL' or 'URL_Column_Name'
@@ -1158,6 +1198,166 @@ def freelance_directory(files_read, company_name):
                     logging.info(f"werkzoeken.nl post-mapping: Removed {removed_rows} rows containing 'p/m' in rate field (permanent employment jobs)")
                 else:
                     logging.info(f"werkzoeken.nl post-mapping: No rows contained 'p/m' in rate field")
+        
+        # UMC POST-MAPPING PROCESSING
+        if company_name == 'UMC':
+            # Process Hours field - remove "p.w." (per week)
+            if 'Hours' in result.columns:
+                def process_hours_umc(hours_str):
+                    if pd.isna(hours_str) or hours_str == '':
+                        return 'Not mentioned'
+                    
+                    hours_clean = str(hours_str)
+                    
+                    # Remove "p.w." (per week) - case insensitive
+                    hours_clean = hours_clean.replace('p.w.', '').replace('P.W.', '').replace('P.w.', '').replace('p.W.', '')
+                    
+                    # Clean up extra spaces
+                    hours_clean = hours_clean.strip()
+                    
+                    return hours_clean if hours_clean else 'Not mentioned'
+                
+                result['Hours'] = result['Hours'].apply(process_hours_umc)
+                logging.info(f"UMC post-mapping: Processed Hours field to remove 'p.w.' (per week)")
+        
+        # YACHT POST-MAPPING PROCESSING
+        if company_name == 'Yacht':
+            # Process Duration field - remove "Voor" prefix
+            if 'Duration' in result.columns:
+                def process_duration_yacht(duration_str):
+                    if pd.isna(duration_str) or duration_str == '':
+                        return 'Not mentioned'
+                    # Remove "Voor" (case insensitive) and clean up
+                    duration_clean = str(duration_str).replace('Voor', '').replace('voor', '').strip()
+                    # Remove extra spaces and return
+                    duration_clean = ' '.join(duration_clean.split())
+                    return duration_clean if duration_clean else 'Not mentioned'
+                
+                result['Duration'] = result['Duration'].apply(process_duration_yacht)
+                logging.info(f"Yacht post-mapping: Processed Duration field to remove 'Voor' prefix")
+        
+        # ZZP OPDRACHTEN POST-MAPPING PROCESSING
+        if company_name == 'zzp opdrachten':
+            # Process rate field - remove "Max." prefix
+            if 'rate' in result.columns:
+                def process_rate_zzp(rate_str):
+                    if pd.isna(rate_str) or rate_str == '':
+                        return 'Not mentioned'
+                    # Remove "Max." (case insensitive) and clean up
+                    rate_clean = str(rate_str).replace('Max.', '').replace('max.', '').strip()
+                    # Remove extra spaces and return
+                    rate_clean = ' '.join(rate_clean.split())
+                    return rate_clean if rate_clean else 'Not mentioned'
+                
+                result['rate'] = result['rate'].apply(process_rate_zzp)
+                logging.info(f"zzp opdrachten post-mapping: Processed rate field to remove 'Max.' prefix")
+            
+            # Process Hours and Duration fields - split jobdetails4 by comma
+            if 'Hours' in result.columns and 'Duration' in result.columns:
+                def process_hours_duration_zzp(index):
+                    # Get the original jobdetails4 value from the input DataFrame
+                    jobdetails4_val = files_read.iloc[index]['jobdetails4'] if 'jobdetails4' in files_read.columns else None
+                    
+                    if pd.isna(jobdetails4_val) or jobdetails4_val == '':
+                        return 'Not mentioned', 'Not mentioned'
+                    
+                    jobdetails4_str = str(jobdetails4_val).strip()
+                    
+                    # Split by comma
+                    if ',' in jobdetails4_str:
+                        parts = jobdetails4_str.split(',', 1)  # Split only on first comma
+                        hours_part = parts[0].strip()
+                        duration_part = parts[1].strip() if len(parts) > 1 else ''
+                        
+                        return hours_part if hours_part else 'Not mentioned', duration_part if duration_part else 'Not mentioned'
+                    else:
+                        # If no comma, use the whole value for hours
+                        return jobdetails4_str if jobdetails4_str else 'Not mentioned', 'Not mentioned'
+                
+                # Apply the processing to each row
+                processed_data = [process_hours_duration_zzp(i) for i in range(len(result))]
+                hours_values = [item[0] for item in processed_data]
+                duration_values = [item[1] for item in processed_data]
+                
+                result['Hours'] = hours_values
+                result['Duration'] = duration_values
+                logging.info(f"zzp opdrachten post-mapping: Processed Hours and Duration fields from jobdetails4 (split by comma)")
+            
+            # Process Summary field - remove white lines with no text
+            if 'Summary' in result.columns:
+                def process_summary_zzp(summary_str):
+                    if pd.isna(summary_str) or summary_str == '':
+                        return 'See Vacancy'
+                    
+                    # Convert to string and split by lines
+                    summary_clean = str(summary_str)
+                    
+                    # Split by various line break types and filter out empty/whitespace-only lines
+                    lines = summary_clean.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+                    filtered_lines = [line.strip() for line in lines if line.strip()]
+                    
+                    # Join the non-empty lines back together
+                    summary_clean = ' '.join(filtered_lines)
+                    
+                    return summary_clean if summary_clean else 'See Vacancy'
+                
+                result['Summary'] = result['Summary'].apply(process_summary_zzp)
+                logging.info(f"zzp opdrachten post-mapping: Processed Summary field to remove white lines with no text")
+        
+        # CENTRIC POST-MAPPING PROCESSING
+        if company_name == 'Centric':
+            # Process Title field - remove words starting with "OP-" and words in brackets
+            if 'Title' in result.columns:
+                def process_title_centric(title_str):
+                    if pd.isna(title_str) or title_str == '':
+                        return 'Not mentioned'
+                    
+                    import re
+                    title_clean = str(title_str)
+                    
+                    # Remove words starting with "OP-"
+                    title_clean = re.sub(r'\bOP-\w+\b', '', title_clean)
+                    
+                    # Remove words in brackets (including the brackets)
+                    title_clean = re.sub(r'\([^)]*\)', '', title_clean)
+                    
+                    # Clean up extra spaces and return
+                    title_clean = ' '.join(title_clean.split())
+                    return title_clean if title_clean else 'Not mentioned'
+                
+                result['Title'] = result['Title'].apply(process_title_centric)
+                logging.info(f"Centric post-mapping: Processed Title field to remove words starting with 'OP-' and words in brackets")
+        
+        # SALTA GROUP POST-MAPPING PROCESSING
+        if company_name == 'Salta Group':
+            # Process Title field - remove the first word "Freelance"
+            if 'Title' in result.columns:
+                def process_title_salta(title_str):
+                    if pd.isna(title_str) or title_str == '':
+                        return 'Not mentioned'
+                    
+                    title_clean = str(title_str).strip()
+                    
+                    # Remove only the first occurrence of "Freelance" (case insensitive)
+                    words = title_clean.split()
+                    if words and words[0].lower() == 'freelance':
+                        title_clean = ' '.join(words[1:])
+                    else:
+                        # If "Freelance" is not the first word, look for it anywhere and remove only the first occurrence
+                        title_lower = title_clean.lower()
+                        freelance_index = title_lower.find('freelance')
+                        if freelance_index != -1:
+                            # Remove only the first occurrence of "Freelance"
+                            before_freelance = title_clean[:freelance_index].strip()
+                            after_freelance = title_clean[freelance_index + 9:].strip()  # 9 is length of "freelance"
+                            title_clean = f"{before_freelance} {after_freelance}".strip()
+                    
+                    # Clean up extra spaces and return
+                    title_clean = ' '.join(title_clean.split())
+                    return title_clean if title_clean else 'Not mentioned'
+                
+                result['Title'] = result['Title'].apply(process_title_salta)
+                logging.info(f"Salta Group post-mapping: Processed Title field to remove the first word 'Freelance'")
         
         # Remove validation and cleaning logic - just return the processed data
         logging.info(f"Successfully processed data for {company_name}")
