@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 from datetime import datetime
-import uuid
 import hashlib
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -27,7 +26,7 @@ _logging.getLogger("requests").setLevel(_logging.WARNING)
 _logging.getLogger("supabase_py").setLevel(_logging.WARNING)
 
 # Load environment variables
-load_dotenv()
+load_dotenv('dotenv')
 
 # Supabase configuration
 SUPABASE_URL = "https://lfwgzoltxrfutexrjahr.supabase.co"
@@ -42,13 +41,193 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 BATCH_SIZE = 500  # Number of records to upload in each batch
 NEW_TABLE = "Allgigs_All_vacancies_NEW"
 HISTORICAL_TABLE = "Allgigs_All_vacancies"
-OUTPUT_FILE = "/Users/jaapjanlammers/Library/CloudStorage/GoogleDrive-jj@nineways.nl/My Drive/allGigs_log/allgigs.csv"
 
 # Directory structure
 BASE_DIR = Path('/Users/jaapjanlammers/Desktop/Freelancedirectory')
 FREELANCE_DIR = BASE_DIR / 'Freelance Directory'
 IMPORTANT_DIR = BASE_DIR / 'Important_allGigs'
-# AUTOMATION_DETAILS_PATH = IMPORTANT_DIR / 'automation_details.csv' # Commented out as it's fetched from Supabase
+
+# ==================================================
+# REGIONAL CATEGORIZATION SYSTEM
+# ==================================================
+# Uses "Dutch by default" approach - assume Dutch unless clear evidence otherwise
+
+def categorize_location(location: str, rate: str = None, company: str = None, source: str = None, title: str = None, summary: str = None) -> dict:
+    """
+    Categorize a location into Dutch, EU, and Rest of World categories.
+    Logic: Assume Dutch by default unless we find clear evidence of non-Dutch origin.
+    
+    Args:
+        location (str): The location string to categorize
+        rate (str, optional): The rate/salary string to check for currency indicators
+        
+    Returns:
+        Dict[str, bool]: Dictionary with 'Dutch', 'EU', 'Rest_of_World' as keys
+    """
+    if pd.isna(location) or location == '':
+        location_clean = ''
+    else:
+        location_clean = str(location).lower().strip()
+    
+    # 1. First check for clear EU countries and cities (highest priority)
+    eu_countries_excluding_nl = [
+        'germany', 'france', 'italy', 'spain', 'poland', 'belgium', 'austria',
+        'sweden', 'denmark', 'finland', 'portugal', 'greece', 'czech republic',
+        'czechia', 'hungary', 'romania', 'bulgaria', 'croatia', 'slovakia',
+        'slovenia', 'lithuania', 'latvia', 'estonia', 'ireland', 'luxembourg',
+        'malta', 'cyprus'
+    ]
+    
+    # Major EU cities (when country is not specified)
+    major_eu_cities = [
+        'berlin', 'munich', 'hamburg', 'cologne', 'frankfurt',  # Germany
+        'paris', 'marseille', 'lyon', 'toulouse', 'nice',       # France
+        'rome', 'milan', 'naples', 'turin', 'florence',         # Italy
+        'madrid', 'barcelona', 'valencia', 'seville',           # Spain
+        'warsaw', 'krakow', 'gdansk', 'wroclaw',                # Poland
+        'brussels', 'antwerp', 'ghent', 'bruges',               # Belgium
+        'vienna', 'salzburg', 'innsbruck',                      # Austria
+        'stockholm', 'gothenburg', 'malmö',                     # Sweden
+        'copenhagen', 'aarhus', 'odense', 'københavn',          # Denmark
+        'helsinki', 'espoo', 'tampere',                         # Finland
+        'lisbon', 'porto', 'braga',                             # Portugal
+        'athens', 'thessaloniki', 'patras',                     # Greece
+        'prague', 'brno', 'ostrava',                            # Czech Republic
+        'budapest', 'debrecen', 'szeged',                       # Hungary
+        'bucharest', 'cluj-napoca', 'timișoara',                # Romania
+        'sofia', 'plovdiv', 'varna',                            # Bulgaria
+        'zagreb', 'split', 'rijeka',                            # Croatia
+        'bratislava', 'košice',                                  # Slovakia
+        'ljubljana', 'maribor',                                  # Slovenia
+        'vilnius', 'kaunas', 'klaipėda',                        # Lithuania
+        'riga', 'daugavpils', 'liepāja',                        # Latvia
+        'tallinn', 'tartu', 'narva',                            # Estonia
+        'dublin', 'cork', 'limerick',                           # Ireland
+        'luxembourg', 'esch-sur-alzette',                       # Luxembourg
+        'valletta', 'birkirkara',                               # Malta
+        'nicosia', 'limassol', 'larnaca'                        # Cyprus
+    ]
+    
+    if location_clean:
+        for country in eu_countries_excluding_nl:
+            if country in location_clean:
+                return {'Dutch': False, 'EU': True, 'Rest_of_World': False}
+        
+        for city in major_eu_cities:
+            if city in location_clean:
+                return {'Dutch': False, 'EU': True, 'Rest_of_World': False}
+    
+    # 2. Check for "European Union" specifically mentioned
+    if location_clean and 'european union' in location_clean:
+        return {'Dutch': False, 'EU': True, 'Rest_of_World': False}
+    
+    # 3. Check for clear non-EU countries in location
+    rest_of_world_countries = [
+        'united states', 'usa', 'america', 'canada', 'australia', 'new zealand', 
+        'india', 'china', 'japan', 'singapore', 'hong kong', 'south korea',
+        'brazil', 'mexico', 'argentina', 'chile', 'south africa', 'israel',
+        'turkey', 'russia', 'ukraine', 'belarus', 'switzerland', 'norway',
+        'united kingdom', 'uk', 'britain', 'england', 'scotland', 'wales'
+    ]
+    
+    if location_clean:
+        for country in rest_of_world_countries:
+            if country in location_clean:
+                return {'Dutch': False, 'EU': False, 'Rest_of_World': True}
+    
+    # 4. Check for USD currency (only after location checks)
+    if rate and not pd.isna(rate):
+        rate_str = str(rate).lower().strip()
+        usd_indicators = ['$', 'usd', 'dollar', '$/hr', '$/hour', '$/day', '$/month']
+        if any(indicator in rate_str for indicator in usd_indicators):
+            return {'Dutch': False, 'EU': False, 'Rest_of_World': True}
+    
+    # 5. If we reach here, assume Dutch by default
+    # This covers all Dutch locations, Dutch remote jobs, and ambiguous cases
+    return {'Dutch': True, 'EU': True, 'Rest_of_World': False}
+
+def add_regional_columns(df: pd.DataFrame, location_column: str = 'Location') -> pd.DataFrame:
+    """
+    Add regional categorization columns to a DataFrame.
+    Uses "Dutch by default" approach with context-based categorization.
+    
+    Args:
+        df (pd.DataFrame): The DataFrame to add columns to
+        location_column (str): The name of the location column to analyze
+        
+    Returns:
+        pd.DataFrame: DataFrame with new regional columns added
+    """
+    if location_column not in df.columns:
+        logging.warning(f"Column '{location_column}' not found in DataFrame")
+        return df
+    
+    # Create a copy to avoid modifying the original
+    df_copy = df.copy()
+    
+    # Apply categorization to each row with all available context
+    def categorize_row(row):
+        return categorize_location(
+            location=row.get(location_column),
+            rate=row.get('rate'),
+            company=row.get('Company'),
+            source=row.get('Source'),
+            title=row.get('Title'),
+            summary=row.get('Summary')
+        )
+    
+    categorizations = df_copy.apply(categorize_row, axis=1)
+    
+    # Extract the boolean values into separate columns
+    df_copy['Dutch'] = categorizations.apply(lambda x: x['Dutch'])
+    df_copy['EU'] = categorizations.apply(lambda x: x['EU'])
+    df_copy['Rest_of_World'] = categorizations.apply(lambda x: x['Rest_of_World'])
+    
+    return df_copy
+
+def analyze_regional_distribution(df: pd.DataFrame) -> dict:
+    """
+    Analyze the distribution of jobs across regions.
+    
+    Args:
+        df (pd.DataFrame): DataFrame with regional columns
+        
+    Returns:
+        Dict[str, int]: Dictionary with counts for each region
+    """
+    if not all(col in df.columns for col in ['Dutch', 'EU', 'Rest_of_World']):
+        logging.warning("Regional columns not found. Run add_regional_columns first.")
+        return {}
+    
+    distribution = {
+        'Dutch': df['Dutch'].sum(),
+        'EU': df['EU'].sum(),
+        'Rest_of_World': df['Rest_of_World'].sum(),
+        'Total': len(df)
+    }
+    
+    return distribution
+
+def print_regional_summary(df: pd.DataFrame) -> None:
+    """
+    Print a summary of regional job distribution.
+    
+    Args:
+        df (pd.DataFrame): DataFrame with regional columns
+    """
+    distribution = analyze_regional_distribution(df)
+    
+    if not distribution:
+        return
+    
+    logging.info("=" * 50)
+    logging.info("REGIONAL JOB DISTRIBUTION")
+    logging.info("=" * 50)
+    logging.info(f"Dutch jobs: {distribution['Dutch']} ({distribution['Dutch']/distribution['Total']*100:.1f}%)")
+    logging.info(f"EU jobs: {distribution['EU']} ({distribution['EU']/distribution['Total']*100:.1f}%)")
+    logging.info(f"Rest of World jobs: {distribution['Rest_of_World']} ({distribution['Rest_of_World']/distribution['Total']*100:.1f}%)")
+    logging.info(f"Total jobs: {distribution['Total']}")
+    logging.info("=" * 50)
 
 # Company mappings dictionary
 COMPANY_MAPPINGS = {
@@ -112,7 +291,7 @@ COMPANY_MAPPINGS = {
         'Company': 'KVK',
         'Source': 'KVK'
     },
-    'Cirle8': {
+    'Circle8': {
         'Title': 'Title',
         'Location': 'cvacancygridcard_usp',
         'Summary': 'See Vacancy',
@@ -123,6 +302,18 @@ COMPANY_MAPPINGS = {
         'Duration': 'Not mentioned',
         'Company': 'Circle8',
         'Source': 'Circle8'
+    },
+    'Bebee': {
+        'Title': 'Title',
+        'Location': 'Info1',
+        'Summary': 'mt2',
+        'URL': 'Title_URL',
+        'start': 'ASAP',
+        'rate': 'Not mentioned',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Info',
+        'Source': 'Bebee'
     },
     'LinkedIn': {
         'Title': 'Title',
@@ -495,7 +686,7 @@ COMPANY_MAPPINGS = {
         'start': 'ASAP',
         'Source': 'HintTech'
     },
-    'Haarlemmermeerhuurtin': {
+    'haarlemmermeerhuurtin': {
         'Title': 'Title',
         'rate': 'Title3',
         'Duration': 'Title5',
@@ -543,7 +734,7 @@ COMPANY_MAPPINGS = {
         'Company': 'Behance',
         'Source': 'Behance'
     },
-    'Cirle8': {
+    'Circle8': {
         'Title': 'Title',
         'Location': 'Not mentioned',
         'Summary': 'See Vacancy',
@@ -2096,6 +2287,11 @@ def prepare_data_for_upload(df, historical_data=None):
         logging.info(f"Removing {duplicates_count} duplicates from new data based on UNIQUE_ID")
         df = df.drop_duplicates(subset=['UNIQUE_ID'], keep='first')
     
+    # Add regional categorization columns
+    logging.info("Adding regional categorization columns...")
+    df = add_regional_columns(df, location_column='Location')
+    logging.info("Regional categorization completed.")
+    
     return df
 
 def merge_with_historical_data(new_data, historical_data):
@@ -2403,6 +2599,9 @@ def main():
         
         # Prepare data with dates and IDs
         result = prepare_data_for_upload(result, historical_data)
+        
+        # Print regional distribution summary
+        print_regional_summary(result)
         
         # Save to local CSV file
         current_date_str = timestamp()
