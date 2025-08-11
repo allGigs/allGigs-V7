@@ -891,6 +891,18 @@ COMPANY_MAPPINGS = {
         'Company': 'Interim-Netwerk',
         'Source': 'Interim-Netwerk'
     },
+    'InterimNetwerk': {
+        'Title': 'Title',
+        'Location': 'Location',
+        'Summary': 'Summary',
+        'URL': 'URL',
+        'start': 'ASAP',
+        'rate': 'Not mentioned',
+        'Hours': 'Not mentioned',
+        'Duration': 'Duration',
+        'Company': 'InterimNetwerk',
+        'Source': 'InterimNetwerk'
+    },
     'Friesland': {
         'Title': 'Title',
         'URL': 'Title_URL',
@@ -1238,6 +1250,7 @@ def generate_source_id(source, is_from_input=True):
             'asnbank': 'asnbank',
             'tennet': 'tennet',
             'interim-netwerk': 'interim_netwerk',
+            'interimnetwerk': 'interim_netwerk',
             'zuid holland': 'zuid_holland',
             'linkedininterim': 'linkedininterim',
             # 'zoekklus': 'zoekklus'
@@ -1432,7 +1445,7 @@ def freelance_directory(files_read, company_name):
                     logging.info(f"onlyhuman pre-mapping filter: 'px2' column checked for 'Actueel', no rows removed from {initial_count} rows.")
             else:
                 logging.warning(f"onlyhuman pre-mapping filter: 'px2' column not found in the input CSV for {company_name}. Skipping filter.")
-        elif company_name == 'Interim-Netwerk':
+        elif company_name == 'InterimNetwerk':
             # Special processing for Interim-Netwerk: extract data from Text column
             if 'Text' in files_read.columns and 'Field1_links' in files_read.columns:
                 # Take only the first row of Text column but keep all Field1_links
