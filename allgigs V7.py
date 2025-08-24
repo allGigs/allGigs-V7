@@ -238,7 +238,7 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'LinkIT',
         'Source': 'LinkIT'
@@ -246,11 +246,11 @@ COMPANY_MAPPINGS = {
     'freelance.nl': {
         'Title': 'Title',
         'Location': 'Location',
-        'Summary': 'See Vacancy',
+        'Summary': 'Field3',
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field2',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
         'Source': 'freelance.nl'
@@ -258,43 +258,43 @@ COMPANY_MAPPINGS = {
     'Yacht': {
         'Title': 'Field1',
         'Location': 'Field2',
-        'Summary': 'Text2',
-        'URL': 'https://yachtfreelance.talent-pool.com/projects?openOnly=true&page=1',
-        'start': 'Field3',
-        'rate': 'Text',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
+        'Summary': 'Text1',
+        'URL': 'URL',
+        'start': 'Not mentioned',
+        'rate': 'Field4',
+        'Hours': 'Field3',
+        'Duration': 'Text',
+        'Company': 'Not mentioned',  # Probably mentioned in summary
         'Source': 'Yacht'
     },
     'Flextender': {
         'Title': 'Field2',
-        'Location': 'Field1',
+        'Location': 'Field3',
         'Summary': 'See Vacancy',
         'URL': 'URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
+        'Hours': 'Field5',
+        'Duration': 'Field4',
+        'Company': 'Field1',
         'Source': 'Flextender'
     },
     'KVK': {
         'Title': 'Title',
         'Location': 'Amsterdam',
         'Summary': 'See Vacancy',
-        'URL': 'https://www.kvkhuurtin.nl/opdrachten',
-        'start': 'Title1',
-        'rate': 'Title3',
+        'URL': 'Page_URL',
+        'start': 'Not mentioned',
+        'rate': 'Field3',
         'Hours': 'Not mentioned',
-        'Duration': 'Title1',
+        'Duration': 'Field2',
         'Company': 'KVK',
         'Source': 'KVK'
     },
     'Circle8': {
         'Title': 'Title',
         'Location': 'cvacancygridcard_usp',
-        'Summary': 'See Vacancy',
+        'Summary': 'Text',  # Will be processed to provide fallback if empty
         'URL': 'Title_URL',
         'start': 'Date',
         'rate': 'Not mentioned',
@@ -309,10 +309,10 @@ COMPANY_MAPPINGS = {
         'Summary': 'Text',
         'URL': 'Field2_links',
         'start': 'ASAP',
-        'rate': 'Not mentioned',
+        'rate': 'Info2',
         'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
-        'Company': 'Info',
+        'Company': 'Not mentioned',
         'Source': 'Bebee'
     },
     'LinkedIn': {
@@ -322,7 +322,7 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Company',
         'Source': 'LinkedIn'
@@ -334,10 +334,10 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Company',
-        'Source': 'LinkedIn'
+        'Source': 'LinkedInZZP'
     },
     'LinkedInInterim': {
         'Title': 'Title',
@@ -346,7 +346,7 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Company',
         'Source': 'LinkedIn'
@@ -354,11 +354,11 @@ COMPANY_MAPPINGS = {
     'politie': {
         'Title': 'Field1',
         'Location': 'Hilversum',
-        'Summary': 'Text',
+        'Summary': 'Field4',
         'URL': 'URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'politie',
         'Source': 'politie'
@@ -366,11 +366,11 @@ COMPANY_MAPPINGS = {
     'gelderland': {
         'Title': 'Title',
         'Location': 'Gelderland',
-        'Summary': 'See Vacancy',
-        'URL': 'https://www.werkeningelderland.nl/inhuur/',
+        'Summary': 'Text1',
+        'URL': 'URL',
         'start': 'vacancy_details1',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Text',
         'Duration': 'vacancy_details3',
         'Company': 'Not mentioned',
         'Source': 'gelderland'
@@ -378,35 +378,35 @@ COMPANY_MAPPINGS = {
     'werk.nl': {
         'Title': 'Title',
         'Location': 'Description1',
-        'Summary': 'See Vacancy',
-        'URL': 'https://www.werk.nl/werkzoekenden/vacatures/',
+        'Summary': 'Text',
+        'URL': 'Page_URL1',
         'start': 'ASAP',
-        'rate': 'Not mentioned',
+        'rate': 'Text',  # Will search for currency/number patterns in Text column
         'Hours': 'Title3',
         'Duration': 'Not mentioned',
-        'Company': 'Description_split',  # Will be split    
+        'Company': 'Description',  # Will be processed to remove everything after "-"
         'Source': 'werk.nl'
     },
     'indeed': {
         'Title': 'Title',
-        'Location': 'css1restlb',
-        'Summary': 'csso11dc0',
+        'Location': 'Field2',
+        'Summary': 'Field2',
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'css18z4q2i',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'css1h7lukg',
         'Source': 'indeed'
     },
     'Planet Interim': {
         'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'text',
+        'Location': 'Field1',
+        'Summary': 'Field4',
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Price',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
         'Source': 'Planet Interim'
@@ -418,7 +418,7 @@ COMPANY_MAPPINGS = {
         'URL': 'https://www.werkenbijns.nl/vacatures?keywords=Inhuur',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'NS',
         'Source': 'NS'
@@ -426,7 +426,7 @@ COMPANY_MAPPINGS = {
     'hoofdkraan': {
         'Title': 'Title',
         'Location': 'colmd4',
-        'Summary': 'Description',
+        'Summary': 'Text',
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'fontweightbold',
@@ -439,10 +439,10 @@ COMPANY_MAPPINGS = {
     # 'Zoekklus': {
     #     'Title': 'Field',
     #     'URL': 'Field3_links',
-    #     'Location': 'Not mentioned',
+    #     'Location': 'Field2',
     #     'Summary': 'Not mentioned',
     #     'rate': 'Not mentioned',
-    #     'Hours': 'Not mentioned',
+    #     'Hours': 'Field3',
     #     'Duration': 'Not mentioned',
     #     'Company': 'Not mentioned',
     #     'Source': 'Zoekklus'
@@ -450,8 +450,8 @@ COMPANY_MAPPINGS = {
     
     'Overheid': {
         'Title': 'Title',
-        'Location': 'Content3',
-        'Summary': 'Keywords',
+        'Location': 'Field1',
+        'Summary': 'Field2',
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Content',
@@ -487,13 +487,13 @@ COMPANY_MAPPINGS = {
     'Harvey Nash': {
         'Title': 'Title',
         'Location': 'Location',
-        'Summary': 'Not mentioned',
+        'Summary': 'Text',
         'URL': 'Title_URL',
-        'start': 'Field1',
-        'rate': 'Salary',
+        'start': 'Not mentioned',
+        'rate': 'Not mentioned',
         'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
-        'Company': 'Field2',
+        'Company': 'Not mentioned',
         'Source': 'Harvey Nash'
     },
     'Behance': {
@@ -503,19 +503,19 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Company',
         'Source': 'Behance'
     },
     'Schiphol': {
         'Title': 'Field2',
-        'Location': 'Hybrid',
-        'Summary': 'Text5',
+        'Location': 'Text2',
+        'Summary': 'Text6',
         'URL': 'Field1_links',
         'start': 'ASAP',
-        'rate': 'Text2',  # Will be processed to check Text2 and Text4
-        'Hours': '36',
+        'rate': 'Text4',  # Will be processed to check Text2 and Text4
+        'Hours': 'Text3',
         'Duration': 'Not mentioned',
         'Company': 'Schiphol',
         'Source': 'Schiphol'
@@ -527,21 +527,21 @@ COMPANY_MAPPINGS = {
         'URL': 'Time_links',
         'start': 'ASAP',
         'rate': 'not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'z6wlhx',
         'Source': 'Jooble'
     },
     'werkzoeken.nl': {
-        'Title': 'Title',
+        'Title': 'Title1',
         'Location': 'Company_name1',
-        'Summary': 'See Vacancy',
+        'Summary': 'Field3',
         'URL': 'Title_URL',
         'start': 'ASAP',
-        'rate': 'offer',  # Will be processed to remove entries with "p/m"
+        'rate': 'requestedwrapper5',  # Will be processed to remove entries with "p/m"
         'Hours': 'requestedwrapper',
         'Duration': 'Not mentioned',
-        'Company': 'Company_name',  # Will be processed to remove everything before "• "
+        'Company': 'Field1',
         'Source': 'werkzoeken.nl'
     },
     'UMC': {
@@ -559,11 +559,11 @@ COMPANY_MAPPINGS = {
     'FlexValue_B.V.': {
         'Title': 'Title',
         'Location': 'scjnlklf',
-        'Summary': 'See Vacancy',
+        'Summary': 'Text',  # Will be processed to remove everything before "opdrachtbeschrijving"
         'URL': 'Title_URL',
         'start': 'Date1',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'rate': 'Text',  # Will be processed to extract text between "Tarief" and "all-in"
+        'Hours': 'Text',  # Will be processed to extract number after "Uren per week"
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
         'Source': 'FlexValue_B.V.'
@@ -575,7 +575,7 @@ COMPANY_MAPPINGS = {
         'URL': 'URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Centric',
         'Source': 'Centric'
@@ -583,26 +583,26 @@ COMPANY_MAPPINGS = {
     'freelancer.com': {
         'Title': 'Like',
         'Location': 'Remote',
-        'Summary': 'Description',
+        'Summary': 'Field4',
         'URL': 'Like_URL',
         'start': 'ASAP',
         'rate': 'Price',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
         'Source': 'freelancer.com'
     },
-    'freelancer.nl': {
+    'Freelancer.nl': {
         'Title': 'Title',
         'Location': 'Location',
-        'Summary': 'cardtext',
-        'URL': 'cardlink_URL',
+        'Summary': 'Text',
+        'URL': 'btn_URL',
         'start': 'ASAP',
         'rate': 'budget',
         'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
-        'Source': 'freelancer.nl'
+        'Source': 'Freelancer.nl'
     },
     'Salta Group': {
         'Title': 'Keywords',
@@ -611,46 +611,46 @@ COMPANY_MAPPINGS = {
         'Summary': 'feature_spancontainsclass_text',
         'Company': 'Company',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'start': 'ASAP',
         'Source': 'Salta Group'
     },
     'ProLinker.com': {
-        'Title': 'Title',
-        'Location': 'section3',
-        'Summary': 'section',
-        'URL': 'Title_URL',
+        'Title': 'Field4_text',
+        'Location': 'Field11',
+        'Summary': 'Field4',
+        'URL': 'Field4_links',
         'start': 'ASAP',
-        'rate': 'Like',
-        'Hours': 'Not mentioned',
+        'rate': 'Field15',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
         'Source': 'ProLinker.com'
     },
     'Flex West-Brabant': {
-        'Title': 'Title',
-        'Location': 'org',
-        'Summary': 'See Vacancy',
-        'URL': 'Title_URL',
-        'start': 'Field3',
+        'Title': 'Field5',
+        'Location': 'Not mentioned',
+        'Summary': 'Text',
+        'URL': 'Field4',
+        'start': 'Not mentioned',
         'rate': 'Not mentioned',
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
+        'Company': 'org',
         'Source': 'Flex West-Brabant'
     },
     'Amstelveenhuurtin': {
-        'Title': 'Title',
-        'Location': 'searchresultorganisation',
+        'Title': 'Field1',
+        'Location': 'Text',  # Will be processed to extract text between "standplaats:" and "|"
         'Summary': 'See Vacancy',
-        'URL': 'https://www.amstelveenhuurtin.nl/opdrachten',
-        'start': 'Title5',
-        'rate': 'Title3',
-        'Hours': 'Not mentioned',
+        'URL': 'Page_URL',
+        'start': 'Field11',  # Will be processed to extract everything before "t/m"
+        'rate': 'Field8',
+        'Hours': 'Text',  # Will be processed to extract text between "Uren:" and "|"
         'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
-        'Source': 'Amstelveenhuurtin'
+        'Company': 'Field2',
+        'Source': 'huurtin'
     },
     'noordoostbrabant': {
         'Title': 'Field1',
@@ -659,7 +659,7 @@ COMPANY_MAPPINGS = {
         'URL': 'https://inhuurdesk.werkeninnoordoostbrabant.nl/opdrachten#',
         'start': 'Field11',
         'rate': 'Field8',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Field11',
         'Company': 'noordoostbrabant',
         'Source': 'noordoostbrabant'
@@ -677,24 +677,24 @@ COMPANY_MAPPINGS = {
     },
     'Noord-Holland': {
         'Title': 'Title',
-        'Location': 'Not mentioned',
+        'Location': 'Field2',
         'Summary': 'See Vacancy',
         'URL': 'https://inhuur.werkeninnoordhollandnoord.nl/opdrachten',
         'start': 'Title5',
         'rate': 'Title3',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Title5',
         'Company': 'searchresultorganisation',
         'Source': 'Noord-Holland'
     },
     'groningenhuurtin': {
         'Title': 'Title',
-        'Location': 'Not mentioned',
+        'Location': 'Field2',
         'Summary': 'See Vacancy',
         'URL': 'https://www.groningenhuurtin.nl/opdrachten',
         'start': 'Title5',
         'rate': 'Title3',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Title5',
         'Company': 'searchresultorganisation',
         'Source': 'groningenhuurtin'
@@ -728,16 +728,16 @@ COMPANY_MAPPINGS = {
         'rate': 'Title3',
         'Duration': 'Title5',
         'URL': 'https://www.haarlemmermeerhuurtin.nl/opdrachten',
-        'Location': 'Not mentioned',
+        'Location': 'Field2',
         'Summary': 'See Vacancy',
         'start': 'ASAP',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Company': 'Gemeente Haarlemmermeer',
         'Source': 'Haarlemmermeerhuurtin'
     },
     'Select': {
         'Title': 'Title',
-        'Location': 'Location', 
+        'Location': 'Field2', 
         'Summary': 'See Vacancy',
         'URL': 'Title_URL',
         'start': 'Date',
@@ -748,25 +748,25 @@ COMPANY_MAPPINGS = {
         'Source': 'Select'
     },
     'overheidzzp': {
-        'Title': 'Title',
-        'Location': 'Not mentioned',
-        'Summary': 'See Vacancy',
-        'URL': 'Title_URL',
+        'Title': 'Field7_text',
+        'Location': 'Field3',
+        'Summary': 'Field4',
+        'URL': 'Field1_links',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Company_name',
+        'Hours': 'Field4',
+        'Duration': 'Field5',
+        'Company': 'Field2',
         'Source': 'overheidzzp'
     },
     'POOQ': {
         'Title': 'Title',
         'Location': 'ml5',
-        'Summary': 'See Vacancy',
+        'Summary': 'Field1',
         'URL': 'Title_URL',
         'start': 'hidden',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'rate': 'Field2',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
         'Source': 'POOQ'
@@ -774,23 +774,23 @@ COMPANY_MAPPINGS = {
     'gemeente-projecten': {
         'Title': 'Field1',  # Will be processed to remove text in () and () themselves
         'Location': 'Field2',  # Will be processed to remove text in () and () themselves
-        'Summary': 'Field8',
+        'Summary': 'Text',
         'URL': 'URL',
         'start': 'ASAP',
-        'rate': 'Field4',  # Will be processed to extract duration if text mentions "Voor"
+        'rate': 'Field4',  # Will be processed to extract currency from Field4
         'Hours': 'Field3',
-        'Duration': 'Field7',  # Will also receive extracted duration from rate field if applicable
+        'Duration': 'Field4',
         'Company': 'Not mentioned',
         'Source': 'gemeente-projecten'
     },
     'ggdzwhuurtin.nl': {
         'Title': 'Text',
-        'Location': 'Not mentioned',
+        'Location': 'Field2',
         'Summary': 'See Vacancy',
         'URL': 'https://www.ggdzwhuurtin.nl/opdrachten#',
         'start': 'ASAP',
         'rate': 'Text4',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Text6',  # Will be processed to calculate date difference in months
         'Company': 'GGD Zaanstreek-Waterland',
         'Source': 'ggdzwhuurtin.nl'
@@ -798,7 +798,7 @@ COMPANY_MAPPINGS = {
     'freep': {
         'Title': 'Title',
         'Location': 'flex3',
-        'Summary': 'See Vacancy',
+        'Summary': 'Field4',
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'flex2',
@@ -814,7 +814,7 @@ COMPANY_MAPPINGS = {
         'URL': 'URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'vacancycard',
         'Source': 'onlyhuman'
@@ -831,46 +831,46 @@ COMPANY_MAPPINGS = {
         'Company': 'Company',
         'Source': 'StaffingMS'
     },
-    '4-Freelancers': {
+    '4-Freelancers.nl': {
         'Title': 'Functietitel',
         'URL': 'Functietitel_URL',
         'Location': 'Plaats',
-        'Summary': 'Not mentioned',
+        'Summary': 'Text6',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
+        'Hours': 'Field3',
+        'Duration': 'Text2',
         'Company': 'Not mentioned',
-        'Source': '4-Freelancers',
+        'Source': '4-Freelancers.nl',
         'start': 'ASAP'
     },
     'flexSpot.io': {
         'Title': 'Title',
         'Location': 'reset',
-        'Summary': 'See Vacancy',
+        'Summary': 'Field4',
         'URL': 'button_URL',
         'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
+        'rate': 'Text1',
+        'Hours': 'Field3',
+        'Duration': 'Text3',
         'Company': 'Company',
         'Source': 'flexSpot.io'
     },
     'ASNBank': {
         'Title': 'Field2',
         'Location': 'Text',  # Will be processed to extract first part after splitting on space
-        'Summary': 'See Vacancy',
+        'Summary': 'Text1',
         'URL': 'Field1_links',
         'start': 'ASAP',
         'rate': 'Text',  # Will be processed to extract rate after "€"
         'Hours': 'Text',  # Will be processed to extract hours and remove "uur"
         'Duration': 'Not mentioned',
-        'Company': 'ASN Bank',
+        'Company': 'ASNBank',
         'Source': 'ASNBank'
     },
     'tennet': {
         'Title': 'widgetheader',
-        'Location': 'feature1',
-        'Summary': 'Title',
+        'Location': 'feature1',  # Will be processed to remove everything after "/"
+        'Summary': 'Field4',
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'feature2',
@@ -879,18 +879,6 @@ COMPANY_MAPPINGS = {
         'Company': 'TenneT',
         'Source': 'tennet'
     },
-    'Interim-Netwerk': {
-        'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'Summary',
-        'URL': 'URL',
-        'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Duration',
-        'Company': 'Interim-Netwerk',
-        'Source': 'Interim-Netwerk'
-    },
     'InterimNetwerk': {
         'Title': 'Title',
         'Location': 'Location',
@@ -898,7 +886,7 @@ COMPANY_MAPPINGS = {
         'URL': 'URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Duration',
         'Company': 'InterimNetwerk',
         'Source': 'InterimNetwerk'
@@ -906,13 +894,13 @@ COMPANY_MAPPINGS = {
     'Friesland': {
         'Title': 'Title',
         'URL': 'Title_URL',
-        'Location': 'caption',
-        'Summary': 'Not mentioned',
+        'Location': 'Field2',
+        'Summary': 'Field4',
         'start': 'Not mentioned',
         'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
+        'Hours': 'Field3',
         'Duration': 'Not mentioned',
-        'Company': 'Friesland',
+        'Company': 'caption',
         'Source': 'Friesland'
     },
     'Zuid-Holland': {
@@ -921,8 +909,8 @@ COMPANY_MAPPINGS = {
         'Company': 'Company',
         'Location': 'Location',
         'Hours': 'hfp_cardiconsblockitem',
-        'Summary': 'Not mentioned',
-        'start': 'Not mentioned',
+        'Summary': 'Field4',
+        'start': 'Date',
         'rate': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Source': 'Zuid-Holland'
@@ -1249,7 +1237,6 @@ def generate_source_id(source, is_from_input=True):
             'flexspot': 'flexspot',
             'asnbank': 'asnbank',
             'tennet': 'tennet',
-            'interim-netwerk': 'interim_netwerk',
             'interimnetwerk': 'interim_netwerk',
             'zuid holland': 'zuid_holland',
             'linkedininterim': 'linkedininterim',
@@ -1347,18 +1334,8 @@ def freelance_directory(files_read, company_name):
         
         # COMPANY-SPECIFIC PRE-MAPPING FILTERS
         if company_name == 'ProLinker.com':
-            if 'text' in files_read.columns:
-                initial_count = len(files_read)
-                # Filter for rows where 'text' column contains "Open" (case-insensitive)
-                files_read = files_read[files_read['text'].astype(str).str.contains("Open", case=False, na=False)]
-                filtered_count = len(files_read)
-                if initial_count > filtered_count:
-                    logging.info(f"Applied ProLinker.com pre-mapping filter on 'text' column for 'Open', rows changed from {initial_count} to {filtered_count}")
-                elif initial_count == filtered_count and initial_count > 0:
-                    logging.info(f"ProLinker.com pre-mapping filter: 'text' column checked for 'Open', no rows removed from {initial_count} rows.")
-                # If initial_count is 0, no need to log anything specific beyond the standard read log
-            else:
-                logging.warning(f"ProLinker.com pre-mapping filter: 'text' column not found in the input CSV for {company_name}. Skipping filter.")
+            # No pre-mapping filter - removed text column check for "Open"
+            pass
         elif company_name == 'werkzoeken.nl':
             if 'requestedwrapper2' in files_read.columns:
                 initial_count = len(files_read)
@@ -1397,30 +1374,44 @@ def freelance_directory(files_read, company_name):
                     logging.info(f"Behance pre-mapping filter: 'Text4' column checked for empty content, no rows removed from {initial_count} rows.")
             else:
                 logging.warning(f"Behance pre-mapping filter: 'Text4' column not found in the input CSV for {company_name}. Skipping filter.")
+        elif company_name == 'Bebee':
+            # Keep rows that mention freelance-related terms in either Field1_text or Text (case-insensitive, substring allowed)
+            keywords = ['freelance', 'interim', 'zzp', 'flexibele', 'remote']
+            if 'Field1_text' in files_read.columns or 'Text' in files_read.columns:
+                initial_count = len(files_read)
+                def contains_keywords(value):
+                    try:
+                        text = str(value).lower()
+                        return any(keyword in text for keyword in keywords)
+                    except Exception:
+                        return False
+                mask_field1 = files_read['Field1_text'].apply(contains_keywords) if 'Field1_text' in files_read.columns else False
+                mask_text = files_read['Text'].apply(contains_keywords) if 'Text' in files_read.columns else False
+                # If only one column exists, the other mask will be a scalar False, bitwise OR will still work
+                combined_mask = mask_field1 | mask_text
+                files_read = files_read[combined_mask]
+                filtered_count = len(files_read)
+                if initial_count > filtered_count:
+                    logging.info(f"Applied Bebee pre-mapping filter on 'Field1_text'/'Text' for freelance-related terms {keywords}, rows changed from {initial_count} to {filtered_count}")
+                else:
+                    logging.info(f"Bebee pre-mapping filter: No rows removed after checking for freelance-related terms in 'Field1_text'/'Text'")
+            else:
+                logging.warning(f"Bebee pre-mapping filter: Neither 'Field1_text' nor 'Text' column found in the input CSV for {company_name}. Skipping filter.")
         elif company_name == 'Overheid':
-            if 'Keywords' in files_read.columns:
+            if 'Field3' in files_read.columns:
                 initial_count = len(files_read)
-                # Filter out rows where 'Keywords' column contains "Loondienst" (case-insensitive)
-                files_read = files_read[~files_read['Keywords'].astype(str).str.contains("Loondienst", case=False, na=False)]
+                # Filter out rows where 'Field3' column contains "Loondienst" (case-insensitive)
+                files_read = files_read[~files_read['Field3'].astype(str).str.contains("Loondienst", case=False, na=False)]
                 filtered_count = len(files_read)
                 if initial_count > filtered_count:
-                    logging.info(f"Applied Overheid pre-mapping filter on 'Keywords' column to remove 'Loondienst', rows changed from {initial_count} to {filtered_count}")
+                    logging.info(f"Applied Overheid pre-mapping filter on 'Field3' column to remove 'Loondienst', rows changed from {initial_count} to {filtered_count}")
                 elif initial_count == filtered_count and initial_count > 0:
-                    logging.info(f"Overheid pre-mapping filter: 'Keywords' column checked for 'Loondienst', no rows removed from {initial_count} rows.")
+                    logging.info(f"Overheid pre-mapping filter: 'Field3' column checked for 'Loondienst', no rows removed from {initial_count} rows.")
             else:
-                logging.warning(f"Overheid pre-mapping filter: 'Keywords' column not found in the input CSV for {company_name}. Skipping filter.")
+                logging.warning(f"Overheid pre-mapping filter: 'Field3' column not found in the input CSV for {company_name}. Skipping filter.")
         elif company_name == 'overheidzzp':
-            if 'elementorelement' in files_read.columns:
-                initial_count = len(files_read)
-                # Filter for rows where 'elementorelement' column contains "ZZP" (case-insensitive)
-                files_read = files_read[files_read['elementorelement'].astype(str).str.contains("ZZP", case=False, na=False)]
-                filtered_count = len(files_read)
-                if initial_count > filtered_count:
-                    logging.info(f"Applied overheidzzp pre-mapping filter on 'elementorelement' column for 'ZZP', rows changed from {initial_count} to {filtered_count}")
-                elif initial_count == filtered_count and initial_count > 0:
-                    logging.info(f"overheidzzp pre-mapping filter: 'elementorelement' column checked for 'ZZP', no rows removed from {initial_count} rows.")
-            else:
-                logging.warning(f"overheidzzp pre-mapping filter: 'elementorelement' column not found in the input CSV for {company_name}. Skipping filter.")
+            # No pre-mapping filter anymore as per new spec
+            pass
         elif company_name == 'freep':
             if 'flex1' in files_read.columns:
                 initial_count = len(files_read)
@@ -1445,8 +1436,20 @@ def freelance_directory(files_read, company_name):
                     logging.info(f"onlyhuman pre-mapping filter: 'px2' column checked for 'Actueel', no rows removed from {initial_count} rows.")
             else:
                 logging.warning(f"onlyhuman pre-mapping filter: 'px2' column not found in the input CSV for {company_name}. Skipping filter.")
+        elif company_name == 'flexSpot.io':
+            if 'Text2' in files_read.columns:
+                initial_count = len(files_read)
+                # Filter for rows where 'Text2' column contains "Freelance" (case-insensitive)
+                files_read = files_read[files_read['Text2'].astype(str).str.contains("Freelance", case=False, na=False)]
+                filtered_count = len(files_read)
+                if initial_count > filtered_count:
+                    logging.info(f"Applied flexSpot.io pre-mapping filter on 'Text2' column for 'Freelance', rows changed from {initial_count} to {filtered_count}")
+                elif initial_count == filtered_count and initial_count > 0:
+                    logging.info(f"flexSpot.io pre-mapping filter: 'Text2' column checked for 'Freelance', no rows removed from {initial_count} rows.")
+            else:
+                logging.warning(f"flexSpot.io pre-mapping filter: 'Text2' column not found in the input CSV for {company_name}. Skipping filter.")
         elif company_name == 'InterimNetwerk':
-            # Special processing for Interim-Netwerk: extract data from Text column
+            # Special processing for InterimNetwerk: extract data from Text column
             if 'Text' in files_read.columns and 'Field1_links' in files_read.columns:
                 # Take only the first row of Text column but keep all Field1_links
                 if len(files_read) > 0:
@@ -1557,19 +1560,19 @@ def freelance_directory(files_read, company_name):
                             'Duration': duration,
                             'start': 'ASAP',
                             'rate': 'Not mentioned',
-                            'Hours': 'Not mentioned',
-                            'Company': 'Interim-Netwerk',
-                            'Source': 'Interim-Netwerk'
+                            'Hours': 'Field3',
+                                                    'Company': 'InterimNetwerk',
+                        'Source': 'InterimNetwerk'
                         })
                     
                     # Convert to DataFrame
                     files_read = pd.DataFrame(processed_data)
-                    logging.info(f"Interim-Netwerk special processing: Created {len(files_read)} rows from {len(jobs)} job blocks")
+                    logging.info(f"InterimNetwerk special processing: Created {len(files_read)} rows from {len(jobs)} job blocks")
                 else:
-                    logging.warning("Interim-Netwerk: No data found in CSV file")
+                    logging.warning("InterimNetwerk: No data found in CSV file")
                     files_read = pd.DataFrame()
             else:
-                logging.warning("Interim-Netwerk: Required columns 'Text' and 'Field1_links' not found")
+                logging.warning("InterimNetwerk: Required columns 'Text' and 'Field1_links' not found")
                 files_read = pd.DataFrame()
         
         # Create a new DataFrame with standardized columns
@@ -1578,7 +1581,7 @@ def freelance_directory(files_read, company_name):
         # Map the columns according to the mapping
         for std_col, src_col_mapping_value in mapping.items():
             if src_col_mapping_value in files_read.columns:
-                if company_name == 'werk.nl' and std_col == 'Company' and src_col_mapping_value == 'Description_split':
+                if company_name == 'werk.nl' and std_col == 'Company' and src_col_mapping_value == 'Description':
                     # Special handling for werk.nl: split Description on "-" and use first part as Company
                     result[std_col] = files_read['Description'].str.split('-').str[0].str.strip()
                 else:
@@ -1601,7 +1604,9 @@ def freelance_directory(files_read, company_name):
                 is_column_name = src_col_mapping_value in files_read.columns
                 
                 # Also check for common column names that should be preserved
-                common_column_names = {'Text2', 'Location', 'searchresultorganisation', 'Field1', 'Field4'}
+                # Note: Field4 is removed from this list to prevent showing "Field4" as literal text
+                # Note: Field1 is removed from this list to prevent blanking out legitimate Field1 data
+                common_column_names = {'Text2', 'Location', 'searchresultorganisation'}
                 is_common_column = src_col_mapping_value in common_column_names
                 
                 # Check if it's a common literal value
@@ -1667,6 +1672,271 @@ def freelance_directory(files_read, company_name):
         # Apply fallback for Company column using the company_name variable
         if 'Company' in result.columns:
             result.loc[result['Company'] == '', 'Company'] = company_name
+
+        # WERK.NL POST-MAPPING PROCESSING
+        if company_name == 'werk.nl':
+            # Process rate field - extract only relevant numbers (rates/salaries) from Text column
+            if 'rate' in result.columns:
+                def extract_strict_rate(text_str):
+                    if pd.isna(text_str) or text_str == '':
+                        return 'Not mentioned'
+                    
+                    text_clean = str(text_str).strip()
+                    
+                    # Look for specific rate/salary patterns only
+                    import re
+                    
+                    # Pattern for "€X/hour" or "€X per hour" or "€X/uur"
+                    euro_per_hour = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:per\s+hour|/hour|/uur)', text_clean, re.IGNORECASE)
+                    if euro_per_hour:
+                        amount = float(euro_per_hour.group(1))
+                        return f'€{amount:.0f}/hour'
+                    
+                    # Pattern for "€X/day" or "€X per day" or "€X/dag"
+                    euro_per_day = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:per\s+day|/day|/dag)', text_clean, re.IGNORECASE)
+                    if euro_per_day:
+                        amount = float(euro_per_day.group(1))
+                        return f'€{amount:.0f}/day'
+                    
+                    # Pattern for "€X/month" or "€X per month" or "€X/maand"
+                    euro_per_month = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:per\s+month|/month|/maand)', text_clean, re.IGNORECASE)
+                    if euro_per_month:
+                        amount = float(euro_per_month.group(1))
+                        return f'€{amount:.0f}/month'
+                    
+                    # Pattern for "€X/year" or "€X per year" or "€X/jaar"
+                    euro_per_year = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:per\s+year|/year|/jaar)', text_clean, re.IGNORECASE)
+                    if euro_per_year:
+                        amount = float(euro_per_year.group(1))
+                        return f'€{amount:.0f}/year'
+                    
+                    # Pattern for salary ranges "€X - €Y" or "€X tot €Y"
+                    salary_range = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:-|tot)\s*€\s*(\d+(?:\.\d+)?)', text_clean)
+                    if salary_range:
+                        min_amount = float(salary_range.group(1))
+                        max_amount = float(salary_range.group(2))
+                        return f'€{min_amount:.0f} - €{max_amount:.0f}'
+                    
+                    # Pattern for standalone "€X" (but avoid phone numbers, dates, etc.)
+                    # Look for € followed by number but not in phone/date contexts
+                    euro_standalone = re.search(r'(?<![\d\w])\€\s*(\d{2,5}(?:\.\d+)?)(?![\d\w])', text_clean)
+                    if euro_standalone:
+                        amount = float(euro_standalone.group(1))
+                        # Only accept reasonable salary amounts (€20-€1000)
+                        if 20 <= amount <= 1000:
+                            return f'€{amount:.0f}'
+                    
+                    # Pattern for "X euro" or "X EUR" (but avoid phone numbers)
+                    euro_text = re.search(r'(?<![\d\w])(\d{2,5}(?:\.\d+)?)\s*(?:euro|EUR)(?![\d\w])', text_clean, re.IGNORECASE)
+                    if euro_text:
+                        amount = float(euro_text.group(1))
+                        # Only accept reasonable salary amounts (€20-€1000)
+                        if 20 <= amount <= 1000:
+                            return f'€{amount:.0f}'
+                    
+                    return 'Not mentioned'
+                
+                result['rate'] = result['rate'].apply(extract_strict_rate)
+                logging.info(f"werk.nl post-mapping: Processed rate field with strict number filtering")
+        
+        # GEMEENTE PROJECTEN POST-MAPPING PROCESSING
+        if company_name == 'gemeente-projecten':
+            # Process rate field - extract currency from Field4
+            if 'rate' in result.columns:
+                def extract_currency_from_field4(text_str):
+                    if pd.isna(text_str) or text_str == '':
+                        return 'Not mentioned'
+                    
+                    text_clean = str(text_str).strip()
+                    
+                    # Look for currency patterns
+                    import re
+                    
+                    # Pattern for "€X" or "€ X"
+                    euro_pattern = re.search(r'€\s*(\d+(?:\.\d+)?)', text_clean)
+                    if euro_pattern:
+                        amount = float(euro_pattern.group(1))
+                        return f'€{amount:.0f}'
+                    
+                    # Pattern for "X euro" or "X EUR"
+                    euro_text_pattern = re.search(r'(\d+(?:\.\d+)?)\s*(?:euro|EUR)', text_clean, re.IGNORECASE)
+                    if euro_text_pattern:
+                        amount = float(euro_text_pattern.group(1))
+                        return f'€{amount:.0f}'
+                    
+                    # Pattern for "Tariefindicatie: €X" or similar
+                    tarief_pattern = re.search(r'tariefindicatie[:\s]*€\s*(\d+(?:\.\d+)?)', text_clean, re.IGNORECASE)
+                    if tarief_pattern:
+                        amount = float(tarief_pattern.group(1))
+                        return f'€{amount:.0f}'
+                    
+                    # If no currency found, return "Not mentioned"
+                    return 'Not mentioned'
+                
+                result['rate'] = result['rate'].apply(extract_currency_from_field4)
+                logging.info(f"gemeente-projecten post-mapping: Processed rate field to extract currency from Field4")
+        
+        # TENNET POST-MAPPING PROCESSING
+        if company_name == 'tennet':
+            # Process location field - remove everything after "/"
+            if 'Location' in result.columns:
+                def clean_location_tennet(location_str):
+                    if pd.isna(location_str) or location_str == '':
+                        return 'Not mentioned'
+                    
+                    location_clean = str(location_str).strip()
+                    
+                    # Remove everything after "/" (including the "/" itself)
+                    if '/' in location_clean:
+                        location_clean = location_clean.split('/')[0].strip()
+                    
+                    return location_clean if location_clean else 'Not mentioned'
+                
+                result['Location'] = result['Location'].apply(clean_location_tennet)
+                logging.info(f"tennet post-mapping: Processed location field to remove content after '/'")
+        
+        # CIRCLE8 POST-MAPPING PROCESSING
+        if company_name == 'Circle8':
+            # Process Summary field - provide fallback text if no information is provided
+            if 'Summary' in result.columns:
+                def process_summary_circle8(summary_str):
+                    if pd.isna(summary_str) or summary_str == '' or str(summary_str).strip() == '':
+                        return 'We were not able to find description'
+                    
+                    summary_clean = str(summary_str).strip()
+                    return summary_clean if summary_clean else 'We were not able to find description'
+                
+                result['Summary'] = result['Summary'].apply(process_summary_circle8)
+                logging.info(f"Circle8 post-mapping: Processed Summary field to provide fallback text when empty")
+        
+        # FLEXVALUE POST-MAPPING PROCESSING
+        if company_name == 'FlexValue_B.V.':
+            # Process Summary field - remove everything before "opdrachtbeschrijving"
+            if 'Summary' in result.columns:
+                def process_summary_flexvalue(summary_str):
+                    if pd.isna(summary_str) or summary_str == '':
+                        return 'Not mentioned'
+                    
+                    summary_clean = str(summary_str).strip()
+                    
+                    # Find "opdrachtbeschrijving" and take everything after it
+                    if 'opdrachtbeschrijving' in summary_clean.lower():
+                        # Find the position of "opdrachtbeschrijving" (case insensitive)
+                        import re
+                        match = re.search(r'opdrachtbeschrijving', summary_clean, re.IGNORECASE)
+                        if match:
+                            # Take everything after the marker
+                            summary_clean = summary_clean[match.end():].strip()
+                    
+                    return summary_clean if summary_clean else 'Not mentioned'
+                
+                result['Summary'] = result['Summary'].apply(process_summary_flexvalue)
+                logging.info(f"FlexValue post-mapping: Processed Summary field to remove content before 'opdrachtbeschrijving'")
+            
+            # Process rate field - extract text between "Tarief" and "all-in"
+            if 'rate' in result.columns:
+                def process_rate_flexvalue(rate_str):
+                    if pd.isna(rate_str) or rate_str == '':
+                        return 'Not mentioned'
+                    
+                    rate_clean = str(rate_str).strip()
+                    
+                    # Find text between "Tarief" and "all-in"
+                    import re
+                    tarief_match = re.search(r'tarief', rate_clean, re.IGNORECASE)
+                    allin_match = re.search(r'all-in', rate_clean, re.IGNORECASE)
+                    
+                    if tarief_match and allin_match and allin_match.start() > tarief_match.end():
+                        # Extract text between the markers
+                        extracted_text = rate_clean[tarief_match.end():allin_match.start()].strip()
+                        return extracted_text if extracted_text else 'Not mentioned'
+                    
+                    return 'Not mentioned'
+                
+                result['rate'] = result['rate'].apply(process_rate_flexvalue)
+                logging.info(f"FlexValue post-mapping: Processed rate field to extract text between 'Tarief' and 'all-in'")
+            
+            # Process Hours field - extract number after "Uren per week"
+            if 'Hours' in result.columns:
+                def process_hours_flexvalue(hours_str):
+                    if pd.isna(hours_str) or hours_str == '':
+                        return 'Not mentioned'
+                    
+                    hours_clean = str(hours_str).strip()
+                    
+                    # Find "Uren per week" and extract the number after it
+                    import re
+                    match = re.search(r'uren per week\s*(\d+)', hours_clean, re.IGNORECASE)
+                    if match:
+                        number = match.group(1)
+                        return number
+                    
+                    return 'Not mentioned'
+                
+                result['Hours'] = result['Hours'].apply(process_hours_flexvalue)
+                logging.info(f"FlexValue post-mapping: Processed Hours field to extract number after 'Uren per week'")
+        
+        # AMSTELVEENHUURTIN POST-MAPPING PROCESSING
+        if company_name == 'Amstelveenhuurtin':
+            # Process Location field - extract text between "standplaats:" and "|"
+            if 'Location' in result.columns:
+                def process_location_amstelveenhuurtin(location_str):
+                    if pd.isna(location_str) or location_str == '':
+                        return 'Not mentioned'
+                    
+                    location_clean = str(location_str).strip()
+                    
+                    # Find text between "standplaats:" and "|"
+                    import re
+                    match = re.search(r'standplaats:\s*(.*?)\s*\|', location_clean, re.IGNORECASE)
+                    if match:
+                        extracted_text = match.group(1).strip()
+                        return extracted_text if extracted_text else 'Not mentioned'
+                    
+                    return 'Not mentioned'
+                
+                result['Location'] = result['Location'].apply(process_location_amstelveenhuurtin)
+                logging.info(f"Amstelveenhuurtin post-mapping: Processed Location field to extract text between 'standplaats:' and '|'")
+            
+            # Process Hours field - extract text between "Uren:" and "|"
+            if 'Hours' in result.columns:
+                def process_hours_amstelveenhuurtin(hours_str):
+                    if pd.isna(hours_str) or hours_str == '':
+                        return 'Not mentioned'
+                    
+                    hours_clean = str(hours_str).strip()
+                    
+                    # Find text between "Uren:" and "|"
+                    import re
+                    match = re.search(r'uren:\s*(.*?)\s*\|', hours_clean, re.IGNORECASE)
+                    if match:
+                        extracted_text = match.group(1).strip()
+                        return extracted_text if extracted_text else 'Not mentioned'
+                    
+                    return 'Not mentioned'
+                
+                result['Hours'] = result['Hours'].apply(process_hours_amstelveenhuurtin)
+                logging.info(f"Amstelveenhuurtin post-mapping: Processed Hours field to extract text between 'Uren:' and '|'")
+            
+            # Process start field - extract everything before "t/m"
+            if 'start' in result.columns:
+                def process_start_amstelveenhuurtin(start_str):
+                    if pd.isna(start_str) or start_str == '':
+                        return 'Not mentioned'
+                    
+                    start_clean = str(start_str).strip()
+                    
+                    # Find everything before "t/m" (case insensitive)
+                    import re
+                    match = re.search(r'^(.*?)\s*t/m', start_clean, re.IGNORECASE)
+                    if match:
+                        extracted_text = match.group(1).strip()
+                        return extracted_text if extracted_text else 'Not mentioned'
+                    
+                    return start_clean if start_clean else 'Not mentioned'
+                
+                result['start'] = result['start'].apply(process_start_amstelveenhuurtin)
+                logging.info(f"Amstelveenhuurtin post-mapping: Processed start field to extract everything before 't/m'")
 
         # Drop rows where Title or URL is empty
         before_drop = len(result)
@@ -2012,6 +2282,94 @@ def freelance_directory(files_read, company_name):
                 result['Summary'] = result['Summary'].apply(process_summary_linkedin)
                 logging.info(f"LinkedIn post-mapping: Processed Summary field to remove whitelines and make text compact")
         
+        # INDEED POST-MAPPING PROCESSING
+        if company_name == 'indeed':
+            # Process Location field - extract location from Field2 column
+            if 'Location' in result.columns and 'Field2' in files_read.columns:
+                def process_location_indeed(index):
+                    import re
+                    
+                    # Get the Field2 value from the original input DataFrame
+                    field2_val = files_read.iloc[index]['Field2'] if 'Field2' in files_read.columns else None
+                    
+                    if pd.isna(field2_val) or field2_val == '':
+                        return 'Not mentioned'
+                    
+                    field2_str = str(field2_val)
+                    
+                    # Search for the exact word "Locatie" and extract everything after it until "&" marker
+                    locatie_pattern = r'Locatie([^&]*)'
+                    locatie_match = re.search(locatie_pattern, field2_str)
+                    
+                    if locatie_match:
+                        location = locatie_match.group(1).strip()
+                        return location if location else 'Not mentioned'
+                    
+                    return 'Not mentioned'
+                
+                # Apply the processing to each row
+                result['Location'] = [process_location_indeed(i) for i in range(len(result))]
+                logging.info(f"Indeed post-mapping: Processed Location field to extract location from Field2 column using 'Locatie' pattern")
+            
+            # Process Rate field - extract rate from Field2 column (only overwrite if a value is found)
+            if 'rate' in result.columns and 'Field2' in files_read.columns:
+                def process_rate_indeed(index):
+                    import re
+                    # Get the Field2 value from the original input DataFrame
+                    field2_val = files_read.iloc[index]['Field2'] if 'Field2' in files_read.columns else None
+                    if pd.isna(field2_val) or field2_val == '':
+                        return None
+                    field2_str = str(field2_val)
+                    # Search for rate information in Field2 (look for patterns like "€", "EUR", "euro", etc.)
+                    rate_patterns = [
+                        r'€\s*(\d+(?:[.,]\d+)?)',        # € 50 or € 50,00
+                        r'(\d+(?:[.,]\d+)?)\s*€',        # 50 € or 50,00 €
+                        r'EUR\s*(\d+(?:[.,]\d+)?)',      # EUR 50
+                        r'(\d+(?:[.,]\d+)?)\s*EUR',      # 50 EUR
+                        r'euro\s*(\d+(?:[.,]\d+)?)',     # euro 50
+                        r'(\d+(?:[.,]\d+)?)\s*euro',     # 50 euro
+                        r'(\d+(?:[.,]\d+)?)\s*per\s*uur',   # 50 per uur
+                        r'(\d+(?:[.,]\d+)?)\s*per\s*day',   # 50 per day
+                        r'(\d+(?:[.,]\d+)?)\s*per\s*week',  # 50 per week
+                        r'(\d+(?:[.,]\d+)?)\s*per\s*month'  # 50 per month
+                    ]
+                    for pattern in rate_patterns:
+                        rate_match = re.search(pattern, field2_str, re.IGNORECASE)
+                        if rate_match:
+                            rate = rate_match.group(1).replace(',', '.')
+                            return rate
+                    return None
+                # Compute extracted rates and only overwrite existing when found
+                extracted_rates = [process_rate_indeed(i) for i in range(len(result))]
+                for i, extracted in enumerate(extracted_rates):
+                    if extracted is not None and extracted != '':
+                        result.at[i, 'rate'] = extracted
+                logging.info(f"Indeed post-mapping: Processed Rate field (conditional overwrite) from Field2 column")
+
+            # Process Summary field - use Field2 but remove the first line
+            if 'Summary' in result.columns:
+                def process_summary_indeed(index):
+                    try:
+                        source_val = None
+                        if 'Field2' in files_read.columns:
+                            source_val = files_read.iloc[index]['Field2']
+                        if pd.isna(source_val) or source_val == '':
+                            source_val = result.iloc[index]['Summary'] if index < len(result) else ''
+                        summary_str = str(source_val)
+                        # Normalize line breaks and split
+                        summary_str = summary_str.replace('\r\n', '\n').replace('\r', '\n')
+                        lines = summary_str.split('\n')
+                        if len(lines) <= 1:
+                            cleaned = summary_str.strip()
+                        else:
+                            cleaned = ' '.join([ln.strip() for ln in lines[1:] if ln.strip()])
+                        return cleaned if cleaned else 'See Vacancy'
+                    except Exception:
+                        return 'See Vacancy'
+
+                result['Summary'] = [process_summary_indeed(i) for i in range(len(result))]
+                logging.info(f"Indeed post-mapping: Processed Summary to drop first line from Field2")
+        
         # SCHIPHOL POST-MAPPING PROCESSING
         if company_name == 'Schiphol':
             # Process rate field - check both Text2 and Text4, use whichever contains a number
@@ -2081,6 +2439,59 @@ def freelance_directory(files_read, company_name):
                     logging.info(f"werkzoeken.nl post-mapping: Removed {removed_rows} rows containing 'p/m' in rate field (permanent employment jobs)")
                 else:
                     logging.info(f"werkzoeken.nl post-mapping: No rows contained 'p/m' in rate field")
+
+        # OVERHEIDZZP POST-MAPPING PROCESSING
+        if company_name == 'overheidzzp':
+            # Hours: remove the words "per week"
+            if 'Hours' in result.columns:
+                def process_hours_overheidzzp(hours_str):
+                    if pd.isna(hours_str) or hours_str == '':
+                        return 'Not mentioned'
+                    cleaned = str(hours_str).replace('per week', '').replace('Per week', '')
+                    cleaned = ' '.join(cleaned.split())
+                    return cleaned if cleaned else 'Not mentioned'
+                result['Hours'] = result['Hours'].apply(process_hours_overheidzzp)
+                logging.info(f"overheidzzp post-mapping: Processed Hours to remove 'per week'")
+
+            # Duration: remove anything in brackets ()
+            if 'Duration' in result.columns:
+                def process_duration_overheidzzp(duration_str):
+                    if pd.isna(duration_str) or duration_str == '':
+                        return 'Not mentioned'
+                    import re
+                    cleaned = re.sub(r'\([^)]*\)', '', str(duration_str)).strip()
+                    cleaned = ' '.join(cleaned.split())
+                    return cleaned if cleaned else 'Not mentioned'
+                result['Duration'] = result['Duration'].apply(process_duration_overheidzzp)
+                logging.info(f"overheidzzp post-mapping: Processed Duration to remove bracketed text")
+
+            # Summary: extract text between 'Over de opdracht\t' and 'Let op' (case-insensitive)
+            if 'Summary' in result.columns:
+                def process_summary_overheidzzp(index):
+                    try:
+                        source_val = None
+                        if 'Text' in files_read.columns:
+                            source_val = files_read.iloc[index]['Text']
+                        if pd.isna(source_val) or source_val == '':
+                            source_val = result.iloc[index]['Summary'] if index < len(result) else ''
+                        s = str(source_val)
+                        import re
+                        # Normalize spaces and tabs
+                        s_norm = s.replace('\r\n', '\n').replace('\r', '\n')
+                        # Find markers case-insensitive
+                        m1 = re.search(r'over de opdracht\t', s_norm, re.IGNORECASE)
+                        m2 = re.search(r'document\.addEventListener', s_norm, re.IGNORECASE)
+                        if m1 and m2 and m2.start() > m1.end():
+                            mid = s_norm[m1.end():m2.start()].strip()
+                            mid = ' '.join(mid.split())
+                            return mid if mid else 'See Vacancy'
+                        # Fallback: return original cleaned summary
+                        fallback = ' '.join(s_norm.split())
+                        return fallback if fallback else 'See Vacancy'
+                    except Exception:
+                        return 'See Vacancy'
+                result['Summary'] = [process_summary_overheidzzp(i) for i in range(len(result))]
+                logging.info(f"overheidzzp post-mapping: Extracted Summary between 'Over de opdracht' and 'document.addEventListener'")
         
         # UMC POST-MAPPING PROCESSING
         if company_name == 'UMC':
@@ -2229,36 +2640,32 @@ def freelance_directory(files_read, company_name):
                 result['Location'] = result['Location'].apply(process_location_gemeente)
                 logging.info(f"gemeente projecten post-mapping: Processed Location field to remove text in parentheses")
             
-            # Process rate field - extract duration if text mentions "Voor"
-            if 'rate' in result.columns and 'Duration' in result.columns:
-                def process_rate_gemeente(index):
-                    rate_val = result.iloc[index]['rate'] if 'rate' in result.columns else None
-                    duration_val = result.iloc[index]['Duration'] if 'Duration' in result.columns else None
-                    
-                    if pd.isna(rate_val) or rate_val == '':
-                        return 'Not mentioned', duration_val
-                    
+            # Process rate field - extract euro amount from Field10 (e.g., "€50" or "€ 50,00").
+            if 'rate' in result.columns:
+                def process_rate_gemeente(rate_str):
+                    if pd.isna(rate_str) or rate_str == '':
+                        return 'Not mentioned'
                     import re
-                    rate_str = str(rate_val).strip()
-                    
-                    # Look for text that mentions "Voor" (case-insensitive)
-                    if 'voor' in rate_str.lower():
-                        # If "Voor" is mentioned, use the entire rate text as duration
-                        final_duration = rate_str if pd.isna(duration_val) or duration_val == '' or duration_val == 'Not mentioned' else duration_val
-                        
-                        # Clear the rate field since it's being used for duration
-                        return 'Not mentioned', final_duration
-                    
-                    return rate_str, duration_val
-                
-                # Apply the processing to each row
-                processed_data = [process_rate_gemeente(i) for i in range(len(result))]
-                rate_values = [item[0] for item in processed_data]
-                duration_values = [item[1] for item in processed_data]
-                
-                result['rate'] = rate_values
-                result['Duration'] = duration_values
-                logging.info(f"gemeente projecten post-mapping: Processed rate field to extract duration when 'Voor' is mentioned")
+                    s = str(rate_str)
+                    m = re.search(r'€\s*([0-9]+(?:[.,][0-9]{1,2})?)', s)
+                    if m:
+                        val = m.group(1).replace(',', '.')
+                        return f"€ {val}"
+                    return 'Not mentioned'
+                result['rate'] = result['rate'].apply(process_rate_gemeente)
+                logging.info(f"gemeente projecten post-mapping: Extracted euro amount from Field10 into rate")
+
+            # Process Duration field - remove the word "Voor" (case-insensitive) and clean up
+            if 'Duration' in result.columns:
+                def process_duration_gemeente(duration_str):
+                    if pd.isna(duration_str) or duration_str == '':
+                        return 'Not mentioned'
+                    import re
+                    cleaned = re.sub(r'\bvoor\b', '', str(duration_str), flags=re.IGNORECASE)
+                    cleaned = ' '.join(cleaned.split()).strip()
+                    return cleaned if cleaned else 'Not mentioned'
+                result['Duration'] = result['Duration'].apply(process_duration_gemeente)
+                logging.info(f"gemeente projecten post-mapping: Removed 'Voor' from Duration")
         
         # GGDZWHUURTIN.NL POST-MAPPING PROCESSING
         if company_name == 'ggdzwhuurtin.nl':
@@ -2321,7 +2728,7 @@ def freelance_directory(files_read, company_name):
                 logging.info(f"ggdzwhuurtin.nl post-mapping: Processed Duration field to calculate date differences in months")
         
         # 4 FREELANCERS POST-MAPPING PROCESSING
-        if company_name == '4 Freelancers':
+        if company_name == '4-Freelancers.nl':
             # Process Title field - remove text in () and the () themselves
             if 'Title' in result.columns:
                 def process_title_4freelancers(title_str):
@@ -2341,6 +2748,18 @@ def freelance_directory(files_read, company_name):
                 
                 result['Title'] = result['Title'].apply(process_title_4freelancers)
                 logging.info(f"4 Freelancers post-mapping: Processed Title field to remove text in parentheses")
+
+            # Pre-mapping-like filter: drop rows mentioning 'Detachering' in Text (case-insensitive)
+            if 'Text' in files_read.columns and len(result) == len(files_read):
+                try:
+                    initial_count = len(result)
+                    mask = ~files_read['Text'].astype(str).str.contains('Detachering', case=False, na=False)
+                    result = result[mask.reset_index(drop=True)]
+                    filtered = initial_count - len(result)
+                    if filtered > 0:
+                        logging.info(f"4-Freelancers.nl filter: removed {filtered} rows mentioning 'Detachering' in Text")
+                except Exception:
+                    pass
         
         # ASNBANK POST-MAPPING PROCESSING
         if company_name == 'ASNBank':
@@ -3752,8 +4171,8 @@ def check_and_rotate_log_file():
     except Exception as e:
         print(f"Warning: Could not rotate log file: {e}")
 
-def print_simple_table():
-    """Print processing results in enhanced table format with detailed reasons"""
+def print_simple_table(result_df=None):
+    """Print processing results in enhanced table format with detailed reasons and field completion stats"""
     if not processing_results:
         return
     
@@ -3762,8 +4181,8 @@ def print_simple_table():
     output.append("📊 DATA SOURCE PROCESSING RESULTS (Sorted by Success % - Lowest First)")
     output.append("="*120)
     
-    # Enhanced header with status icons
-    header = f"{'Source':<20} {'Status':<12} {'Initial':<8} {'Final':<8} {'Dropped':<8} {'Success %':<10} {'Detailed Reason':<50}"
+    # Enhanced header with status icons and field completion
+    header = f"{'Source':<20} {'Status':<12} {'Initial':<8} {'Final':<8} {'Dropped':<8} {'Success %':<10} {'Title':<8} {'URL':<8} {'Location':<10} {'Summary':<10} {'Rate':<8} {'Hours':<8} {'Duration':<10}"
     output.append(header)
     output.append("-" * 120)
     
@@ -3777,21 +4196,24 @@ def print_simple_table():
         dropped = result.get('dropped', 0)
         success_pct = (final / initial * 100) if initial > 0 else 0
         
-        # Create detailed reason based on status and data
-        if status == "Skipped":
-            if initial == 0:
-                detailed_reason = "No data found in source file"
+        # Calculate field completion statistics if result_df is available
+        field_stats = {}
+        if result_df is not None and status == "Success":
+            source_data = result_df[result_df['Source'] == company]
+            if len(source_data) > 0:
+                fields_to_check = ['Title', 'URL', 'Location', 'Summary', 'rate', 'Hours', 'Duration']
+                for field in fields_to_check:
+                    if field in source_data.columns:
+                        # Count non-empty, non-null values (excluding "Not mentioned")
+                        completed = source_data[field].notna() & (source_data[field] != 'Not mentioned') & (source_data[field] != '')
+                        completion_pct = (completed.sum() / len(source_data) * 100) if len(source_data) > 0 else 0
+                        field_stats[field] = f"{completion_pct:.0f}%"
+                    else:
+                        field_stats[field] = "0%"
             else:
-                detailed_reason = f"All {initial} records filtered out during processing"
-        elif status == "Failed":
-            detailed_reason = f"Failed to process: {result.get('drop_reason', 'Unknown error')}"
-        elif status == "Success":
-            if dropped == 0:
-                detailed_reason = "All records successfully processed (100% retention)"
-            else:
-                detailed_reason = f"{dropped} records dropped due to validation/duplicate detection"
+                field_stats = {field: "0%" for field in ['Title', 'URL', 'Location', 'Summary', 'rate', 'Hours', 'Duration']}
         else:
-            detailed_reason = result.get('drop_reason', 'Unknown status')
+            field_stats = {field: "N/A" for field in ['Title', 'URL', 'Location', 'Summary', 'rate', 'Hours', 'Duration']}
         
         enhanced_results.append({
             'company': company,
@@ -3800,7 +4222,7 @@ def print_simple_table():
             'final': final,
             'dropped': dropped,
             'success_pct': success_pct,
-            'detailed_reason': detailed_reason
+            'field_stats': field_stats
         })
     
     # Sort by success percentage (lowest first)
@@ -3814,7 +4236,7 @@ def print_simple_table():
         final = result['final']
         dropped = result['dropped']
         success_pct = result['success_pct']
-        detailed_reason = result['detailed_reason'][:49]  # Truncate reason
+        field_stats = result['field_stats']
         
         # Status icons
         if status == "Success":
@@ -3826,10 +4248,16 @@ def print_simple_table():
         else:
             status_icon = "❓"
         
-        row = f"{company:<20} {status_icon} {status:<8} {initial:<8} {final:<8} {dropped:<8} {success_pct:>7.1f}% {detailed_reason:<50}"
+        row = f"{company:<20} {status_icon} {status:<8} {initial:<8} {final:<8} {dropped:<8} {success_pct:>7.1f}% {field_stats['Title']:<8} {field_stats['URL']:<8} {field_stats['Location']:<10} {field_stats['Summary']:<10} {field_stats['rate']:<8} {field_stats['Hours']:<8} {field_stats['Duration']:<10}"
         output.append(row)
     
     output.append("-" * 120)
+    
+    # Add field completion legend
+    output.append("\n📋 FIELD COMPLETION LEGEND:")
+    output.append("  • Shows percentage of records with actual data (not 'Not mentioned' or empty)")
+    output.append("  • N/A = Source was skipped or failed")
+    output.append("  • Higher percentages indicate better data quality")
     
     # Write all lines to both console and log
     for line in output:
@@ -4184,7 +4612,7 @@ def main():
         print_regional_summary(result)
         
         # Print enhanced table format summaries
-        print_simple_table()
+        print_simple_table(result)
         print_duplicates_table(duplicate_results)
         print_id_generation_table(id_results)
         print_summary_stats()
@@ -4199,6 +4627,11 @@ def main():
         result.to_csv(full_output_path, index=False)
         logging.info(f"Saved {num_rows} records to {full_output_path}")
         
+        # Also save a local copy for analysis
+        local_csv_path = "allgigs_v7_processed.csv"
+        result.to_csv(local_csv_path, index=False)
+        logging.info(f"Saved local copy to {local_csv_path}")
+        
         # Only upload to Supabase if there are no errors, source failures, or broken URLs
         if error_messages or source_failures or broken_urls:
             if broken_urls:
@@ -4206,30 +4639,62 @@ def main():
             else:
                 logging.error("Upload to Supabase skipped due to errors. See error summary above.")
         else:
-            # Upload to both Supabase tables and collect results
+            # Upload to both Supabase tables with transaction-like behavior
+            # Both tables must succeed together, or both fail together
             upload_results = []
+            upload_successful = True
+            
+            # First, attempt to upload to NEW table
             try:
+                logging.info(f"Attempting to upload to {NEW_TABLE}...")
                 upload_result_new = supabase_upload(result, NEW_TABLE, is_historical=False)
                 upload_results.append(upload_result_new)
+                if upload_result_new.get('status') == 'Failed':
+                    upload_successful = False
+                    logging.error(f"NEW table upload failed: {upload_result_new.get('error', 'Unknown error')}")
             except Exception as e:
+                upload_successful = False
                 upload_results.append({
                     'table_name': NEW_TABLE,
                     'status': 'Failed',
                     'error': str(e)
                 })
+                logging.error(f"Exception during NEW table upload: {str(e)}")
             
-            try:
-                upload_result_historical = supabase_upload(result, HISTORICAL_TABLE, is_historical=True)
-                upload_results.append(upload_result_historical)
-            except Exception as e:
+            # Only proceed to historical table if NEW table succeeded
+            if upload_successful:
+                try:
+                    logging.info(f"NEW table upload successful. Attempting to upload to {HISTORICAL_TABLE}...")
+                    upload_result_historical = supabase_upload(result, HISTORICAL_TABLE, is_historical=True)
+                    upload_results.append(upload_result_historical)
+                    if upload_result_historical.get('status') == 'Failed':
+                        upload_successful = False
+                        logging.error(f"HISTORICAL table upload failed: {upload_result_historical.get('error', 'Unknown error')}")
+                except Exception as e:
+                    upload_successful = False
+                    upload_results.append({
+                        'table_name': HISTORICAL_TABLE,
+                        'status': 'Failed',
+                        'error': str(e)
+                    })
+                    logging.error(f"Exception during HISTORICAL table upload: {str(e)}")
+            else:
+                # NEW table failed, so skip historical table and add a placeholder
                 upload_results.append({
                     'table_name': HISTORICAL_TABLE,
-                    'status': 'Failed',
-                    'error': str(e)
+                    'status': 'Skipped',
+                    'error': 'Skipped because NEW table upload failed'
                 })
+                logging.warning(f"Skipping {HISTORICAL_TABLE} upload because {NEW_TABLE} upload failed")
             
             # Print Supabase upload results table
             print_supabase_upsert_table(upload_results)
+            
+            # Log the transaction result
+            if upload_successful:
+                logging.info("✅ Both tables uploaded successfully - transaction completed")
+            else:
+                logging.error("❌ Upload transaction failed - no tables were updated")
         
     except Exception as e:
         msg = f"FAILED: Main process - {str(e)}"
