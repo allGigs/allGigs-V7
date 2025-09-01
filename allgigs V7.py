@@ -234,13 +234,13 @@ COMPANY_MAPPINGS = {
     'LinkIT': {
         'Title': 'Title',
         'Location': 'Location',
-        'Summary': 'Title1',
+        'Summary': 'Field3',
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Field3',
-        'Duration': 'Not mentioned',
-        'Company': 'LinkIT',
+        'Hours': 'Field4',
+        'Duration': 'Field5',  # Will be processed to check for "months" marker
+        'Company': 'Field1',
         'Source': 'LinkIT'
     },
     'freelance.nl': {
@@ -280,7 +280,7 @@ COMPANY_MAPPINGS = {
         'Source': 'Flextender'
     },
     'KVK': {
-        'Title': 'Title',
+        'Title': 'Field1',
         'Location': 'Amsterdam',
         'Summary': 'See Vacancy',
         'URL': 'Page_URL',
@@ -353,12 +353,12 @@ COMPANY_MAPPINGS = {
     },
     'politie': {
         'Title': 'Field1',
-        'Location': 'Hilversum',
-        'Summary': 'Field4',
+        'Location': 'Text2',
+        'Summary': 'Text5,Text6',  # Will be processed to merge Text5 and Text6
         'URL': 'URL',
-        'start': 'ASAP',
+        'start': 'Text',
         'rate': 'Not mentioned',
-        'Hours': 'Field3',
+        'Hours': 'Text3',
         'Duration': 'Not mentioned',
         'Company': 'politie',
         'Source': 'politie'
@@ -401,12 +401,12 @@ COMPANY_MAPPINGS = {
     },
     'Planet Interim': {
         'Title': 'Title',
-        'Location': 'Field1',
-        'Summary': 'Field4',
+        'Location': 'Location',
+        'Summary': 'Text',
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Price',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
         'Source': 'Planet Interim'
@@ -463,7 +463,7 @@ COMPANY_MAPPINGS = {
     'rijkswaterstaat': {
         'Title': 'widgetheader',
         'Location': 'feature1',
-        'Summary': 'See Vacancy',
+        'Summary': 'Text1',
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'feature2',
@@ -571,11 +571,11 @@ COMPANY_MAPPINGS = {
     'Centric': {
         'Title': 'Field1',
         'Location': 'Field2',
-        'Summary': 'See Vacancy',
+        'Summary': 'Text',
         'URL': 'URL',
         'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Field3',
+        'rate': 'Text',
+        'Hours': 'Text',
         'Duration': 'Not mentioned',
         'Company': 'Centric',
         'Source': 'Centric'
@@ -607,11 +607,11 @@ COMPANY_MAPPINGS = {
     'Salta Group': {
         'Title': 'Keywords',
         'URL': 'Title_URL',
-        'Location': 'Location',
-        'Summary': 'feature_spancontainsclass_text',
+        'Location': 'Not mentioned',
+        'Summary': 'Text',
         'Company': 'Company',
         'rate': 'Not mentioned',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'start': 'ASAP',
         'Source': 'Salta Group'
@@ -655,19 +655,19 @@ COMPANY_MAPPINGS = {
     'noordoostbrabant': {
         'Title': 'Field1',
         'Location': 'Field2',
-        'Summary': 'See Vacancy',
-        'URL': 'https://inhuurdesk.werkeninnoordoostbrabant.nl/opdrachten#',
+        'Summary': 'Text',
+        'URL': 'Page_URL',
         'start': 'Field11',
-        'rate': 'Field8',
-        'Hours': 'Field3',
-        'Duration': 'Field11',
-        'Company': 'noordoostbrabant',
+        'rate': 'Field2',
+        'Hours': 'See Summary',
+        'Duration': 'See Summary',
+        'Company': 'Field3',
         'Source': 'noordoostbrabant'
     },
     'flevoland': {
         'Title': 'Field1',
         'Location': 'Field2',
-        'Summary': 'Field8',
+        'Summary': 'Field7,Field8',  # Will be processed to merge Field7 and Field8
         'URL': 'Field9_links',
         'start': 'Field3',
         'rate': 'Not mentioned',
@@ -676,39 +676,39 @@ COMPANY_MAPPINGS = {
         'Source': 'flevoland'
     },
     'Noord-Holland': {
-        'Title': 'Title',
+        'Title': 'Text',
         'Location': 'Field2',
-        'Summary': 'See Vacancy',
-        'URL': 'https://inhuur.werkeninnoordhollandnoord.nl/opdrachten',
-        'start': 'Title5',
-        'rate': 'Title3',
-        'Hours': 'Field3',
-        'Duration': 'Title5',
-        'Company': 'searchresultorganisation',
+        'Summary': 'Text2',
+        'URL': 'Page_URL',
+        'start': 'See Summary',
+        'rate': 'Text2',  # Will be processed to extract text between "€" and "|"
+        'Hours': 'See Summary',
+        'Duration': 'See Summary',
+        'Company': 'Text2',
         'Source': 'Noord-Holland'
     },
     'groningenhuurtin': {
-        'Title': 'Title',
-        'Location': 'Field2',
-        'Summary': 'See Vacancy',
-        'URL': 'https://www.groningenhuurtin.nl/opdrachten',
-        'start': 'Title5',
-        'rate': 'Title3',
-        'Hours': 'Field3',
-        'Duration': 'Title5',
-        'Company': 'searchresultorganisation',
+        'Title': 'Text2',
+        'Location': 'Text',  # Will be processed to extract text between "Standplaats:" and "|"
+        'Summary': 'Text',
+        'URL': 'Page_URL',
+        'start': 'Not mentioned',
+        'rate': 'Text',  # Will be processed to extract number after "€"
+        'Hours': 'Text',  # Will be processed to extract number between "uren" and "|"
+        'Duration': 'Not mentioned',
+        'Company': 'Text1',
         'Source': 'groningenhuurtin'
     },
     'TalentenRegio': {
-        'Title': 'Title',
-        'Location': 'Title1',
-        'Summary': 'See Vacancy',
-        'URL': 'hiddenmobile_URL',
-        'start': 'csscolumnflexer12',
+        'Title': 'Field1',
+        'Location': 'Not mentioned',
+        'Summary': 'Text4,Text5',  # Will be processed to merge Text4 and Text5
+        'URL': 'Page_URL',
+        'start': 'Not mentioned',
         'rate': 'Not mentioned',
         'Hours': 'csscolumnflexer8',
-        'Duration': 'csscolumnflexer4',
-        'Company': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Field2',
         'Source': 'TalentenRegio'
     },
     'HintTech': {
@@ -719,22 +719,11 @@ COMPANY_MAPPINGS = {
         'rate': 'vc_colmd63',
         'Duration': 'vc_colmd64',
         'Location': 'vc_colmd61',
-        'Summary': 'See Vacancy',
+        'Summary': 'Text7',
         'start': 'ASAP',
         'Source': 'HintTech'
     },
-    'haarlemmermeerhuurtin': {
-        'Title': 'Title',
-        'rate': 'Title3',
-        'Duration': 'Title5',
-        'URL': 'https://www.haarlemmermeerhuurtin.nl/opdrachten',
-        'Location': 'Field2',
-        'Summary': 'See Vacancy',
-        'start': 'ASAP',
-        'Hours': 'Field3',
-        'Company': 'Gemeente Haarlemmermeer',
-        'Source': 'Haarlemmermeerhuurtin'
-    },
+
     'Select': {
         'Title': 'Title',
         'Location': 'Field2', 
@@ -1878,6 +1867,33 @@ def freelance_directory(files_read, company_name):
         
         # AMSTELVEENHUURTIN POST-MAPPING PROCESSING
         if company_name == 'Amstelveenhuurtin':
+            # Process Title field - remove words in brackets and words starting with "SO" followed by a number
+            if 'Title' in result.columns:
+                def process_title_amstelveenhuurtin(title_str):
+                    if pd.isna(title_str) or title_str == '':
+                        return 'Not mentioned'
+                    
+                    # Convert to string and clean up
+                    title_clean = str(title_str).strip()
+                    
+                    # Remove words in brackets (including nested brackets)
+                    title_clean = re.sub(r'\([^)]*\)', '', title_clean)
+                    
+                    # Remove words that start with "SO" followed by a number
+                    title_clean = re.sub(r'\bSO\d+\b', '', title_clean, flags=re.IGNORECASE)
+                    
+                    # Clean up extra spaces
+                    title_clean = re.sub(r'\s+', ' ', title_clean).strip()
+                    
+                    # Return "Not mentioned" if empty after cleaning
+                    if not title_clean:
+                        return 'Not mentioned'
+                    
+                    return title_clean
+                
+                result['Title'] = result['Title'].apply(process_title_amstelveenhuurtin)
+                logging.info(f"Amstelveenhuurtin post-mapping: Processed Title field to remove words in brackets and SO-number patterns")
+            
             # Process Location field - extract text between "standplaats:" and "|"
             if 'Location' in result.columns:
                 def process_location_amstelveenhuurtin(location_str):
@@ -2839,6 +2855,75 @@ def freelance_directory(files_read, company_name):
                 
                 result['Title'] = result['Title'].apply(process_title_centric)
                 logging.info(f"Centric post-mapping: Processed Title field to remove words starting with 'OP-' and words in brackets")
+            
+            # Process Hours field - extract text
+            if 'Hours' in result.columns:
+                def process_hours_centric(hours_str):
+                    if pd.isna(hours_str) or hours_str == '':
+                        return 'Not mentioned'
+                    
+                    hours_clean = str(hours_str).strip()
+                    return hours_clean if hours_clean else 'Not mentioned'
+                
+                result['Hours'] = result['Hours'].apply(process_hours_centric)
+                logging.info(f"Centric post-mapping: Processed Hours field to extract text")
+            
+            # Process Summary field - extract text
+            if 'Summary' in result.columns:
+                def process_summary_centric(summary_str):
+                    if pd.isna(summary_str) or summary_str == '':
+                        return 'Not mentioned'
+                    
+                    summary_clean = str(summary_str).strip()
+                    return summary_clean if summary_clean else 'Not mentioned'
+                
+                result['Summary'] = result['Summary'].apply(process_summary_centric)
+                logging.info(f"Centric post-mapping: Processed Summary field to extract text")
+            
+            # Process rate field - extract text between "maximum rate:" and "working distance" (case insensitive)
+            if 'rate' in result.columns:
+                def process_rate_centric(rate_str):
+                    if pd.isna(rate_str) or rate_str == '':
+                        return 'Not mentioned'
+                    
+                    rate_clean = str(rate_str).strip()
+                    
+                    # Find text between "maximum rate:" and "working distance" (case insensitive)
+                    import re
+                    max_rate_match = re.search(r'maximum rate:', rate_clean, re.IGNORECASE)
+                    working_distance_match = re.search(r'working distance', rate_clean, re.IGNORECASE)
+                    
+                    if max_rate_match and working_distance_match and working_distance_match.start() > max_rate_match.end():
+                        # Extract text between the markers
+                        extracted_text = rate_clean[max_rate_match.end():working_distance_match.start()].strip()
+                        return extracted_text if extracted_text else 'Not mentioned'
+                    
+                    return 'Not mentioned'
+                
+                result['rate'] = result['rate'].apply(process_rate_centric)
+                logging.info(f"Centric post-mapping: Processed rate field to extract text between 'maximum rate:' and 'working distance'")
+        
+        # RIJKSWATERSTAAT POST-MAPPING PROCESSING
+        if company_name == 'rijkswaterstaat':
+            # Remove rows that contain specific markers in the Text column
+            if 'Text' in result.columns:
+                initial_count = len(result)
+                
+                # Create a mask to identify rows to keep (exclude rows with unwanted markers)
+                mask = ~result['Text'].astype(str).str.contains(
+                    r'ZZP niet toegestaan|geen ZZP|Detachering', 
+                    case=False, 
+                    na=False
+                )
+                
+                # Apply the mask to filter out unwanted rows
+                result = result[mask].reset_index(drop=True)
+                
+                removed_count = initial_count - len(result)
+                if removed_count > 0:
+                    logging.info(f"Rijkswaterstaat post-mapping: Removed {removed_count} rows containing 'ZZP niet toegestaan', 'geen ZZP', or 'Detachering' markers")
+                else:
+                    logging.info(f"Rijkswaterstaat post-mapping: No rows found with unwanted markers")
         
         # SALTA GROUP POST-MAPPING PROCESSING
         if company_name == 'Salta Group':
@@ -3078,6 +3163,68 @@ def freelance_directory(files_read, company_name):
                 
                 result['start'] = result['start'].apply(process_start_groningenhuurtin)
                 logging.info(f"groningenhuurtin post-mapping: Processed start field to extract first date from Title5")
+            
+            # Process Location field - extract text between "Standplaats:" and "|"
+            if 'Location' in result.columns:
+                def process_location_groningenhuurtin(location_str):
+                    if pd.isna(location_str) or location_str == '':
+                        return 'Not mentioned'
+                    
+                    location_clean = str(location_str).strip()
+                    
+                    # Find text between "Standplaats:" and "|"
+                    import re
+                    match = re.search(r'standplaats:\s*(.*?)\s*\|', location_clean, re.IGNORECASE)
+                    if match:
+                        extracted_text = match.group(1).strip()
+                        return extracted_text if extracted_text else 'Not mentioned'
+                    
+                    return 'Not mentioned'
+                
+                result['Location'] = result['Location'].apply(process_location_groningenhuurtin)
+                logging.info(f"groningenhuurtin post-mapping: Processed Location field to extract text between 'Standplaats:' and '|'")
+            
+            # Process Hours field - extract number between "uren" and "|"
+            if 'Hours' in result.columns:
+                def process_hours_groningenhuurtin(hours_str):
+                    if pd.isna(hours_str) or hours_str == '':
+                        return 'Not mentioned'
+                    
+                    hours_clean = str(hours_str).strip()
+                    
+                    # Find number between "uren" and "|"
+                    import re
+                    match = re.search(r'uren\s*(\d+)\s*\|', hours_clean, re.IGNORECASE)
+                    if match:
+                        number = match.group(1)
+                        return number
+                    
+                    return 'Not mentioned'
+                
+                result['Hours'] = result['Hours'].apply(process_hours_groningenhuurtin)
+                logging.info(f"groningenhuurtin post-mapping: Processed Hours field to extract number between 'uren' and '|'")
+            
+            # Process rate field - extract number after "€"
+            if 'rate' in result.columns:
+                def process_rate_groningenhuurtin(rate_str):
+                    if pd.isna(rate_str) or rate_str == '':
+                        return 'Not mentioned'
+                    
+                    rate_clean = str(rate_str).strip()
+                    
+                    # Find number after "€"
+                    import re
+                    match = re.search(r'€\s*(\d+(?:,\d+)?)', rate_clean, re.IGNORECASE)
+                    if match:
+                        number = match.group(1)
+                        # Remove commas from numbers like "1,500"
+                        number = number.replace(',', '')
+                        return number
+                    
+                    return 'Not mentioned'
+                
+                result['rate'] = result['rate'].apply(process_rate_groningenhuurtin)
+                logging.info(f"groningenhuurtin post-mapping: Processed rate field to extract number after '€'")
         
         # FLEVOLAND POST-MAPPING PROCESSING
         if company_name == 'flevoland':
@@ -3146,137 +3293,99 @@ def freelance_directory(files_read, company_name):
                 
                 result['Hours'] = result['Hours'].apply(process_hours_flevoland)
                 logging.info(f"flevoland post-mapping: Processed Hours field to remove 'hours' word")
-        
-        # AMSTELVEENHUURTIN POST-MAPPING PROCESSING
-        if company_name == 'Amstelveenhuurtin':
-            # Process Title field - remove words in brackets and words starting with "SO" followed by a number
-            if 'Title' in result.columns:
-                def process_title_amstelveenhuurtin(title_str):
-                    if pd.isna(title_str) or title_str == '':
-                        return 'Not mentioned'
+            
+            # Process Summary field - merge Field7 and Field8
+            if 'Summary' in result.columns:
+                def process_summary_flevoland(row):
+                    # Get Field7 and Field8 values from the original data
+                    field7_value = row.get('Field7', '') if 'Field7' in row else ''
+                    field8_value = row.get('Field8', '') if 'Field8' in row else ''
                     
-                    # Convert to string and clean up
-                    title_clean = str(title_str).strip()
+                    # Convert to strings and clean up
+                    field7_clean = str(field7_value).strip() if field7_value else ''
+                    field8_clean = str(field8_value).strip() if field8_value else ''
                     
-                    # Remove words in brackets (including nested brackets)
-                    title_clean = re.sub(r'\([^)]*\)', '', title_clean)
-                    
-                    # Remove words that start with "SO" followed by a number
-                    title_clean = re.sub(r'\bSO\d+\b', '', title_clean, flags=re.IGNORECASE)
+                    # Combine the fields with a space separator
+                    if field7_clean and field8_clean:
+                        combined_summary = f"{field7_clean} {field8_clean}"
+                    elif field7_clean:
+                        combined_summary = field7_clean
+                    elif field8_clean:
+                        combined_summary = field8_clean
+                    else:
+                        combined_summary = 'Not mentioned'
                     
                     # Clean up extra spaces
-                    title_clean = re.sub(r'\s+', ' ', title_clean).strip()
+                    combined_summary = re.sub(r'\s+', ' ', combined_summary).strip()
                     
-                    # Return "Not mentioned" if empty after cleaning
-                    if not title_clean:
-                        return 'Not mentioned'
-                    
-                    return title_clean
+                    return combined_summary if combined_summary else 'Not mentioned'
                 
-                result['Title'] = result['Title'].apply(process_title_amstelveenhuurtin)
-                logging.info(f"Amstelveenhuurtin post-mapping: Processed Title field to remove words in brackets and SO-number patterns")
-            
-            # Process Duration field - calculate months between the first and second date from Title5
-            if 'Duration' in result.columns:
-                def process_duration_amstelveenhuurtin(duration_str):
-                    if pd.isna(duration_str) or duration_str == '':
-                        return 'Not mentioned'
+                result['Summary'] = result.apply(process_summary_flevoland, axis=1)
+                logging.info(f"flevoland post-mapping: Processed Summary field to merge Field7 and Field8")
+        
+        # TALENTENREGIO POST-MAPPING PROCESSING
+        if company_name == 'TalentenRegio':
+            # Process Summary field - merge Text4 and Text5
+            if 'Summary' in result.columns:
+                def process_summary_talentenregio(row):
+                    # Get Text4 and Text5 values from the original data
+                    text4_value = row.get('Text4', '') if 'Text4' in row else ''
+                    text5_value = row.get('Text5', '') if 'Text5' in row else ''
                     
-                    try:
-                        # Convert to string and clean up
-                        duration_clean = str(duration_str).strip()
-                        
-                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
-                        date_patterns = [
-                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
-                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
-                        ]
-                        
-                        dates_found = []
-                        for pattern in date_patterns:
-                            matches = re.findall(pattern, duration_clean)
-                            for match in matches:
-                                if len(match) == 3:
-                                    if len(match[0]) == 4:  # YYYY-MM-DD format
-                                        year, month, day = match
-                                    else:  # DD-MM-YYYY format
-                                        day, month, year = match
-                                    try:
-                                        date_obj = datetime(int(year), int(month), int(day))
-                                        dates_found.append(date_obj)
-                                    except ValueError:
-                                        continue
-                        
-                        # If we found at least 2 dates, calculate the difference in months
-                        if len(dates_found) >= 2:
-                            # Sort dates to ensure first date is earlier
-                            dates_found.sort()
-                            start_date = dates_found[0]
-                            end_date = dates_found[1]
-                            
-                            # Calculate difference in months
-                            months_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
-                            
-                            if months_diff > 0:
-                                return f"{months_diff} months"
-                            else:
-                                return "Less than 1 month"
-                        else:
-                            return duration_clean
-                            
-                    except Exception as e:
-                        logging.warning(f"Error processing amstelveenhuurtin duration '{duration_str}': {e}")
-                        return duration_clean
-                
-                result['Duration'] = result['Duration'].apply(process_duration_amstelveenhuurtin)
-                logging.info(f"Amstelveenhuurtin post-mapping: Processed Duration field to calculate months between dates from Title5")
-            
-            # Process start field - extract the first date from Title5
-            if 'start' in result.columns:
-                def process_start_amstelveenhuurtin(start_str):
-                    if pd.isna(start_str) or start_str == '':
-                        return 'ASAP'
+                    # Convert to strings and clean up
+                    text4_clean = str(text4_value).strip() if text4_value else ''
+                    text5_clean = str(text5_value).strip() if text5_value else ''
                     
-                    try:
-                        # Convert to string and clean up
-                        start_clean = str(start_str).strip()
-                        
-                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
-                        date_patterns = [
-                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
-                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
-                        ]
-                        
-                        dates_found = []
-                        for pattern in date_patterns:
-                            matches = re.findall(pattern, start_clean)
-                            for match in matches:
-                                if len(match) == 3:
-                                    if len(match[0]) == 4:  # YYYY-MM-DD format
-                                        year, month, day = match
-                                    else:  # DD-MM-YYYY format
-                                        day, month, year = match
-                                    try:
-                                        date_obj = datetime(int(year), int(month), int(day))
-                                        dates_found.append(date_obj)
-                                    except ValueError:
-                                        continue
-                        
-                        # Return the first date found, or ASAP if no dates
-                        if dates_found:
-                            # Sort dates and return the earliest one
-                            dates_found.sort()
-                            first_date = dates_found[0]
-                            return first_date.strftime('%Y-%m-%d')
-                        else:
-                            return 'ASAP'
-                            
-                    except Exception as e:
-                        logging.warning(f"Error processing amstelveenhuurtin start date '{start_str}': {e}")
-                        return 'ASAP'
+                    # Combine the fields with a space separator
+                    if text4_clean and text5_clean:
+                        combined_summary = f"{text4_clean} {text5_clean}"
+                    elif text4_clean:
+                        combined_summary = text4_clean
+                    elif text5_clean:
+                        combined_summary = text5_clean
+                    else:
+                        combined_summary = 'Not mentioned'
+                    
+                    # Clean up extra spaces
+                    combined_summary = re.sub(r'\s+', ' ', combined_summary).strip()
+                    
+                    return combined_summary if combined_summary else 'Not mentioned'
                 
-                result['start'] = result['start'].apply(process_start_amstelveenhuurtin)
-                logging.info(f"Amstelveenhuurtin post-mapping: Processed start field to extract first date from Title5")
+                result['Summary'] = result.apply(process_summary_talentenregio, axis=1)
+                logging.info(f"TalentenRegio post-mapping: Processed Summary field to merge Text4 and Text5")
+        
+        # POLITIE POST-MAPPING PROCESSING
+        if company_name == 'politie':
+            # Process Summary field - merge Text5 and Text6
+            if 'Summary' in result.columns:
+                def process_summary_politie(row):
+                    # Get Text5 and Text6 values from the original data
+                    text5_value = row.get('Text5', '') if 'Text5' in row else ''
+                    text6_value = row.get('Text6', '') if 'Text6' in row else ''
+                    
+                    # Convert to strings and clean up
+                    text5_clean = str(text5_value).strip() if text5_value else ''
+                    text6_clean = str(text6_value).strip() if text6_value else ''
+                    
+                    # Combine the fields with a space separator
+                    if text5_clean and text6_clean:
+                        combined_summary = f"{text5_clean} {text6_clean}"
+                    elif text5_clean:
+                        combined_summary = text5_clean
+                    elif text6_clean:
+                        combined_summary = text6_clean
+                    else:
+                        combined_summary = 'Not mentioned'
+                    
+                    # Clean up extra spaces
+                    combined_summary = re.sub(r'\s+', ' ', combined_summary).strip()
+                    
+                    return combined_summary if combined_summary else 'Not mentioned'
+                
+                result['Summary'] = result.apply(process_summary_politie, axis=1)
+                logging.info(f"Politie post-mapping: Processed Summary field to merge Text5 and Text6")
+        
+
         
         # NOORD-HOLLAND POST-MAPPING PROCESSING
         if company_name == 'Noord-Holland':
@@ -3384,15 +3493,16 @@ def freelance_directory(files_read, company_name):
         
         # HAARLEMMERMEERHUURTIN POST-MAPPING PROCESSING
         if company_name == 'Haarlemmermeerhuurtin':
-            # Process Duration field - calculate months between the first and second date from Title5
-            if 'Duration' in result.columns:
-                def process_duration_haarlemmermeerhuurtin(duration_str):
-                    if pd.isna(duration_str) or duration_str == '':
+            # Process Duration field - extract from Summary field
+            if 'Duration' in result.columns and 'Summary' in result.columns:
+                def process_duration_from_summary(row):
+                    summary_str = row.get('Summary', '')
+                    if pd.isna(summary_str) or summary_str == '':
                         return 'Not mentioned'
                     
                     try:
                         # Convert to string and clean up
-                        duration_clean = str(duration_str).strip()
+                        summary_clean = str(summary_str).strip()
                         
                         # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
                         date_patterns = [
@@ -3402,7 +3512,7 @@ def freelance_directory(files_read, company_name):
                         
                         dates_found = []
                         for pattern in date_patterns:
-                            matches = re.findall(pattern, duration_clean)
+                            matches = re.findall(pattern, summary_clean)
                             for match in matches:
                                 if len(match) == 3:
                                     if len(match[0]) == 4:  # YYYY-MM-DD format
@@ -3430,24 +3540,69 @@ def freelance_directory(files_read, company_name):
                             else:
                                 return "Less than 1 month"
                         else:
-                            return duration_clean
+                            return 'Not mentioned'
                             
                     except Exception as e:
-                        logging.warning(f"Error processing Haarlemmermeerhuurtin duration '{duration_str}': {e}")
-                        return duration_clean
+                        logging.warning(f"Error processing Haarlemmermeerhuurtin duration from summary '{summary_str}': {e}")
+                        return 'Not mentioned'
                 
-                result['Duration'] = result['Duration'].apply(process_duration_haarlemmermeerhuurtin)
-                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed Duration field to calculate months between dates from Title5")
+                result['Duration'] = result.apply(process_duration_from_summary, axis=1)
+                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed Duration field to extract from Summary")
             
-            # Process start field - extract the first date from Title5
-            if 'start' in result.columns:
-                def process_start_haarlemmermeerhuurtin(start_str):
-                    if pd.isna(start_str) or start_str == '':
+            # Process fields that are set to "See Summary" - extract from Pub_Time field
+            if 'rate' in result.columns and 'Summary' in result.columns:
+                def process_rate_from_summary(row):
+                    summary_str = row.get('Summary', '')
+                    if pd.isna(summary_str) or summary_str == '':
+                        return 'Not mentioned'
+                    
+                    summary_clean = str(summary_str).strip()
+                    # Look for rate patterns in the summary
+                    import re
+                    # Look for currency patterns like €50, €50.00, 50€, etc.
+                    rate_match = re.search(r'€\s*(\d+(?:,\d+)?(?:\.\d+)?)', summary_clean, re.IGNORECASE)
+                    if rate_match:
+                        return rate_match.group(1)
+                    
+                    # Look for "per uur" patterns
+                    per_uur_match = re.search(r'(\d+(?:,\d+)?(?:\.\d+)?)\s*per\s*uur', summary_clean, re.IGNORECASE)
+                    if per_uur_match:
+                        return per_uur_match.group(1)
+                    
+                    return 'Not mentioned'
+                
+                result['rate'] = result.apply(process_rate_from_summary, axis=1)
+                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed rate field to extract from Summary")
+            
+            if 'Hours' in result.columns and 'Summary' in result.columns:
+                def process_hours_from_summary(row):
+                    summary_str = row.get('Summary', '')
+                    if pd.isna(summary_str) or summary_str == '':
+                        return 'Not mentioned'
+                    
+                    summary_clean = str(summary_str).strip()
+                    # Look for hours patterns in the summary
+                    import re
+                    # Look for patterns like "40 uur", "40 uren", "40h", etc.
+                    hours_match = re.search(r'(\d+)\s*(?:uur|uren|h|hours?)', summary_clean, re.IGNORECASE)
+                    if hours_match:
+                        return hours_match.group(1)
+                    
+                    return 'Not mentioned'
+                
+                result['Hours'] = result.apply(process_hours_from_summary, axis=1)
+                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed Hours field to extract from Summary")
+            
+            # Process start field - extract from Summary field
+            if 'start' in result.columns and 'Summary' in result.columns:
+                def process_start_from_summary(row):
+                    summary_str = row.get('Summary', '')
+                    if pd.isna(summary_str) or summary_str == '':
                         return 'ASAP'
                     
                     try:
                         # Convert to string and clean up
-                        start_clean = str(start_str).strip()
+                        summary_clean = str(summary_str).strip()
                         
                         # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
                         date_patterns = [
@@ -3457,7 +3612,7 @@ def freelance_directory(files_read, company_name):
                         
                         dates_found = []
                         for pattern in date_patterns:
-                            matches = re.findall(pattern, start_clean)
+                            matches = re.findall(pattern, summary_clean)
                             for match in matches:
                                 if len(match) == 3:
                                     if len(match[0]) == 4:  # YYYY-MM-DD format
@@ -3480,11 +3635,11 @@ def freelance_directory(files_read, company_name):
                             return 'ASAP'
                             
                     except Exception as e:
-                        logging.warning(f"Error processing Haarlemmermeerhuurtin start date '{start_str}': {e}")
+                        logging.warning(f"Error processing Haarlemmermeerhuurtin start date from summary '{summary_str}': {e}")
                         return 'ASAP'
                 
-                result['start'] = result['start'].apply(process_start_haarlemmermeerhuurtin)
-                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed start field to extract first date from Title5")
+                result['start'] = result.apply(process_start_from_summary, axis=1)
+                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed start field to extract from Summary")
         
         # TECHFREELANCERS POST-MAPPING PROCESSING
         if company_name == 'TechFreelancers':
@@ -3633,6 +3788,23 @@ def freelance_directory(files_read, company_name):
                 
                 result['Duration'] = result['Duration'].apply(process_duration_interimhub)
                 logging.info(f"InterimHub post-mapping: Processed Duration field to standardize duration formats")
+        
+        # LINKIT POST-MAPPING PROCESSING
+        elif company_name == 'LinkIT':
+            if 'Duration' in result.columns:
+                def process_duration_linkit(duration_value):
+                    """Process LinkIT Duration field to check for 'months' marker"""
+                    if pd.isna(duration_value) or duration_value == '':
+                        return 'Not mentioned'
+                    
+                    duration_str = str(duration_value).lower()
+                    if 'months' in duration_str:
+                        return duration_str
+                    else:
+                        return 'Not mentioned'
+                
+                result['Duration'] = result['Duration'].apply(process_duration_linkit)
+                logging.info(f"LinkIT post-mapping: Processed Duration field to check for 'months' marker")
         
         # Remove validation and cleaning logic - just return the processed data
         return result
@@ -4313,6 +4485,76 @@ def print_summary_stats():
     for line in output:
         write_to_log_and_console(line)
 
+def upload_processing_results_to_supabase():
+    """Upload processing results to Supabase table 'DATA SOURCE PROCESSING RESULTS' - overwrites entire table"""
+    if not processing_results:
+        return
+
+    try:
+        # Create results with the 6 columns you want
+        csv_data = []
+        current_date = datetime.now().strftime('%Y-%m-%d')
+        current_time = datetime.now().strftime('%H:%M:%S')
+
+        for result in processing_results:
+            company = result['company']
+            status = result['status']
+            initial = result.get('read_data', 0)
+            final = result.get('processed', 0)
+            dropped = result.get('dropped', 0)
+            success_pct = (final / initial * 100) if initial > 0 else 0
+
+            csv_data.append({
+                'Source': company,
+                'Initial': initial,
+                'Dropped': dropped,
+                'Final': final,
+                'Success_Percentage': success_pct,
+                'Status': status,
+                'run_date': current_date,
+                'run_time': current_time
+            })
+
+        # Create DataFrame and sort by success percentage (lowest first)
+        df = pd.DataFrame(csv_data)
+        df = df.sort_values('Success_Percentage', ascending=True)
+
+        # Handle NaN values before converting to records
+        df = df.fillna('')
+        for col in df.columns:
+            df[col] = df[col].astype(str).replace(['nan', 'NaN', 'None', 'none', 'NULL', 'null'], '')
+
+        # Convert DataFrame to list of dictionaries
+        records = df.to_dict('records')
+        total_records = len(records)
+
+        # First, delete all existing records from the table
+        logging.info(f"Deleting all existing records from 'DATA SOURCE PROCESSING RESULTS' table")
+        supabase.table('DATA SOURCE PROCESSING RESULTS').delete().neq('id', 0).execute()
+
+        # Then upload new records to Supabase in batches
+        new_records_total = 0
+        for i in range(0, total_records, BATCH_SIZE):
+            batch_df = df[i:i + BATCH_SIZE]
+            batch_data = batch_df.to_dict(orient='records')
+
+            try:
+                logging.info(f"Uploading {len(batch_data)} processing results to Supabase table 'DATA SOURCE PROCESSING RESULTS' for batch starting at index {i}")
+                response = supabase.table('DATA SOURCE PROCESSING RESULTS').insert(batch_data).execute()
+                if hasattr(response, 'data'):
+                    new_records = len(response.data)
+                    new_records_total += new_records
+                time.sleep(1)  # Rate limiting
+            except Exception as e_upsert:
+                logging.error(f"Error during processing results upload for batch {i // BATCH_SIZE + 1}: {str(e_upsert)}")
+                raise
+
+        logging.info(f"Successfully uploaded {new_records_total} processing results to Supabase table 'DATA SOURCE PROCESSING RESULTS' (table overwritten)")
+
+    except Exception as e:
+        logging.error(f"Failed to upload processing results to Supabase: {str(e)}")
+        raise
+
 def print_supabase_upsert_table(upload_results):
     """Print Supabase upload results in table format"""
     if not upload_results:
@@ -4689,7 +4931,10 @@ def main():
             
             # Print Supabase upload results table
             print_supabase_upsert_table(upload_results)
-            
+
+            # Upload processing results to Supabase
+            upload_processing_results_to_supabase()
+
             # Log the transaction result
             if upload_successful:
                 logging.info("✅ Both tables uploaded successfully - transaction completed")
