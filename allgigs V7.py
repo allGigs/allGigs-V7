@@ -54,12 +54,16 @@ IMPORTANT_DIR = BASE_DIR / 'Important_allGigs'
 def categorize_location(location: str, rate: str = None, company: str = None, source: str = None, title: str = None, summary: str = None) -> dict:
     """
     Categorize a location into Dutch, EU, and Rest of World categories.
-    Logic: Assume Dutch by default unless we find clear evidence of non-Dutch origin.
-    
+    Enhanced with remote/hybrid detection and contextual analysis.
+
     Args:
         location (str): The location string to categorize
         rate (str, optional): The rate/salary string to check for currency indicators
-        
+        company (str, optional): Company name for contextual analysis
+        source (str, optional): Job source for regional bias detection
+        title (str, optional): Job title for additional context
+        summary (str, optional): Job description for remote/hybrid clues
+
     Returns:
         Dict[str, bool]: Dictionary with 'Dutch', 'EU', 'Rest_of_World' as keys
     """
@@ -67,8 +71,69 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
         location_clean = ''
     else:
         location_clean = str(location).lower().strip()
-    
-    # 1. First check for clear EU countries and cities (highest priority)
+
+    # Initialize remote/hybrid detection
+    is_remote = False
+    is_hybrid = False
+    remote_region = None
+
+    # 1. DETECT REMOTE/HYBRID PATTERNS FIRST
+    remote_patterns = ['remote', 'remote work', 'work from home', 'wfh', 'telecommute',
+                      'home office', 'work remotely', 'remote position', 'virtual']
+    hybrid_patterns = ['hybrid', 'hybrid work', 'office + remote', 'mixed', 'flexible location']
+
+    # Check for remote patterns
+    for pattern in remote_patterns:
+        if pattern in location_clean:
+            is_remote = True
+            break
+
+    # Check for hybrid patterns
+    for pattern in hybrid_patterns:
+        if pattern in location_clean:
+            is_hybrid = True
+            break
+
+    # Extract remote region specifications
+    if is_remote:
+        if 'remote (eu)' in location_clean or 'eu remote' in location_clean:
+            remote_region = 'eu'
+        elif 'remote (netherlands)' in location_clean or 'remote nl' in location_clean:
+            remote_region = 'dutch'
+        elif 'remote (germany)' in location_clean or 'germany remote' in location_clean:
+            remote_region = 'eu_germany'
+
+    # 2. ANALYZE CONTEXT FOR REMOTE JOBS WITHOUT REGION SPECIFICATION
+    if is_remote and not remote_region:
+        # Check company context for Dutch companies
+        if company and not pd.isna(company):
+            company_clean = str(company).lower().strip()
+            dutch_companies = ['ing', 'rabobank', 'abn amro', 'philips', 'shell', 'unilever']
+            if any(dutch_company in company_clean for dutch_company in dutch_companies):
+                remote_region = 'dutch'
+
+        # Check source context (Dutch job boards suggest Dutch remote)
+        if not remote_region and source:
+            dutch_sources = ['freelance.nl', 'interimnetwerk']
+            if any(dutch_source in str(source).lower() for dutch_source in dutch_sources):
+                remote_region = 'dutch'
+
+    # 3. APPLY REMOTE REGIONAL LOGIC
+    if is_remote and remote_region:
+        if remote_region == 'dutch':
+            return {'Dutch': True, 'EU': False, 'Rest_of_World': False}
+        elif remote_region.startswith('eu'):
+            return {'Dutch': False, 'EU': True, 'Rest_of_World': False}
+
+    # For unspecified remote, use company context
+    if is_remote and not remote_region:
+        if company and not pd.isna(company):
+            company_clean = str(company).lower().strip()
+            dutch_companies = ['ing', 'rabobank', 'abn amro', 'philips', 'shell', 'unilever']
+            if any(dutch_company in company_clean for dutch_company in dutch_companies):
+                return {'Dutch': True, 'EU': False, 'Rest_of_World': False}
+
+    # 4. REGULAR LOCATION ANALYSIS (for non-remote or hybrid office locations)
     eu_countries_excluding_nl = [
         'germany', 'france', 'italy', 'spain', 'poland', 'belgium', 'austria',
         'sweden', 'denmark', 'finland', 'portugal', 'greece', 'czech republic',
@@ -76,96 +141,126 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
         'slovenia', 'lithuania', 'latvia', 'estonia', 'ireland', 'luxembourg',
         'malta', 'cyprus'
     ]
-    
-    # Major EU cities (when country is not specified)
+
     major_eu_cities = [
-        'berlin', 'munich', 'hamburg', 'cologne', 'frankfurt',  # Germany
-        'paris', 'marseille', 'lyon', 'toulouse', 'nice',       # France
-        'rome', 'milan', 'naples', 'turin', 'florence',         # Italy
-        'madrid', 'barcelona', 'valencia', 'seville',           # Spain
-        'warsaw', 'krakow', 'gdansk', 'wroclaw',                # Poland
-        'brussels', 'antwerp', 'ghent', 'bruges',               # Belgium
-        'vienna', 'salzburg', 'innsbruck',                      # Austria
-        'stockholm', 'gothenburg', 'malmö',                     # Sweden
-        'copenhagen', 'aarhus', 'odense', 'københavn',          # Denmark
-        'helsinki', 'espoo', 'tampere',                         # Finland
-        'lisbon', 'porto', 'braga',                             # Portugal
-        'athens', 'thessaloniki', 'patras',                     # Greece
-        'prague', 'brno', 'ostrava',                            # Czech Republic
-        'budapest', 'debrecen', 'szeged',                       # Hungary
-        'bucharest', 'cluj-napoca', 'timișoara',                # Romania
-        'sofia', 'plovdiv', 'varna',                            # Bulgaria
-        'zagreb', 'split', 'rijeka',                            # Croatia
-        'bratislava', 'košice',                                  # Slovakia
-        'ljubljana', 'maribor',                                  # Slovenia
-        'vilnius', 'kaunas', 'klaipėda',                        # Lithuania
-        'riga', 'daugavpils', 'liepāja',                        # Latvia
-        'tallinn', 'tartu', 'narva',                            # Estonia
-        'dublin', 'cork', 'limerick',                           # Ireland
-        'luxembourg', 'esch-sur-alzette',                       # Luxembourg
-        'valletta', 'birkirkara',                               # Malta
-        'nicosia', 'limassol', 'larnaca'                        # Cyprus
+        'berlin', 'munich', 'hamburg', 'cologne', 'frankfurt', 'paris', 'marseille',
+        'lyon', 'rome', 'milan', 'madrid', 'barcelona', 'warsaw', 'krakow',
+        'brussels', 'vienna', 'stockholm', 'copenhagen', 'helsinki', 'lisbon'
     ]
-    
+
     if location_clean:
         for country in eu_countries_excluding_nl:
             if country in location_clean:
                 return {'Dutch': False, 'EU': True, 'Rest_of_World': False}
-        
+
         for city in major_eu_cities:
             if city in location_clean:
                 return {'Dutch': False, 'EU': True, 'Rest_of_World': False}
-    
-    # 2. Check for "European Union" specifically mentioned
+
+    # 5. Check for "European Union" mentions
     if location_clean and 'european union' in location_clean:
         return {'Dutch': False, 'EU': True, 'Rest_of_World': False}
-    
-    # 3. Check for clear non-EU countries in location
+
+    # 6. Check for non-EU countries
     rest_of_world_countries = [
-        'united states', 'usa', 'america', 'canada', 'australia', 'new zealand', 
+        'united states', 'usa', 'america', 'canada', 'australia', 'new zealand',
         'india', 'china', 'japan', 'singapore', 'hong kong', 'south korea',
         'brazil', 'mexico', 'argentina', 'chile', 'south africa', 'israel',
         'turkey', 'russia', 'ukraine', 'belarus', 'switzerland', 'norway',
         'united kingdom', 'uk', 'britain', 'england', 'scotland', 'wales'
     ]
-    
+
     if location_clean:
         for country in rest_of_world_countries:
             if country in location_clean:
                 return {'Dutch': False, 'EU': False, 'Rest_of_World': True}
-    
-    # 4. Check for USD currency (only after location checks)
+
+    # 7. Check for USD currency
     if rate and not pd.isna(rate):
         rate_str = str(rate).lower().strip()
         usd_indicators = ['$', 'usd', 'dollar', '$/hr', '$/hour', '$/day', '$/month']
         if any(indicator in rate_str for indicator in usd_indicators):
             return {'Dutch': False, 'EU': False, 'Rest_of_World': True}
-    
-    # 5. If we reach here, assume Dutch by default
-    # This covers all Dutch locations, Dutch remote jobs, and ambiguous cases
-    # Dutch jobs are exclusively Dutch, not EU
+
+    # 8. Default to Dutch
     return {'Dutch': True, 'EU': False, 'Rest_of_World': False}
+
+def detect_work_arrangement(location: str = None, title: str = None, summary: str = None,
+                          company: str = None, source: str = None) -> str:
+    """Detect Remote, Hybrid, Onsite, or Not Specified from multiple text sources."""
+    text_sources = []
+    if location and not pd.isna(location):
+        text_sources.append(str(location))
+    if title and not pd.isna(title):
+        text_sources.append(str(title))
+    if summary and not pd.isna(summary):
+        text_sources.append(str(summary))
+    if company and not pd.isna(company):
+        text_sources.append(str(company))
+
+    combined_text = ' '.join(text_sources).lower().strip()
+    if not combined_text:
+        return 'Not Specified'
+
+    # Remote patterns
+    remote_patterns = ['remote', 'remote work', 'work from home', 'wfh', 'telecommute',
+                      'home office', 'work remotely', 'remote position', 'virtual']
+    if any(pattern in combined_text for pattern in remote_patterns):
+        if 'remote (eu)' in combined_text or 'eu remote' in combined_text:
+            return 'Remote (EU)'
+        elif 'remote (netherlands)' in combined_text or 'remote nl' in combined_text:
+            return 'Remote (Netherlands)'
+        elif any(region in combined_text for region in ['remote (germany)', 'remote (france)', 'remote (uk)']):
+            return 'Remote (Specified Country)'
+        else:
+            return 'Remote'
+
+    # Hybrid patterns
+    hybrid_patterns = ['hybrid', 'hybrid work', 'office + remote', 'remote + office',
+                      'mixed work', 'flexible location', 'blended']
+    if any(pattern in combined_text for pattern in hybrid_patterns):
+        return 'Hybrid'
+
+    # Onsite patterns
+    onsite_patterns = ['onsite', 'on-site', 'office based', 'office-based', 'in office',
+                      'at office', 'office location', 'physical office']
+    if any(pattern in combined_text for pattern in onsite_patterns):
+        return 'Onsite'
+
+    return 'Not Specified'
 
 def add_regional_columns(df: pd.DataFrame, location_column: str = 'Location') -> pd.DataFrame:
     """
-    Add regional categorization columns to a DataFrame.
-    Uses "Dutch by default" approach with context-based categorization.
-    
+    Add regional categorization and work arrangement columns to a DataFrame.
+    Enhanced with remote/hybrid detection across multiple columns.
+
     Args:
         df (pd.DataFrame): The DataFrame to add columns to
         location_column (str): The name of the location column to analyze
-        
+
     Returns:
-        pd.DataFrame: DataFrame with new regional columns added
+        pd.DataFrame: DataFrame with new regional and work arrangement columns
     """
     if location_column not in df.columns:
         logging.warning(f"Column '{location_column}' not found in DataFrame")
         return df
-    
-    # Create a copy to avoid modifying the original
+
     df_copy = df.copy()
-    
-    # Apply categorization to each row with all available context
+
+    # Add WORK ARRANGEMENT column first
+    work_arrangements = []
+    for idx, row in df_copy.iterrows():
+        arrangement = detect_work_arrangement(
+            location=row.get(location_column),
+            title=row.get('Title'),
+            summary=row.get('Summary'),
+            company=row.get('Company'),
+            source=row.get('Source')
+        )
+        work_arrangements.append(arrangement)
+    df_copy['Work_Arrangement'] = work_arrangements
+
+    # Apply regional categorization with enhanced remote/hybrid logic
     def categorize_row(row):
         return categorize_location(
             location=row.get(location_column),
@@ -175,14 +270,14 @@ def add_regional_columns(df: pd.DataFrame, location_column: str = 'Location') ->
             title=row.get('Title'),
             summary=row.get('Summary')
         )
-    
+
     categorizations = df_copy.apply(categorize_row, axis=1)
-    
-    # Extract the boolean values into separate columns
+
+    # Extract regional boolean values
     df_copy['Dutch'] = categorizations.apply(lambda x: x['Dutch'])
     df_copy['EU'] = categorizations.apply(lambda x: x['EU'])
     df_copy['Rest_of_World'] = categorizations.apply(lambda x: x['Rest_of_World'])
-    
+
     return df_copy
 
 def analyze_regional_distribution(df: pd.DataFrame) -> dict:
@@ -231,6 +326,18 @@ def print_regional_summary(df: pd.DataFrame) -> None:
 
 # Company mappings dictionary
 COMPANY_MAPPINGS = {
+    'twine': {
+        'Title': 'Title',
+        'URL': 'Title_URL',
+        'Company': '_17qbdj78',
+        'Location': '_3cvhfnlp',
+        'rate': '_3cvhfnlp1',
+        'Summary': '_1cgbvbmx',
+        'start': 'ASAP',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Source': 'twine'
+    },
     'LinkIT': {
         'Title': 'Title',
         'Location': 'Location',
@@ -246,7 +353,7 @@ COMPANY_MAPPINGS = {
     'freelance.nl': {
         'Title': 'Title',
         'Location': 'Location',
-        'Summary': 'Field3',
+        'Summary': 'Field2',
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
@@ -282,7 +389,7 @@ COMPANY_MAPPINGS = {
     'KVK': {
         'Title': 'Field1',
         'Location': 'Amsterdam',
-        'Summary': 'See Vacancy',
+        'Summary': 'Text',
         'URL': 'Page_URL',
         'start': 'Not mentioned',
         'rate': 'Field3',
@@ -337,7 +444,7 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Company',
-        'Source': 'LinkedInZZP'
+        'Source': 'LinkedIn'
     },
     'LinkedInInterim': {
         'Title': 'Title',
@@ -650,17 +757,17 @@ COMPANY_MAPPINGS = {
         'Hours': 'Text',  # Will be processed to extract text between "Uren:" and "|"
         'Duration': 'Not mentioned',
         'Company': 'Field2',
-        'Source': 'huurtin'
+        'Source': 'Amstelveenhuurtin'
     },
     'noordoostbrabant': {
         'Title': 'Field1',
-        'Location': 'Field2',
+        'Location': 'Text',
         'Summary': 'Text',
         'URL': 'Page_URL',
-        'start': 'Field11',
+        'start': 'Text',
         'rate': 'Field2',
         'Hours': 'See Summary',
-        'Duration': 'See Summary',
+        'Duration': 'Text',
         'Company': 'Field3',
         'Source': 'noordoostbrabant'
     },
@@ -692,10 +799,10 @@ COMPANY_MAPPINGS = {
         'Location': 'Text',  # Will be processed to extract text between "Standplaats:" and "|"
         'Summary': 'Text',
         'URL': 'Page_URL',
-        'start': 'Not mentioned',
+        'start': 'Text',
         'rate': 'Text',  # Will be processed to extract number after "€"
         'Hours': 'Text',  # Will be processed to extract number between "uren" and "|"
-        'Duration': 'Not mentioned',
+        'Duration': 'Text',
         'Company': 'Text1',
         'Source': 'groningenhuurtin'
     },
@@ -775,12 +882,12 @@ COMPANY_MAPPINGS = {
     'ggdzwhuurtin.nl': {
         'Title': 'Text',
         'Location': 'Field2',
-        'Summary': 'See Vacancy',
-        'URL': 'https://www.ggdzwhuurtin.nl/opdrachten#',
-        'start': 'ASAP',
-        'rate': 'Text4',
+        'Summary': 'Text11',
+        'URL': 'Page_URL',
+        'start': 'Text11',
+        'rate': 'Text11',
         'Hours': 'Field3',
-        'Duration': 'Text6',  # Will be processed to calculate date difference in months
+        'Duration': 'Text11',  # Will be processed to calculate date difference in months
         'Company': 'GGD Zaanstreek-Waterland',
         'Source': 'ggdzwhuurtin.nl'
     },
@@ -904,29 +1011,19 @@ COMPANY_MAPPINGS = {
         'Duration': 'Not mentioned',
         'Source': 'Zuid-Holland'
     },
-    'TechFreelancers': {
+
+
+    'haarlemmermeerhuurtin': {
         'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'Description',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'Salary',
-        'Hours': 'Hours',
-        'Duration': 'Duration',
-        'Company': 'Company',
-        'Source': 'TechFreelancers'
-    },
-    'InterimHub': {
-        'Title': 'JobTitle',
-        'Location': 'City',
-        'Summary': 'JobDescription',
-        'URL': 'ApplyURL',
-        'start': 'StartDate',
-        'rate': 'HourlyRate',
-        'Hours': 'WorkHours',
-        'Duration': 'ContractLength',
-        'Company': 'ClientName',
-        'Source': 'InterimHub'
+        'Location': 'Pub_Time',  # Will be processed to extract text between "Standplaats:" and "|"
+        'Summary': 'Pub_Time',
+        'URL': 'Page_URL',
+        'start': 'Pub_Time',
+        'rate': 'Pub_Time',  # Will be processed to extract currency marker "€"
+        'Hours': 'Pub_Time',
+        'Duration': 'Pub_Time',
+        'Company': 'Not mentioned',
+        'Source': 'haarlemmermeerhuurtin'
     },
 }
 
@@ -1179,10 +1276,12 @@ def generate_source_id(source, is_from_input=True):
         # Handle special cases for known sources
         source_mappings = {
             'freelancer': 'freelancer',
+            'Freelancer.nl': 'Freelancer_nl',
             'freelance': 'freelance',
             'linkedin': 'linkedin',
             'indeed': 'indeed',
             'prolinker': 'prolinker',
+            'ProLinker.com': 'ProLinker_com',
             'werkzoeken': 'werkzoeken',
             'werk': 'werk',
             'overheid': 'overheid',
@@ -1216,9 +1315,12 @@ def generate_source_id(source, is_from_input=True):
             'noordoostbrabant': 'noordoostbrabant',
             'flex west-brabant': 'flex_west_brabant',
             'amstelveen': 'amstelveen',
+            'amstelveenhuurtin': 'amstelveenhuurtin',
             'haarlemmermeerhuurtin': 'haarlemmermeer',
+            'groningenhuurtin': 'groningenhuurtin',
             'gemeente-projecten': 'gemeente_projecten',
             'ggdzwhuurtin': 'ggdz_whuurtin',
+            'ggdzwhuurtin.nl': 'ggdz_whuurtin_nl',
             'freep': 'freep',
             'onlyhuman': 'onlyhuman',
             'staffingms': 'staffingms',
@@ -1228,7 +1330,12 @@ def generate_source_id(source, is_from_input=True):
             'tennet': 'tennet',
             'interimnetwerk': 'interim_netwerk',
             'zuid holland': 'zuid_holland',
-            'linkedininterim': 'linkedininterim',
+            'linkedininterim': 'LinkedIn',
+            'linkedinzzp': 'LinkedIn',
+            'freelance.nl': 'freelance_nl',
+            'twine': 'twine',
+            'overheidzzp': 'overheidzzp',
+            'POOQ': 'POOQ',
             # 'zoekklus': 'zoekklus'
         }
         
@@ -1364,28 +1471,55 @@ def freelance_directory(files_read, company_name):
             else:
                 logging.warning(f"Behance pre-mapping filter: 'Text4' column not found in the input CSV for {company_name}. Skipping filter.")
         elif company_name == 'Bebee':
-            # Keep rows that mention freelance-related terms in either Field1_text or Text (case-insensitive, substring allowed)
-            keywords = ['freelance', 'interim', 'zzp', 'flexibele', 'remote']
+            # Step 1: Keep rows that mention freelance-related terms in either Field1_text or Text (case-insensitive, substring allowed)
+            freelance_keywords = ['freelance', 'interim', 'zzp', 'flexibele', 'remote']
             if 'Field1_text' in files_read.columns or 'Text' in files_read.columns:
                 initial_count = len(files_read)
-                def contains_keywords(value):
+
+                def contains_freelance_keywords(value):
                     try:
                         text = str(value).lower()
-                        return any(keyword in text for keyword in keywords)
+                        return any(keyword in text for keyword in freelance_keywords)
                     except Exception:
                         return False
-                mask_field1 = files_read['Field1_text'].apply(contains_keywords) if 'Field1_text' in files_read.columns else False
-                mask_text = files_read['Text'].apply(contains_keywords) if 'Text' in files_read.columns else False
+
+                mask_field1 = files_read['Field1_text'].apply(contains_freelance_keywords) if 'Field1_text' in files_read.columns else False
+                mask_text = files_read['Text'].apply(contains_freelance_keywords) if 'Text' in files_read.columns else False
                 # If only one column exists, the other mask will be a scalar False, bitwise OR will still work
-                combined_mask = mask_field1 | mask_text
-                files_read = files_read[combined_mask]
-                filtered_count = len(files_read)
-                if initial_count > filtered_count:
-                    logging.info(f"Applied Bebee pre-mapping filter on 'Field1_text'/'Text' for freelance-related terms {keywords}, rows changed from {initial_count} to {filtered_count}")
+                freelance_mask = mask_field1 | mask_text
+                files_read = files_read[freelance_mask]
+                post_freelance_count = len(files_read)
+
+                # Step 2: Remove rows that contain permanent job markers (salary, baan, etc.)
+                permanent_job_markers = ['salaris', 'base salary', 'startersbaan', 'salary', 'salarisrange', 'baan']
+
+                def contains_permanent_markers(value):
+                    try:
+                        text = str(value).lower()
+                        return any(marker in text for marker in permanent_job_markers)
+                    except Exception:
+                        return False
+
+                # Check Text column specifically for permanent job markers
+                if 'Text' in files_read.columns:
+                    permanent_mask = files_read['Text'].apply(contains_permanent_markers)
+                    permanent_count = permanent_mask.sum()
+                    files_read = files_read[~permanent_mask]  # Remove rows with permanent markers
+                    final_count = len(files_read)
+
+                    # Log results
+                    if initial_count > post_freelance_count:
+                        logging.info(f"Applied Bebee freelance filter: rows {initial_count} → {post_freelance_count} (kept freelance terms)")
+
+                    if permanent_count > 0:
+                        logging.info(f"Applied Bebee permanent job filter: removed {permanent_count} rows with markers {permanent_job_markers}, final count: {final_count}")
+                        logging.info(f"Bebee filtering complete: {initial_count} → {final_count} rows (reason: not freelance jobs)")
+                    else:
+                        logging.info(f"Bebee permanent job filter: No rows removed, final count: {final_count}")
                 else:
-                    logging.info(f"Bebee pre-mapping filter: No rows removed after checking for freelance-related terms in 'Field1_text'/'Text'")
+                    logging.warning(f"Bebee permanent job filter: 'Text' column not found. Only applied freelance filter: {initial_count} → {post_freelance_count} rows")
             else:
-                logging.warning(f"Bebee pre-mapping filter: Neither 'Field1_text' nor 'Text' column found in the input CSV for {company_name}. Skipping filter.")
+                logging.warning(f"Bebee filtering: Neither 'Field1_text' nor 'Text' column found in the input CSV for {company_name}. Skipping all filters.")
         elif company_name == 'Overheid':
             if 'Field3' in files_read.columns:
                 initial_count = len(files_read)
@@ -1728,6 +1862,27 @@ def freelance_directory(files_read, company_name):
                 result['rate'] = result['rate'].apply(extract_strict_rate)
                 logging.info(f"werk.nl post-mapping: Processed rate field with strict number filtering")
         
+        # TWINE POST-MAPPING PROCESSING
+        if company_name == 'twine':
+            # Process Title field - remove "Easy Apply " text
+            if 'Title' in result.columns:
+                def process_title_twine(title_str):
+                    if pd.isna(title_str) or title_str == '':
+                        return 'Not mentioned'
+                    
+                    title_clean = str(title_str).strip()
+                    
+                    # Remove "Easy Apply " (case insensitive)
+                    title_clean = title_clean.replace('Easy Apply ', '').replace('easy apply ', '')
+                    
+                    # Clean up extra spaces
+                    title_clean = ' '.join(title_clean.split()).strip()
+                    
+                    return title_clean if title_clean else 'Not mentioned'
+                
+                result['Title'] = result['Title'].apply(process_title_twine)
+                logging.info(f"twine post-mapping: Processed Title field to remove 'Easy Apply ' text")
+        
         # GEMEENTE PROJECTEN POST-MAPPING PROCESSING
         if company_name == 'gemeente-projecten':
             # Process rate field - extract currency from Field4
@@ -2051,7 +2206,7 @@ def freelance_directory(files_read, company_name):
                 logging.info(f"HintTech post-mapping: Processed Duration field to calculate date differences")
         
         # HAARLEMMERMEERHUURTIN POST-MAPPING PROCESSING
-        if company_name == 'Haarlemmermeerhuurtin':
+        if company_name == 'haarlemmermeerhuurtin':
             # Process rate field - remove "per uur" and keep only the amount
             if 'rate' in result.columns:
                 def process_rate(rate_str):
@@ -2064,7 +2219,7 @@ def freelance_directory(files_read, company_name):
                     return rate_clean if rate_clean else 'Not mentioned'
                 
                 result['rate'] = result['rate'].apply(process_rate)
-                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed rate field to remove 'per uur'")
+                logging.info(f"haarlemmermeerhuurtin post-mapping: Processed rate field to remove 'per uur'")
             
             # Process Duration field - calculate difference between start and end dates
             if 'Duration' in result.columns:
@@ -2128,7 +2283,7 @@ def freelance_directory(files_read, company_name):
                         return 'Not mentioned'
                 
                 result['Duration'] = result['Duration'].apply(process_duration_haarlemmermeer)
-                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed Duration field to calculate date differences")
+                logging.info(f"haarlemmermeerhuurtin post-mapping: Processed Duration field to calculate date differences")
         
         # HOOFDKRAAN POST-MAPPING PROCESSING
         if company_name == 'hoofdkraan':
@@ -2615,7 +2770,7 @@ def freelance_directory(files_read, company_name):
                 logging.info(f"zzp opdrachten post-mapping: Processed Summary field to remove white lines with no text")
         
         # GEMEENTE PROJECTEN POST-MAPPING PROCESSING
-        if company_name == 'gemeente projecten':
+        if company_name == 'gemeente-projecten':
             # Process Title field - remove text in () and the () themselves
             if 'Title' in result.columns:
                 def process_title_gemeente(title_str):
@@ -2634,7 +2789,7 @@ def freelance_directory(files_read, company_name):
                     return title_clean if title_clean else 'Not mentioned'
                 
                 result['Title'] = result['Title'].apply(process_title_gemeente)
-                logging.info(f"gemeente projecten post-mapping: Processed Title field to remove text in parentheses")
+                logging.info(f"gemeente-projecten post-mapping: Processed Title field to remove text in parentheses")
             
             # Process Location field - remove text in () and the () themselves
             if 'Location' in result.columns:
@@ -2654,7 +2809,7 @@ def freelance_directory(files_read, company_name):
                     return location_clean if location_clean else 'Not mentioned'
                 
                 result['Location'] = result['Location'].apply(process_location_gemeente)
-                logging.info(f"gemeente projecten post-mapping: Processed Location field to remove text in parentheses")
+                logging.info(f"gemeente-projecten post-mapping: Processed Location field to remove text in parentheses")
             
             # Process rate field - extract euro amount from Field10 (e.g., "€50" or "€ 50,00").
             if 'rate' in result.columns:
@@ -2669,7 +2824,7 @@ def freelance_directory(files_read, company_name):
                         return f"€ {val}"
                     return 'Not mentioned'
                 result['rate'] = result['rate'].apply(process_rate_gemeente)
-                logging.info(f"gemeente projecten post-mapping: Extracted euro amount from Field10 into rate")
+                logging.info(f"gemeente-projecten post-mapping: Extracted euro amount from Field10 into rate")
 
             # Process Duration field - remove the word "Voor" (case-insensitive) and clean up
             if 'Duration' in result.columns:
@@ -2681,11 +2836,11 @@ def freelance_directory(files_read, company_name):
                     cleaned = ' '.join(cleaned.split()).strip()
                     return cleaned if cleaned else 'Not mentioned'
                 result['Duration'] = result['Duration'].apply(process_duration_gemeente)
-                logging.info(f"gemeente projecten post-mapping: Removed 'Voor' from Duration")
+                logging.info(f"gemeente-projecten post-mapping: Removed 'Voor' from Duration")
         
         # GGDZWHUURTIN.NL POST-MAPPING PROCESSING
         if company_name == 'ggdzwhuurtin.nl':
-            # Process Duration field - calculate difference between first and second date in months
+            # Process Duration field - find 2 dates in DD-MM-YYYY format and calculate months between them
             if 'Duration' in result.columns:
                 def process_duration_ggdz(duration_str):
                     if pd.isna(duration_str) or duration_str == '':
@@ -2697,51 +2852,97 @@ def freelance_directory(files_read, company_name):
                         
                         duration_clean = str(duration_str).strip()
                         
-                        # Common separators for date ranges (including Dutch separators)
-                        separators = [' t/m ', ' to ', ' - ', ' tot ', ' until ', ' through ', ' tm ', ' t.m. ']
+                        # Look for DD-MM-YYYY date patterns
+                        date_pattern = r'(\d{1,2})-(\d{1,2})-(\d{4})'
+                        dates_found = re.findall(date_pattern, duration_clean)
                         
-                        for sep in separators:
-                            if sep in duration_clean.lower():
-                                parts = duration_clean.lower().split(sep)
-                                if len(parts) == 2:
-                                    start_date_str = parts[0].strip()
-                                    end_date_str = parts[1].strip()
+                        if len(dates_found) >= 2:
+                            # Get the first two dates
+                            date1_parts = dates_found[0]
+                            date2_parts = dates_found[1]
+                            
+                            try:
+                                date1 = datetime(int(date1_parts[2]), int(date1_parts[1]), int(date1_parts[0]))
+                                date2 = datetime(int(date2_parts[2]), int(date2_parts[1]), int(date2_parts[0]))
+                                
+                                # Calculate difference in months
+                                months_diff = (date2.year - date1.year) * 12 + (date2.month - date1.month)
+                                
+                                if months_diff > 0:
+                                    return f"{months_diff} months"
+                                else:
+                                    return "Less than 1 month"
                                     
-                                    # Try to parse dates with common formats
-                                    date_formats = ['%d-%m-%Y', '%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d', '%d.%m.%Y']
-                                    
-                                    start_date = None
-                                    end_date = None
-                                    
-                                    for fmt in date_formats:
-                                        try:
-                                            start_date = datetime.strptime(start_date_str, fmt)
-                                            end_date = datetime.strptime(end_date_str, fmt)
-                                            break
-                                        except ValueError:
-                                            continue
-                                    
-                                    if start_date and end_date:
-                                        # Calculate difference in days
-                                        diff_days = abs((end_date - start_date).days)
-                                        if diff_days > 0:
-                                            # Convert to months (using 30.44 days per month for accuracy)
-                                            months = round(diff_days / 30.44)
-                                            if months == 0:
-                                                months = 1  # Minimum 1 month for any duration
-                                            
-                                            if months == 1:
-                                                return "1 month"
-                                            else:
-                                                return f"{months} months"
-                                    break
-                        
-                        return duration_clean  # Return original if can't parse
+                            except ValueError:
+                                return duration_clean
+                        else:
+                            return duration_clean
+                            
                     except Exception:
                         return 'Not mentioned'
                 
                 result['Duration'] = result['Duration'].apply(process_duration_ggdz)
-                logging.info(f"ggdzwhuurtin.nl post-mapping: Processed Duration field to calculate date differences in months")
+                logging.info(f"ggdzwhuurtin.nl post-mapping: Processed Duration field to calculate months between DD-MM-YYYY dates")
+            
+            # Process start field - find first date in DD-MM-YYYY format
+            if 'start' in result.columns:
+                def process_start_ggdz(start_str):
+                    if pd.isna(start_str) or start_str == '':
+                        return 'ASAP'
+                    
+                    try:
+                        import re
+                        from datetime import datetime
+                        
+                        start_clean = str(start_str).strip()
+                        
+                        # Look for DD-MM-YYYY date pattern
+                        date_pattern = r'(\d{1,2})-(\d{1,2})-(\d{4})'
+                        date_match = re.search(date_pattern, start_clean)
+                        
+                        if date_match:
+                            day, month, year = date_match.groups()
+                            try:
+                                date_obj = datetime(int(year), int(month), int(day))
+                                return date_obj.strftime('%Y-%m-%d')
+                            except ValueError:
+                                return 'ASAP'
+                        else:
+                            return 'ASAP'
+                            
+                    except Exception:
+                        return 'ASAP'
+                
+                result['start'] = result['start'].apply(process_start_ggdz)
+                logging.info(f"ggdzwhuurtin.nl post-mapping: Processed start field to extract first DD-MM-YYYY date")
+            
+            # Process rate field - find currency symbol €
+            if 'rate' in result.columns:
+                def process_rate_ggdz(rate_str):
+                    if pd.isna(rate_str) or rate_str == '':
+                        return 'Not mentioned'
+                    
+                    try:
+                        import re
+                        rate_clean = str(rate_str).strip()
+                        
+                        # Look for currency pattern with € symbol
+                        rate_match = re.search(r'€\s*(\d+(?:,\d+)?(?:\.\d+)?)', rate_clean)
+                        if rate_match:
+                            return rate_match.group(1)
+                        
+                        # Look for rate without € symbol but with numbers
+                        number_match = re.search(r'(\d+(?:,\d+)?(?:\.\d+)?)', rate_clean)
+                        if number_match:
+                            return number_match.group(1)
+                        
+                        return 'Not mentioned'
+                        
+                    except Exception:
+                        return 'Not mentioned'
+                
+                result['rate'] = result['rate'].apply(process_rate_ggdz)
+                logging.info(f"ggdzwhuurtin.nl post-mapping: Processed rate field to extract currency from € symbol")
         
         # 4 FREELANCERS POST-MAPPING PROCESSING
         if company_name == '4-Freelancers.nl':
@@ -3058,7 +3259,31 @@ def freelance_directory(files_read, company_name):
                         return 'ASAP'
                 
                 result['start'] = result['start'].apply(process_start_noordoostbrabant)
-                logging.info(f"noordoostbrabant post-mapping: Processed start field to extract first date from Field11")
+                logging.info(f"noordoostbrabant post-mapping: Processed start field to extract first date from Text")
+            
+            # Process Hours field - extract number between "Uren:" and "|" from Location field
+            if 'Hours' in result.columns and 'Location' in result.columns:
+                def process_hours_noordoostbrabant(row):
+                    location_str = row.get('Location', '')
+                    if pd.isna(location_str) or location_str == '':
+                        return 'Not mentioned'
+                    
+                    try:
+                        import re
+                        location_clean = str(location_str).strip()
+                        
+                        # Look for pattern "Uren:" followed by number and "|"
+                        hours_match = re.search(r'uren:\s*(\d+)\s*\|', location_clean, re.IGNORECASE)
+                        if hours_match:
+                            return hours_match.group(1)
+                        
+                        return 'Not mentioned'
+                        
+                    except Exception:
+                        return 'Not mentioned'
+                
+                result['Hours'] = result.apply(process_hours_noordoostbrabant, axis=1)
+                logging.info(f"noordoostbrabant post-mapping: Processed Hours field to extract from Location using 'Uren:' marker")
         
         # GRONINGENHUURTIN POST-MAPPING PROCESSING
         if company_name == 'groningenhuurtin':
@@ -3492,7 +3717,7 @@ def freelance_directory(files_read, company_name):
                 logging.info(f"Noord-Holland post-mapping: Processed start field to extract first date from Title5")
         
         # HAARLEMMERMEERHUURTIN POST-MAPPING PROCESSING
-        if company_name == 'Haarlemmermeerhuurtin':
+        if company_name == 'haarlemmermeerhuurtin':
             # Process Duration field - extract from Summary field
             if 'Duration' in result.columns and 'Summary' in result.columns:
                 def process_duration_from_summary(row):
@@ -3543,11 +3768,11 @@ def freelance_directory(files_read, company_name):
                             return 'Not mentioned'
                             
                     except Exception as e:
-                        logging.warning(f"Error processing Haarlemmermeerhuurtin duration from summary '{summary_str}': {e}")
+                        logging.warning(f"Error processing haarlemmermeerhuurtin duration from summary '{summary_str}': {e}")
                         return 'Not mentioned'
                 
                 result['Duration'] = result.apply(process_duration_from_summary, axis=1)
-                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed Duration field to extract from Summary")
+                logging.info(f"haarlemmermeerhuurtin post-mapping: Processed Duration field to extract from Summary")
             
             # Process fields that are set to "See Summary" - extract from Pub_Time field
             if 'rate' in result.columns and 'Summary' in result.columns:
@@ -3572,7 +3797,7 @@ def freelance_directory(files_read, company_name):
                     return 'Not mentioned'
                 
                 result['rate'] = result.apply(process_rate_from_summary, axis=1)
-                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed rate field to extract from Summary")
+                logging.info(f"haarlemmermeerhuurtin post-mapping: Processed rate field to extract from Summary")
             
             if 'Hours' in result.columns and 'Summary' in result.columns:
                 def process_hours_from_summary(row):
@@ -3591,7 +3816,7 @@ def freelance_directory(files_read, company_name):
                     return 'Not mentioned'
                 
                 result['Hours'] = result.apply(process_hours_from_summary, axis=1)
-                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed Hours field to extract from Summary")
+                logging.info(f"haarlemmermeerhuurtin post-mapping: Processed Hours field to extract from Summary")
             
             # Process start field - extract from Summary field
             if 'start' in result.columns and 'Summary' in result.columns:
@@ -3639,155 +3864,11 @@ def freelance_directory(files_read, company_name):
                         return 'ASAP'
                 
                 result['start'] = result.apply(process_start_from_summary, axis=1)
-                logging.info(f"Haarlemmermeerhuurtin post-mapping: Processed start field to extract from Summary")
+                logging.info(f"haarlemmermeerhuurtin post-mapping: Processed start field to extract from Summary")
         
-        # TECHFREELANCERS POST-MAPPING PROCESSING
-        if company_name == 'TechFreelancers':
-            # Process Salary field - extract numeric values and add currency symbol
-            if 'rate' in result.columns:
-                def process_rate_techfreelancers(rate_str):
-                    if pd.isna(rate_str) or rate_str == '':
-                        return 'Not mentioned'
-                    
-                    rate_clean = str(rate_str).strip()
-                    
-                    # Extract numeric values (including decimals)
-                    import re
-                    numbers = re.findall(r'\d+(?:\.\d+)?', rate_clean)
-                    
-                    if numbers:
-                        # Take the first number found and format as currency
-                        try:
-                            amount = float(numbers[0])
-                            return f'€{amount:.0f}/hour'
-                        except ValueError:
-                            return rate_clean
-                    else:
-                        return rate_clean if rate_clean else 'Not mentioned'
-                
-                result['rate'] = result['rate'].apply(process_rate_techfreelancers)
-                logging.info(f"TechFreelancers post-mapping: Processed rate field to extract numeric values and format as currency")
-            
-            # Process Hours field - standardize hour formats
-            if 'Hours' in result.columns:
-                def process_hours_techfreelancers(hours_str):
-                    if pd.isna(hours_str) or hours_str == '':
-                        return 'Not mentioned'
-                    
-                    hours_clean = str(hours_str).strip()
-                    
-                    # Extract numeric values
-                    import re
-                    numbers = re.findall(r'\d+', hours_clean)
-                    
-                    if numbers:
-                        try:
-                            hours = int(numbers[0])
-                            return f'{hours} hours/week'
-                        except ValueError:
-                            return hours_clean
-                    else:
-                        return hours_clean if hours_clean else 'Not mentioned'
-                
-                result['Hours'] = result['Hours'].apply(process_hours_techfreelancers)
-                logging.info(f"TechFreelancers post-mapping: Processed Hours field to standardize hour formats")
+
         
-        # INTERIMHUB POST-MAPPING PROCESSING
-        if company_name == 'InterimHub':
-            # Process HourlyRate field - extract and format rate information
-            if 'rate' in result.columns:
-                def process_rate_interimhub(rate_str):
-                    if pd.isna(rate_str) or rate_str == '':
-                        return 'Not mentioned'
-                    
-                    rate_clean = str(rate_str).strip()
-                    
-                    # Look for common rate patterns
-                    import re
-                    
-                    # Pattern for "€X/hour" or "€X per hour"
-                    euro_pattern = re.search(r'€\s*(\d+(?:\.\d+)?)', rate_clean)
-                    if euro_pattern:
-                        amount = float(euro_pattern.group(1))
-                        return f'€{amount:.0f}/hour'
-                    
-                    # Pattern for "X euro" or "X EUR"
-                    number_pattern = re.search(r'(\d+(?:\.\d+)?)\s*(?:euro|EUR)', rate_clean, re.IGNORECASE)
-                    if number_pattern:
-                        amount = float(number_pattern.group(1))
-                        return f'€{amount:.0f}/hour'
-                    
-                    # Pattern for just numbers (assume euros)
-                    simple_number = re.search(r'(\d+(?:\.\d+)?)', rate_clean)
-                    if simple_number:
-                        amount = float(simple_number.group(1))
-                        return f'€{amount:.0f}/hour'
-                    
-                    return rate_clean if rate_clean else 'Not mentioned'
-                
-                result['rate'] = result['rate'].apply(process_rate_interimhub)
-                logging.info(f"InterimHub post-mapping: Processed rate field to extract and format rate information")
-            
-            # Process WorkHours field - standardize work hour formats
-            if 'Hours' in result.columns:
-                def process_hours_interimhub(hours_str):
-                    if pd.isna(hours_str) or hours_str == '':
-                        return 'Not mentioned'
-                    
-                    hours_clean = str(hours_str).strip()
-                    
-                    # Extract numeric values
-                    import re
-                    numbers = re.findall(r'\d+', hours_clean)
-                    
-                    if numbers:
-                        try:
-                            hours = int(numbers[0])
-                            if hours <= 24:
-                                return f'{hours} hours/week'
-                            else:
-                                return f'{hours} hours/month'
-                        except ValueError:
-                            return hours_clean
-                    else:
-                        return hours_clean if hours_clean else 'Not mentioned'
-                
-                result['Hours'] = result['Hours'].apply(process_hours_interimhub)
-                logging.info(f"InterimHub post-mapping: Processed Hours field to standardize work hour formats")
-            
-            # Process ContractLength field - standardize duration formats
-            if 'Duration' in result.columns:
-                def process_duration_interimhub(duration_str):
-                    if pd.isna(duration_str) or duration_str == '':
-                        return 'Not mentioned'
-                    
-                    duration_clean = str(duration_str).strip()
-                    
-                    # Common duration patterns
-                    import re
-                    
-                    # Pattern for months
-                    months_pattern = re.search(r'(\d+)\s*(?:month|maand)', duration_clean, re.IGNORECASE)
-                    if months_pattern:
-                        months = int(months_pattern.group(1))
-                        return f'{months} months'
-                    
-                    # Pattern for weeks
-                    weeks_pattern = re.search(r'(\d+)\s*(?:week|weken)', duration_clean, re.IGNORECASE)
-                    if weeks_pattern:
-                        weeks = int(weeks_pattern.group(1))
-                        return f'{weeks} weeks'
-                    
-                    # Pattern for days
-                    days_pattern = re.search(r'(\d+)\s*(?:day|dagen)', duration_clean, re.IGNORECASE)
-                    if days_pattern:
-                        days = int(days_pattern.group(1))
-                        return f'{days} days'
-                    
-                    return duration_clean if duration_clean else 'Not mentioned'
-                
-                result['Duration'] = result['Duration'].apply(process_duration_interimhub)
-                logging.info(f"InterimHub post-mapping: Processed Duration field to standardize duration formats")
+
         
         # LINKIT POST-MAPPING PROCESSING
         elif company_name == 'LinkIT':
