@@ -144,7 +144,12 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
 
     major_eu_cities = [
         'berlin', 'munich', 'hamburg', 'cologne', 'frankfurt', 'paris', 'marseille',
-        'lyon', 'rome', 'milan', 'madrid', 'barcelona', 'warsaw', 'krakow',
+        'lyon', 'toulouse', 'nice', 'nantes', 'strasbourg', 'montpellier', 'bordeaux',
+        'lille', 'rennes', 'reims', 'saint-étienne', 'toulon', 'grenoble', 'dijon',
+        'angers', 'nîmes', 'villeurbanne', 'saint-denis', 'le havre', 'tours',
+        'limoges', 'amiens', 'perpignan', 'metz', 'boulogne-billancourt', 'orléans',
+        'mulhouse', 'rouen', 'caen', 'nancy', 'saint-pierre', 'argenteuil',
+        'rome', 'milan', 'madrid', 'barcelona', 'warsaw', 'krakow',
         'brussels', 'vienna', 'stockholm', 'copenhagen', 'helsinki', 'lisbon'
     ]
 
@@ -178,9 +183,53 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
     # 7. Check for USD currency
     if rate and not pd.isna(rate):
         rate_str = str(rate).lower().strip()
-        usd_indicators = ['$', 'usd', 'dollar', '$/hr', '$/hour', '$/day', '$/month']
+        usd_indicators = ['$', 'usd', 'dollar', 'dollars', '$/hr', '$/hour', '$/day', '$/month', '$/week', '$/year']
         if any(indicator in rate_str for indicator in usd_indicators):
             return {'Dutch': False, 'EU': False, 'Rest_of_World': True}
+
+    # 7.5. LANGUAGE DETECTION - Check for French language indicators
+    def detect_french_language(text_fields):
+        """Detect French language in text fields."""
+        if not text_fields:
+            return False
+        
+        # French language indicators
+        french_indicators = [
+            # Common French words
+            'développeur', 'développeuse', 'ingénieur', 'consultant', 'consultante',
+            'freelance', 'indépendant', 'indépendante', 'télétravail', 'travail',
+            'entreprise', 'société', 'projet', 'mission', 'compétences', 'expérience',
+            'années', 'ans', 'niveau', 'maîtrise', 'connaissance', 'technologies',
+            'développement', 'conception', 'analyse', 'gestion', 'équipe', 'client',
+            'cahier', 'charges', 'spécifications', 'fonctionnelles', 'techniques',
+            'architecture', 'système', 'application', 'logiciel', 'programmation',
+            'code', 'base', 'données', 'interface', 'utilisateur', 'web', 'mobile',
+            'desktop', 'cloud', 'sécurité', 'performance', 'qualité', 'tests',
+            'déploiement', 'maintenance', 'support', 'formation', 'documentation',
+            # French articles and prepositions
+            'le', 'la', 'les', 'un', 'une', 'des', 'du', 'de', 'dans', 'sur', 'avec',
+            'pour', 'par', 'sans', 'sous', 'vers', 'chez', 'entre', 'pendant',
+            # French job-related terms
+            'poste', 'emploi', 'offre', 'recrutement', 'candidature', 'cv',
+            'entretien', 'salaire', 'rémunération', 'avantages', 'congés',
+            'télétravail', 'bureau', 'lieu', 'adresse', 'téléphone', 'email',
+            'contact', 'référence', 'urgent', 'immédiat', 'début', 'fin',
+            'durée', 'période', 'contrat', 'cdi', 'cdd', 'stage', 'alternance'
+        ]
+        
+        # Combine all text fields
+        combined_text = ' '.join([str(field).lower() for field in text_fields if field and not pd.isna(field)])
+        
+        # Count French indicators
+        french_count = sum(1 for indicator in french_indicators if indicator in combined_text)
+        
+        # If we find 3 or more French indicators, consider it French
+        return french_count >= 3
+    
+    # Check for French language in available text fields
+    text_fields = [location, title, summary, company]
+    if detect_french_language(text_fields):
+        return {'Dutch': False, 'EU': True, 'Rest_of_World': False}
 
     # 8. Default to Dutch
     return {'Dutch': True, 'EU': False, 'Rest_of_World': False}
@@ -206,6 +255,7 @@ def detect_work_arrangement(location: str = None, title: str = None, summary: st
     remote_patterns = ['remote', 'remote work', 'work from home', 'wfh', 'telecommute',
                       'home office', 'work remotely', 'remote position', 'virtual']
     if any(pattern in combined_text for pattern in remote_patterns):
+        # First check for explicit region mentions
         if 'remote (eu)' in combined_text or 'eu remote' in combined_text:
             return 'Remote (EU)'
         elif 'remote (netherlands)' in combined_text or 'remote nl' in combined_text:
@@ -213,7 +263,16 @@ def detect_work_arrangement(location: str = None, title: str = None, summary: st
         elif any(region in combined_text for region in ['remote (germany)', 'remote (france)', 'remote (uk)']):
             return 'Remote (Specified Country)'
         else:
-            return 'Remote'
+            # For unspecified remote, determine region from location classification
+            region_classification = categorize_location(location, None, company, source, title, summary)
+            if region_classification['Dutch']:
+                return 'Remote (Netherlands)'
+            elif region_classification['EU']:
+                return 'Remote (EU)'
+            elif region_classification['Rest_of_World']:
+                return 'Remote (Rest of World)'
+            else:
+                return 'Remote'
 
     # Hybrid patterns
     hybrid_patterns = ['hybrid', 'hybrid work', 'office + remote', 'remote + office',
@@ -326,6 +385,7 @@ def print_regional_summary(df: pd.DataFrame) -> None:
 
 # Company mappings dictionary
 COMPANY_MAPPINGS = {
+    # 1. TWINE
     'twine': {
         'Title': 'Title',
         'URL': 'Title_URL',
@@ -336,8 +396,13 @@ COMPANY_MAPPINGS = {
         'start': 'ASAP',
         'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'twine'
     },
+    # 2. LINKIT
     'LinkIT': {
         'Title': 'Title',
         'Location': 'Location',
@@ -348,8 +413,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field4',
         'Duration': 'Field5',  # Will be processed to check for "months" marker
         'Company': 'Field1',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'LinkIT'
     },
+    # 3. FREELANCE.NL
     'freelance.nl': {
         'Title': 'Title',
         'Location': 'Location',
@@ -360,8 +430,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field2',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'freelance.nl'
     },
+    # 4. YACHT
     'Yacht': {
         'Title': 'Field1',
         'Location': 'Field2',
@@ -372,8 +447,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Text',
         'Company': 'Not mentioned',  # Probably mentioned in summary
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Yacht'
     },
+    # 5. FLEXTENDER
     'Flextender': {
         'Title': 'Field2',
         'Location': 'Field3',
@@ -384,8 +464,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field5',
         'Duration': 'Field4',
         'Company': 'Field1',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Flextender'
     },
+    # 6. KVK
     'KVK': {
         'Title': 'Field1',
         'Location': 'Amsterdam',
@@ -396,8 +481,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Not mentioned',
         'Duration': 'Field2',
         'Company': 'KVK',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'KVK'
     },
+    # 7. CIRCLE8
     'Circle8': {
         'Title': 'Title',
         'Location': 'cvacancygridcard_usp',
@@ -408,8 +498,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'cvacancygridcard_usp2',
         'Duration': 'cvacancygridcard_usp1',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Circle8'
     },
+    # 8. BEBEE
     'Bebee': {
         'Title': 'Field1_text',
         'Location': 'Info1',
@@ -420,8 +515,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Bebee'
     },
+    # 9. LINKEDIN
     'LinkedIn': {
         'Title': 'Title',
         'Location': 'Location',
@@ -432,8 +532,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Company',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'LinkedIn'
     },
+    # 10. LINKEDINZZP
     'LinkedInZZP': {
         'Title': 'Title',
         'Location': 'Location',
@@ -444,8 +549,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Company',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'LinkedIn'
     },
+    # 11. LINKEDININTERIM
     'LinkedInInterim': {
         'Title': 'Title',
         'Location': 'Location',
@@ -456,8 +566,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Company',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'LinkedIn'
     },
+    # 12. POLITIE
     'politie': {
         'Title': 'Field1',
         'Location': 'Text2',
@@ -468,8 +583,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Text3',
         'Duration': 'Not mentioned',
         'Company': 'politie',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'politie'
     },
+    # 13. GELDERLAND
     'gelderland': {
         'Title': 'Title',
         'Location': 'Gelderland',
@@ -480,8 +600,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Text',
         'Duration': 'vacancy_details3',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'gelderland'
     },
+    # 14. WERK.NL
     'werk.nl': {
         'Title': 'Title',
         'Location': 'Description1',
@@ -492,8 +617,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Title3',
         'Duration': 'Not mentioned',
         'Company': 'Description',  # Will be processed to remove everything after "-"
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'werk.nl'
     },
+    # 15. INDEED
     'indeed': {
         'Title': 'Title',
         'Location': 'Field2',
@@ -504,8 +634,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'css1h7lukg',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'indeed'
     },
+    # 16. PLANET INTERIM
     'Planet Interim': {
         'Title': 'Title',
         'Location': 'Location',
@@ -516,8 +651,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Planet Interim'
     },
+    # 17. NS
     'NS': {
         'Title': 'Field1',
         'Location': 'Field2',
@@ -528,8 +668,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'NS',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'NS'
     },
+    # 18. HOOFDKRAAN
     'hoofdkraan': {
         'Title': 'Title',
         'Location': 'colmd4',
@@ -540,6 +685,10 @@ COMPANY_MAPPINGS = {
         'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'hoofdkraan'
         },
     
@@ -555,6 +704,7 @@ COMPANY_MAPPINGS = {
     #     'Source': 'Zoekklus'
     # },
     
+    # 19. OVERHEID
     'Overheid': {
         'Title': 'Title',
         'Location': 'Field1',
@@ -565,8 +715,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Content2',
         'Duration': 'Not mentioned',
         'Company': 'Description',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Overheid'
     },
+    # 20. RIJKSWATERSTAAT
     'rijkswaterstaat': {
         'Title': 'widgetheader',
         'Location': 'feature1',
@@ -577,8 +732,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'feature',
         'Duration': 'Not mentioned',
         'Company': 'Rijkswaterstaat',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'rijkswaterstaat'
     },
+    # 21. ZOP OPDACHTEN
     'zzp opdrachten': {
         'Title': 'Title',
         'Location': 'jobdetails6',
@@ -589,8 +749,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'jobdetails4',
         'Duration': 'jobdetails4',
         'Company': 'Title2',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'zzp opdrachten'
     },
+    # 22. HARVEY NASH
     'Harvey Nash': {
         'Title': 'Title',
         'Location': 'Location',
@@ -601,8 +766,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Harvey Nash'
     },
+    # 23. BEHANCE
     'Behance': {
         'Title': 'Title',
         'Location': 'Location',
@@ -613,8 +783,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Company',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Behance'
     },
+    # 24. SCHIPHOL
     'Schiphol': {
         'Title': 'Field2',
         'Location': 'Text2',
@@ -625,8 +800,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Text3',
         'Duration': 'Not mentioned',
         'Company': 'Schiphol',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Schiphol'
     },
+    # 25. JOOBLE
     'Jooble': {
         'Title': 'Keywords',
         'Location': 'caption',
@@ -637,8 +817,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'z6wlhx',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Jooble'
     },
+    # 26. WERKZOEKEN.NL
     'werkzoeken.nl': {
         'Title': 'Title1',
         'Location': 'Company_name1',
@@ -649,8 +834,30 @@ COMPANY_MAPPINGS = {
         'Hours': 'requestedwrapper',
         'Duration': 'Not mentioned',
         'Company': 'Field1',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'werkzoeken.nl'
     },
+    # 27. CODEUR.COM
+    'Codeur.com': {
+        'Title': 'nounderline',
+        'URL': 'nounderline_URL',
+        'Location': 'Not mentioned',
+        'Summary': 'mt2',
+        'start': 'ASAP',
+        'rate': 'whitespacenowrap1',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Not mentioned',
+        'Views': 'whitespacenowrap3',
+        'Likes': '',
+        'Keywords': 'Keywords',
+        'Offers': 'Text2',
+        'Source': 'Codeur.com'
+    },
+    # 28. UMC
     'UMC': {
         'Title': 'Text',
         'Location': 'Text2',
@@ -661,8 +868,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Text3',  # Will be processed to remove "p.w."
         'Duration': 'Not mentioned',
         'Company': 'Text1',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'UMC'
     },
+    # 29. FLEXVALUE_B.V.
     'FlexValue_B.V.': {
         'Title': 'Title',
         'Location': 'scjnlklf',
@@ -673,8 +885,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Text',  # Will be processed to extract number after "Uren per week"
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'FlexValue_B.V.'
     },
+    # 30. CENTRIC
     'Centric': {
         'Title': 'Field1',
         'Location': 'Field2',
@@ -685,8 +902,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Text',
         'Duration': 'Not mentioned',
         'Company': 'Centric',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Centric'
     },
+    # 31. FREELANCER.COM
     'freelancer.com': {
         'Title': 'Like',
         'Location': 'Remote',
@@ -697,8 +919,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'freelancer.com'
     },
+    # 32. FREELANCER.NL
     'Freelancer.nl': {
         'Title': 'Title',
         'Location': 'Location',
@@ -709,8 +936,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Freelancer.nl'
     },
+    # 33. SALTA GROUP
     'Salta Group': {
         'Title': 'Keywords',
         'URL': 'Title_URL',
@@ -721,8 +953,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'start': 'ASAP',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Salta Group'
     },
+    # 34. PROLINKER.COM
     'ProLinker.com': {
         'Title': 'Field4_text',
         'Location': 'Field11',
@@ -733,8 +970,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'ProLinker.com'
     },
+    # 35. FLEX WEST-BRABANT
     'Flex West-Brabant': {
         'Title': 'Field5',
         'Location': 'Not mentioned',
@@ -745,8 +987,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'org',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Flex West-Brabant'
     },
+    # 36. AMSTELVEENHUURTIN
     'Amstelveenhuurtin': {
         'Title': 'Field1',
         'Location': 'Text',  # Will be processed to extract text between "standplaats:" and "|"
@@ -757,8 +1004,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Text',  # Will be processed to extract text between "Uren:" and "|"
         'Duration': 'Not mentioned',
         'Company': 'Field2',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Amstelveenhuurtin'
     },
+    # 37. NOORDOOSTBRABANT
     'noordoostbrabant': {
         'Title': 'Field1',
         'Location': 'Text',
@@ -769,8 +1021,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'See Summary',
         'Duration': 'Text',
         'Company': 'Field3',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'noordoostbrabant'
     },
+    # 38. FLEVOLAND
     'flevoland': {
         'Title': 'Field1',
         'Location': 'Field2',
@@ -780,8 +1037,13 @@ COMPANY_MAPPINGS = {
         'rate': 'Not mentioned',
         'Hours': 'Field5',
         'Company': 'Field6',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'flevoland'
     },
+    # 39. NOORD-HOLLAND
     'Noord-Holland': {
         'Title': 'Text',
         'Location': 'Field2',
@@ -792,8 +1054,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'See Summary',
         'Duration': 'See Summary',
         'Company': 'Text2',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Noord-Holland'
     },
+    # 40. GRONINGENHUURTIN
     'groningenhuurtin': {
         'Title': 'Text2',
         'Location': 'Text',  # Will be processed to extract text between "Standplaats:" and "|"
@@ -804,8 +1071,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Text',  # Will be processed to extract number between "uren" and "|"
         'Duration': 'Text',
         'Company': 'Text1',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'groningenhuurtin'
     },
+    # 41. TALENTENREGIO
     'TalentenRegio': {
         'Title': 'Field1',
         'Location': 'Not mentioned',
@@ -816,8 +1088,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'csscolumnflexer8',
         'Duration': 'Not mentioned',
         'Company': 'Field2',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'TalentenRegio'
     },
+    # 42. HINTTECH
     'HintTech': {
         'Title': 'Title',
         'URL': 'Title_URL',
@@ -828,9 +1105,14 @@ COMPANY_MAPPINGS = {
         'Location': 'vc_colmd61',
         'Summary': 'Text7',
         'start': 'ASAP',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'HintTech'
     },
 
+    # 43. SELECT
     'Select': {
         'Title': 'Title',
         'Location': 'Field2', 
@@ -841,8 +1123,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'hfp_cardiconsblockitem',
         'Duration': 'Not mentioned',
         'Company': 'Company',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Select'
     },
+    # 44. OVERHEIDZZP
     'overheidzzp': {
         'Title': 'Field7_text',
         'Location': 'Field3',
@@ -853,8 +1140,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field4',
         'Duration': 'Field5',
         'Company': 'Field2',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'overheidzzp'
     },
+    # 45. POOQ
     'POOQ': {
         'Title': 'Title',
         'Location': 'ml5',
@@ -865,8 +1157,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'POOQ'
     },
+    # 46. GEMEENTE-PROJECTEN
     'gemeente-projecten': {
         'Title': 'Field1',  # Will be processed to remove text in () and () themselves
         'Location': 'Field2',  # Will be processed to remove text in () and () themselves
@@ -877,8 +1174,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Field4',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'gemeente-projecten'
     },
+    # 47. GGDZWHUURTIN.NL
     'ggdzwhuurtin.nl': {
         'Title': 'Text',
         'Location': 'Field2',
@@ -889,8 +1191,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Text11',  # Will be processed to calculate date difference in months
         'Company': 'GGD Zaanstreek-Waterland',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'ggdzwhuurtin.nl'
     },
+    # 48. FREEP
     'freep': {
         'Title': 'Title',
         'Location': 'flex3',
@@ -901,8 +1208,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'flex4',
         'Duration': 'Not mentioned',
         'Company': 'mdcolspan2',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'freep'
     },
+    # 49. ONLYHUMAN
     'onlyhuman': {
         'Title': 'Title',
         'Location': 'flex3',
@@ -913,8 +1225,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'vacancycard',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'onlyhuman'
     },
+    # 50. STAFFINGMS
     'StaffingMS': {
         'Title': 'Title',
         'Location': 'Location',
@@ -925,8 +1242,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'hfp_cardiconsblockitem',
         'Duration': 'Not mentioned',
         'Company': 'Company',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'StaffingMS'
     },
+    # 51. 4-FREELANCERS.NL
     '4-Freelancers.nl': {
         'Title': 'Functietitel',
         'URL': 'Functietitel_URL',
@@ -936,9 +1258,14 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Text2',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': '4-Freelancers.nl',
         'start': 'ASAP'
     },
+    # 51. FLEXSPOT.IO
     'flexSpot.io': {
         'Title': 'Title',
         'Location': 'reset',
@@ -949,8 +1276,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Text3',
         'Company': 'Company',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'flexSpot.io'
     },
+    # 52. ASNBANK
     'ASNBank': {
         'Title': 'Field2',
         'Location': 'Text',  # Will be processed to extract first part after splitting on space
@@ -961,8 +1293,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Text',  # Will be processed to extract hours and remove "uur"
         'Duration': 'Not mentioned',
         'Company': 'ASNBank',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'ASNBank'
     },
+    # 53. TENNET
     'tennet': {
         'Title': 'widgetheader',
         'Location': 'feature1',  # Will be processed to remove everything after "/"
@@ -973,8 +1310,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'feature',
         'Duration': 'Not mentioned',
         'Company': 'TenneT',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'tennet'
     },
+    # 54. INTERIMNETWERK
     'InterimNetwerk': {
         'Title': 'Title',
         'Location': 'Location',
@@ -985,8 +1327,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Duration',
         'Company': 'InterimNetwerk',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'InterimNetwerk'
     },
+    # 55. FRIESLAND
     'Friesland': {
         'Title': 'Title',
         'URL': 'Title_URL',
@@ -997,8 +1344,13 @@ COMPANY_MAPPINGS = {
         'Hours': 'Field3',
         'Duration': 'Not mentioned',
         'Company': 'caption',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Friesland'
     },
+    # 56. ZUID-HOLLAND
     'Zuid-Holland': {
         'Title': 'Title',
         'URL': 'Title_URL',
@@ -1009,10 +1361,64 @@ COMPANY_MAPPINGS = {
         'start': 'Date',
         'rate': 'Not mentioned',
         'Duration': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'Zuid-Holland'
     },
-
-
+    # 57. COMET
+    'comet': {
+        'Title': 'Mission',
+        'URL': 'Page_URL',
+        'Location': 'Localisation',
+        'Summary': 'Not mentioned',
+        'start': 'ASAP',
+        'rate': 'Not mentioned',
+        'Hours': 'Not mentioned',
+        'Duration': 'Durée',
+        'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': 'Compétences_requises',
+        'Offers': '',
+        'Source': 'comet'
+    },
+    # 58. FREELANCE-INFORMATIQUE
+    'Freelance-Informatique': {
+        'Title': 'stretchedlink',
+        'URL': 'Page_URL',
+        'Location': 'colmd101',  # Will be processed to remove everything before "-" and the marker itself
+        'Summary': 'lineclamp2',
+        'start': 'Date',
+        'rate': 'Not mentioned',
+        'Hours': 'Not mentioned',
+        'Duration': 'colmd102',
+        'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': 'Keywords',
+        'Offers': '',
+        'Source': 'Freelance-Informatique'
+    },
+    # 60. 404WORKS
+    '404Works': {
+        'Title': 'nomargin',
+        'URL': 'nomargin_URL',
+        'Location': 'pin',
+        'Summary': 'Field1',
+        'start': 'Field4',
+        'rate': 'cash',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': 'Keywords',
+        'Offers': '',
+        'Source': '404Works'
+    },
+    # 59. HAARLEMMERMEERHUURTIN
     'haarlemmermeerhuurtin': {
         'Title': 'Title',
         'Location': 'Pub_Time',  # Will be processed to extract text between "Standplaats:" and "|"
@@ -1023,7 +1429,79 @@ COMPANY_MAPPINGS = {
         'Hours': 'Pub_Time',
         'Duration': 'Pub_Time',
         'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
         'Source': 'haarlemmermeerhuurtin'
+    },
+    # 60. HAYS
+    'hays': {
+        'Title': 'Description',
+        'Location': 'Location',
+        'Summary': 'Text',
+        'URL': 'Description_URL',
+        'start': '',
+        'rate': 'Salary',
+        'Hours': '',
+        'Duration': '',
+        'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
+        'Source': 'hays'
+    },
+    # 61. WELCOMETOTHEJUNGLE
+    'welcometothejungle': {
+        'Title': 'scbrzpdj',
+        'URL': 'scjcbmet_URL',
+        'Company': 'scizxthl',
+        'Location': 'scgfgbys',
+        'Summary': 'scizxthl3',
+        'rate': 'Not mentioned',
+        'start': 'ASAP',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': 'scfibhhp5, scfibhhp4',
+        'Offers': '',
+        'Source': 'welcometothejungle'
+    },
+    # 62. 404WORKS
+    '404Works': {
+        'Title': 'Title',
+        'Location': 'Location',
+        'Summary': 'Text',
+        'URL': 'Title_URL',
+        'start': 'ASAP',
+        'rate': 'Not mentioned',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
+        'Source': '404works'
+    },
+    # 63. 4-FREELANCERS.NL
+    '4-Freelancers.nl': {
+        'Title': 'Title',
+        'Location': 'Location',
+        'Summary': 'Text',
+        'URL': 'Title_URL',
+        'start': 'ASAP',
+        'rate': 'Not mentioned',
+        'Hours': 'Not mentioned',
+        'Duration': 'Not mentioned',
+        'Company': 'Not mentioned',
+        'Views': '',
+        'Likes': '',
+        'Keywords': '',
+        'Offers': '',
+        'Source': '4_freelancers_nl'
     },
 }
 
@@ -1275,67 +1753,134 @@ def generate_source_id(source, is_from_input=True):
         
         # Handle special cases for known sources
         source_mappings = {
-            'freelancer': 'freelancer',
-            'Freelancer.nl': 'Freelancer_nl',
-            'freelance': 'freelance',
-            'linkedin': 'linkedin',
-            'indeed': 'indeed',
-            'prolinker': 'prolinker',
-            'ProLinker.com': 'ProLinker_com',
-            'werkzoeken': 'werkzoeken',
-            'werk': 'werk',
-            'overheid': 'overheid',
-            'yacht': 'yacht',
-            'planet interim': 'planet_interim',
-            'salta group': 'salta_group',
-            'harvey nash': 'harvey_nash',
-            'circle8': 'circle8',
-            'behance': 'behance',
-            'jooble': 'jooble',
-            'centric': 'centric',
-            'schiphol': 'schiphol',
-            'rijkswaterstaat': 'rijkswaterstaat',
-            'ns': 'ns',
-            'umc': 'umc',
-            'bebee': 'bebee',
-            'hinttech': 'hinttech',
-            'flextender': 'flextender',
-            'select': 'select',
-            'kvk': 'kvk',
-            'politie': 'politie',
-            'hoofdkraan': 'hoofdkraan',
-            'zzp opdrachten': 'zzp_opdrachten',
-            'flexvalue': 'flexvalue',
-            'talentenregio': 'talentenregio',
-            'linkit': 'linkit',
-            'gelderland': 'gelderland',
-            'noord-holland': 'noord_holland',
-            'flevoland': 'flevoland',
-            'groningen': 'groningen',
-            'noordoostbrabant': 'noordoostbrabant',
-            'flex west-brabant': 'flex_west_brabant',
-            'amstelveen': 'amstelveen',
-            'amstelveenhuurtin': 'amstelveenhuurtin',
-            'haarlemmermeerhuurtin': 'haarlemmermeer',
-            'groningenhuurtin': 'groningenhuurtin',
-            'gemeente-projecten': 'gemeente_projecten',
-            'ggdzwhuurtin': 'ggdz_whuurtin',
-            'ggdzwhuurtin.nl': 'ggdz_whuurtin_nl',
-            'freep': 'freep',
-            'onlyhuman': 'onlyhuman',
-            'staffingms': 'staffingms',
-            '4 freelancers': '4_freelancers',
-            'flexspot': 'flexspot',
-            'asnbank': 'asnbank',
-            'tennet': 'tennet',
-            'interimnetwerk': 'interim_netwerk',
-            'zuid holland': 'zuid_holland',
-            'linkedininterim': 'LinkedIn',
-            'linkedinzzp': 'LinkedIn',
-            'freelance.nl': 'freelance_nl',
+            # 1. TWINE
             'twine': 'twine',
+            # 2. LINKIT
+            'LinkIT': 'linkit',
+            # 3. FREELANCE.NL
+            'freelance.nl': 'freelance_nl',
+            # 4. YACHT
+            'Yacht': 'yacht',
+            # 5. FLEXTENDER
+            'Flextender': 'flextender',
+            # 6. KVK
+            'KVK': 'kvk',
+            # 7. CIRCLE8
+            'Circle8': 'circle8',
+            # 8. BEBEE
+            'Bebee': 'bebee',
+            # 9. LINKEDIN
+            'linkedin': 'linkedin',
+            # 10. LINKEDINZZP
+            'linkedinzzp': 'LinkedIn',
+            # 11. LINKEDININTERIM
+            'linkedininterim': 'LinkedIn',
+            # 12. POLITIE
+            'politie': 'politie',
+            # 13. GELDERLAND
+            'gelderland': 'gelderland',
+            # 14. WERK.NL
+            'werk.nl': 'werk_nl',
+            # 15. INDEED
+            'indeed': 'indeed',
+            # 16. PLANET INTERIM
+            'Planet Interim': 'planet_interim',
+            # 17. HARVEY NASH
+            'Harvey Nash': 'harvey_nash',
+            # 18. BEHANCE
+            'Behance': 'behance',
+            # 19. JOOBLE
+            'Jooble': 'jooble',
+            # 20. CENTRIC
+            'Centric': 'centric',
+            # 21. CODEUR.COM
+            'Codeur.com': 'codeur_com',
+            # 22. SCHIPHOL
+            'Schiphol': 'schiphol',
+            # 23. RIJKSWATERSTAAT
+            'rijkswaterstaat': 'rijkswaterstaat',
+            # 24. NS
+            'ns': 'ns',
+            # 25. UMC
+            'UMC': 'umc',
+            # 26. HINTTECH
+            'HintTech': 'hinttech',
+            # 27. SELECT
+            'Select': 'select',
+            # 28. HOOFDKRAAN
+            'hoofdkraan': 'hoofdkraan',
+            # 29. ZOP OPDACHTEN
+            'zzp opdrachten': 'zzp_opdrachten',
+            # 30. FLEXVALUE_B.V.
+            'FlexValue_B.V.': 'flexvalue',
+            # 31. TALENTENREGIO
+            'TalentenRegio': 'talentenregio',
+            # 32. NOORD-HOLLAND
+            'Noord-Holland': 'noord_holland',
+            # 33. FLEVOLAND
+            'flevoland': 'flevoland',
+            # 34. GRONINGEN
+            'groningen': 'groningenhuurtin',
+            # 35. NOORDOOSTBRABANT
+            'noordoostbrabant': 'noordoostbrabant',
+            # 36. FLEX WEST-BRABANT
+            'Flex West-Brabant': 'flex_west_brabant',
+            # 37. AMSTELVEEN
+            'amstelveen': 'amstelveenhuurtin',
+            # 38. AMSTELVEENHUURTIN
+            'Amstelveenhuurtin': 'amstelveenhuurtin',
+            # 39. AMSTELVEENHUURTIN (ALT)
+            'amstelveenhuurtin': 'amstelveenhuurtin',
+            # 40. HAARLEMMERMEERHUURTIN
+            'haarlemmermeerhuurtin': 'haarlemmermeer',
+            # 41. HAYS
+            'hays': 'hays',
+            # 42. GRONINGENHUURTIN
+            'groningenhuurtin': 'groningenhuurtin',
+            # 43. GEMEENTE-PROJECTEN
+            'gemeente-projecten': 'gemeente_projecten',
+            # 44. GGDZWHUURTIN
+            'ggdzwhuurtin': 'ggdz_whuurtin',
+            # 45. GGDZWHUURTIN.NL
+            'ggdzwhuurtin.nl': 'ggdz_whuurtin_nl',
+            # 46. FREEP
+            'freep': 'freep',
+            # 47. ONLYHUMAN
+            'onlyhuman': 'onlyhuman',
+            # 48. STAFFINGMS
+            'StaffingMS': 'staffingms',
+            # 49. 4-FREELANCERS.NL
+            '4-Freelancers.nl': '4_freelancers_nl',
+            # 50. 4 FREELANCERS
+            '4 freelancers': '4_freelancers',
+            # 51. FLEXSPOT.IO
+            'flexSpot.io': 'flexspot',
+            # 52. ASNBANK
+            'ASNBank': 'asnbank',
+            # 53. FRIESLAND
+            'Friesland': 'friesland',
+            # 54. TENNET
+            'tennet': 'tennet',
+            # 55. INTERIMNETWERK
+            'InterimNetwerk': 'interim_netwerk',
+            # 56. ZUID-HOLLAND
+            'Zuid-Holland': 'zuid_holland',
+            # 57. OVERHEIDZZP
             'overheidzzp': 'overheidzzp',
+            # 58. POOQ
             'POOQ': 'POOQ',
+            # 59. COMET
+            'comet': 'comet',
+            # 60. FREELANCE-INFORMATIQUE
+            'Freelance-Informatique': 'freelance_informatique',
+            # 61. 404WORKS
+            '404Works': '404works',
+            # 62. WELCOMETOTHEJUNGLE
+            'welcometothejungle': 'welcome_to_the_jungle',
+            # 63. 404WORKS
+            '404Works': '404works',
+            # 64. 4-FREELANCERS.NL
+            '4-Freelancers.nl': '4_freelancers_nl',
             # 'zoekklus': 'zoekklus'
         }
         
@@ -1491,7 +2036,7 @@ def freelance_directory(files_read, company_name):
                 post_freelance_count = len(files_read)
 
                 # Step 2: Remove rows that contain permanent job markers (salary, baan, etc.)
-                permanent_job_markers = ['salaris', 'base salary', 'startersbaan', 'salary', 'salarisrange', 'baan']
+                permanent_job_markers = ['salaris', 'base salary', 'startersbaan', 'salary', 'salarisrange', 'baan', 'maandsalaris', 'monthly salary', 'loon', 'wage']
 
                 def contains_permanent_markers(value):
                     try:
@@ -1500,26 +2045,56 @@ def freelance_directory(files_read, company_name):
                     except Exception:
                         return False
 
-                # Check Text column specifically for permanent job markers
+                # Check both Text and Summary columns for permanent job markers
+                permanent_mask = pd.Series([False] * len(files_read), index=files_read.index)
+                
                 if 'Text' in files_read.columns:
-                    permanent_mask = files_read['Text'].apply(contains_permanent_markers)
-                    permanent_count = permanent_mask.sum()
-                    files_read = files_read[~permanent_mask]  # Remove rows with permanent markers
-                    final_count = len(files_read)
+                    text_mask = files_read['Text'].apply(contains_permanent_markers)
+                    permanent_mask = permanent_mask | text_mask
+                
+                if 'Summary' in files_read.columns:
+                    summary_mask = files_read['Summary'].apply(contains_permanent_markers)
+                    permanent_mask = permanent_mask | summary_mask
+                
+                permanent_count = permanent_mask.sum()
+                files_read = files_read[~permanent_mask]  # Remove rows with permanent markers
+                final_count = len(files_read)
 
-                    # Log results
-                    if initial_count > post_freelance_count:
-                        logging.info(f"Applied Bebee freelance filter: rows {initial_count} → {post_freelance_count} (kept freelance terms)")
+                # Log results
+                if initial_count > post_freelance_count:
+                    logging.info(f"Applied Bebee freelance filter: rows {initial_count} → {post_freelance_count} (kept freelance terms)")
 
-                    if permanent_count > 0:
-                        logging.info(f"Applied Bebee permanent job filter: removed {permanent_count} rows with markers {permanent_job_markers}, final count: {final_count}")
-                        logging.info(f"Bebee filtering complete: {initial_count} → {final_count} rows (reason: not freelance jobs)")
-                    else:
-                        logging.info(f"Bebee permanent job filter: No rows removed, final count: {final_count}")
+                if permanent_count > 0:
+                    logging.info(f"Applied Bebee permanent job filter: removed {permanent_count} rows with markers {permanent_job_markers} from Text/Summary columns, final count: {final_count}")
+                    logging.info(f"Bebee filtering complete: {initial_count} → {final_count} rows (reason: not freelance jobs)")
                 else:
-                    logging.warning(f"Bebee permanent job filter: 'Text' column not found. Only applied freelance filter: {initial_count} → {post_freelance_count} rows")
+                    logging.info(f"Bebee permanent job filter: No rows removed, final count: {final_count}")
             else:
                 logging.warning(f"Bebee filtering: Neither 'Field1_text' nor 'Text' column found in the input CSV for {company_name}. Skipping all filters.")
+        elif company_name == 'Codeur.com':
+            if 'Text' in files_read.columns:
+                initial_count = len(files_read)
+                # Drop rows where 'Text' column contains "Fermé" (case-insensitive)
+                files_read = files_read[~files_read['Text'].astype(str).str.contains("Fermé", case=False, na=False)]
+                filtered_count = len(files_read)
+                if initial_count > filtered_count:
+                    logging.info(f"Applied Codeur.com pre-mapping filter on 'Text' column to remove 'Fermé' rows, rows changed from {initial_count} to {filtered_count}")
+                elif initial_count == filtered_count and initial_count > 0:
+                    logging.info(f"Codeur.com pre-mapping filter: 'Text' column checked for 'Fermé' content, no rows removed from {initial_count} rows.")
+            else:
+                logging.warning(f"Codeur.com pre-mapping filter: 'Text' column not found in the input CSV for {company_name}. Skipping filter.")
+        elif company_name == 'welcometothejungle':
+            if 'scfibhhp' in files_read.columns:
+                initial_count = len(files_read)
+                # Keep only rows where 'scfibhhp' column contains "freelance" (case-insensitive)
+                files_read = files_read[files_read['scfibhhp'].astype(str).str.contains("freelance", case=False, na=False)]
+                filtered_count = len(files_read)
+                if initial_count > filtered_count:
+                    logging.info(f"Applied Welcome to the Jungle pre-mapping filter on 'scfibhhp' column to keep only 'freelance' rows, rows changed from {initial_count} to {filtered_count}")
+                elif initial_count == filtered_count and initial_count > 0:
+                    logging.info(f"Welcome to the Jungle pre-mapping filter: 'scfibhhp' column checked for 'freelance' content, no rows removed from {initial_count} rows.")
+            else:
+                logging.warning(f"Welcome to the Jungle pre-mapping filter: 'scfibhhp' column not found in the input CSV for {company_name}. Skipping filter.")
         elif company_name == 'Overheid':
             if 'Field3' in files_read.columns:
                 initial_count = len(files_read)
@@ -1571,6 +2146,18 @@ def freelance_directory(files_read, company_name):
                     logging.info(f"flexSpot.io pre-mapping filter: 'Text2' column checked for 'Freelance', no rows removed from {initial_count} rows.")
             else:
                 logging.warning(f"flexSpot.io pre-mapping filter: 'Text2' column not found in the input CSV for {company_name}. Skipping filter.")
+        elif company_name == '404Works':
+            if 'Field6' in files_read.columns:
+                initial_count = len(files_read)
+                # Filter out rows where 'Field6' column contains "Status Closed" (case-insensitive, handles extra whitespace)
+                files_read = files_read[~files_read['Field6'].astype(str).str.contains(r"\s*Status\s+Closed\s*", case=False, na=False)]
+                filtered_count = len(files_read)
+                if initial_count > filtered_count:
+                    logging.info(f"Applied 404Works pre-mapping filter on 'Field6' column to remove 'Status Closed' rows, rows changed from {initial_count} to {filtered_count}")
+                elif initial_count == filtered_count and initial_count > 0:
+                    logging.info(f"404Works pre-mapping filter: 'Field6' column checked for 'Status Closed', no rows removed from {initial_count} rows.")
+            else:
+                logging.warning(f"404Works pre-mapping filter: 'Field6' column not found in the input CSV for {company_name}. Skipping filter.")
         elif company_name == 'InterimNetwerk':
             # Special processing for InterimNetwerk: extract data from Text column
             if 'Text' in files_read.columns and 'Field1_links' in files_read.columns:
@@ -1709,6 +2296,24 @@ def freelance_directory(files_read, company_name):
                     result[std_col] = files_read['Description'].str.split('-').str[0].str.strip()
                 else:
                     result[std_col] = files_read[src_col_mapping_value]
+            elif '+' in src_col_mapping_value or ',' in src_col_mapping_value:
+                # Handle column merging (e.g., 'col1+col2+col3' or 'col1, col2, col3')
+                if '+' in src_col_mapping_value:
+                    columns_to_merge = src_col_mapping_value.split('+')
+                else:  # comma-separated
+                    columns_to_merge = [col.strip() for col in src_col_mapping_value.split(',')]
+                
+                existing_columns = [col for col in columns_to_merge if col in files_read.columns]
+                
+                if existing_columns:
+                    # Merge the existing columns with space separator
+                    merged_data = files_read[existing_columns[0]].astype(str)
+                    for col in existing_columns[1:]:
+                        merged_data = merged_data + ' ' + files_read[col].astype(str)
+                    result[std_col] = merged_data
+                else:
+                    # No columns found, assign empty string
+                    result[std_col] = pd.Series([''] * len(files_read), index=files_read.index)
             else:
                 # If the mapping value is not a column name, assign the mapping value itself.
                 # This handles literal defaults like 'Company': 'LinkIT' or 'start': 'ASAP'.
@@ -1729,7 +2334,7 @@ def freelance_directory(files_read, company_name):
                 # Also check for common column names that should be preserved
                 # Note: Field4 is removed from this list to prevent showing "Field4" as literal text
                 # Note: Field1 is removed from this list to prevent blanking out legitimate Field1 data
-                common_column_names = {'Text2', 'Location', 'searchresultorganisation'}
+                common_column_names = {'Text2', 'Location', 'searchresultorganisation', 'Keywords'}
                 is_common_column = src_col_mapping_value in common_column_names
                 
                 # Check if it's a common literal value
@@ -1772,7 +2377,7 @@ def freelance_directory(files_read, company_name):
         # End of new safeguard block
         
         # Clean the data
-        standard_columns = ['Title', 'Location', 'Summary', 'URL', 'start', 'rate', 'Company']
+        standard_columns = ['Title', 'Location', 'Summary', 'URL', 'start', 'rate', 'Company', 'Views', 'Likes', 'Keywords', 'Offers']
         for col in standard_columns:
             if col in result.columns:
                 # Convert to string and clean whitespace
@@ -4245,6 +4850,14 @@ def supabase_upload(df, table_name, is_historical=False):
                 columns_to_remove.append('recommendations')
             if 'company_location_roles' in df.columns:
                 columns_to_remove.append('company_location_roles')
+            if 'Views' in df.columns:
+                columns_to_remove.append('Views')
+            if 'Likes' in df.columns:
+                columns_to_remove.append('Likes')
+            if 'Keywords' in df.columns:
+                columns_to_remove.append('Keywords')
+            if 'Offers' in df.columns:
+                columns_to_remove.append('Offers')
             
             if columns_to_remove:
                 logging.info(f"Removing columns for historical table upload to {table_name}: {columns_to_remove}")
@@ -4481,8 +5094,23 @@ def print_simple_table(result_df=None):
     # Sort by success percentage (lowest first)
     enhanced_results.sort(key=lambda x: x['success_pct'])
     
-    # Data rows with better formatting
+    # Remove duplicates based on company name (keep the last occurrence)
+    seen_companies = set()
+    unique_results = []
     for result in enhanced_results:
+        company = result['company']
+        if company not in seen_companies:
+            seen_companies.add(company)
+            unique_results.append(result)
+        else:
+            # Replace the previous entry with the current one (keep the last occurrence)
+            for i, existing_result in enumerate(unique_results):
+                if existing_result['company'] == company:
+                    unique_results[i] = result
+                    break
+    
+    # Data rows with better formatting
+    for result in unique_results:
         company = result['company'][:19]  # Truncate if too long
         status = result['status']
         initial = result['initial']
@@ -4835,17 +5463,55 @@ def main():
 
                 for separator in [',', ';', '\t']:
                     try:
-                        temp_df = pd.read_csv(url_link, sep=separator)
+                        # Check file size first for large files
+                        import os
+                        file_size = os.path.getsize(url_link) if os.path.exists(url_link) else 0
+                        file_size_mb = file_size / (1024 * 1024)
                         
-                        if temp_df.empty: # CSV has headers but no data rows
-                            logging.info(f"INFO: {company_name} - CSV file contains no data rows ({url_link}). Skipping.")
-                            csv_is_empty_or_no_data = True
-                            break # Stop trying separators, we've identified the state
+                        if file_size_mb > 10:  # If file is larger than 10MB, use chunking
+                            logging.info(f"INFO: {company_name} - Large CSV file detected ({file_size_mb:.1f}MB). Processing in chunks...")
+                            
+                            # Read CSV in chunks
+                            chunk_size = 5000  # Process 5000 rows at a time
+                            all_chunks = []
+                            
+                            for chunk in pd.read_csv(url_link, sep=separator, chunksize=chunk_size):
+                                if chunk.empty:
+                                    continue
+                                
+                                # Process each chunk
+                                chunk_processed = chunk.fillna('')
+                                for col in chunk_processed.columns:
+                                    chunk_processed[col] = chunk_processed[col].astype(str).replace(['nan', 'NaN', 'None', 'none'], '')
+                                
+                                all_chunks.append(chunk_processed)
+                                
+                                # Log progress for large files
+                                if len(all_chunks) % 10 == 0:  # Every 50,000 rows
+                                    logging.info(f"INFO: {company_name} - Processed {len(all_chunks) * chunk_size:,} rows...")
+                            
+                            if not all_chunks:
+                                logging.info(f"INFO: {company_name} - CSV file contains no data rows ({url_link}). Skipping.")
+                                csv_is_empty_or_no_data = True
+                                break
+                            
+                            # Combine all chunks
+                            files_read = pd.concat(all_chunks, ignore_index=True)
+                            logging.info(f"INFO: {company_name} - Successfully loaded {len(files_read):,} rows from large CSV file.")
+                            
+                        else:
+                            # Normal processing for smaller files
+                            temp_df = pd.read_csv(url_link, sep=separator)
+                            
+                            if temp_df.empty: # CSV has headers but no data rows
+                                logging.info(f"INFO: {company_name} - CSV file contains no data rows ({url_link}). Skipping.")
+                                csv_is_empty_or_no_data = True
+                                break # Stop trying separators, we've identified the state
 
-                        # If we reach here, CSV has data. Process it.
-                        files_read = temp_df.fillna('')
-                        for col in files_read.columns:
-                            files_read[col] = files_read[col].astype(str).replace(['nan', 'NaN', 'None', 'none'], '')
+                            # If we reach here, CSV has data. Process it.
+                            files_read = temp_df.fillna('')
+                            for col in files_read.columns:
+                                files_read[col] = files_read[col].astype(str).replace(['nan', 'NaN', 'None', 'none'], '')
                         read_successful = True
                         break # Successfully read and processed
 
