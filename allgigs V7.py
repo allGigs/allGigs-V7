@@ -40,6 +40,16 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 BATCH_SIZE = 500  # Number of records to upload in each batch
 NEW_TABLE = "Allgigs_All_vacancies_NEW"
 HISTORICAL_TABLE = "Allgigs_All_vacancies"
+FRENCH_JOBS_TABLE = "french freelance jobs"
+
+# French job sources that should go to French_Freelance_Jobs table
+FRENCH_SOURCES = [
+    '404Works',
+    'Codeur.com', 
+    'Welcome to the Jungle',
+    'comet',
+    'Freelance-Informatique'
+]
 
 # Directory structure
 BASE_DIR = Path('/Users/jaapjanlammers/Desktop/Freelancedirectory')
@@ -65,7 +75,7 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
         summary (str, optional): Job description for remote/hybrid clues
 
     Returns:
-        Dict[str, bool]: Dictionary with 'Dutch', 'EU', 'Rest_of_World' as keys
+        Dict[str, bool]: Dictionary with 'Dutch', 'French', 'EU', 'Rest_of_World' as keys
     """
     if pd.isna(location) or location == '':
         location_clean = ''
@@ -100,6 +110,8 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
             remote_region = 'eu'
         elif 'remote (netherlands)' in location_clean or 'remote nl' in location_clean:
             remote_region = 'dutch'
+        elif 'remote (france)' in location_clean or 'france remote' in location_clean:
+            remote_region = 'french'
         elif 'remote (germany)' in location_clean or 'germany remote' in location_clean:
             remote_region = 'eu_germany'
 
@@ -112,30 +124,91 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
             if any(dutch_company in company_clean for dutch_company in dutch_companies):
                 remote_region = 'dutch'
 
+        # Check company context for French companies - DISABLED per user request
+        # French jobs should only be marked based on location, not company origin
+
         # Check source context (Dutch job boards suggest Dutch remote)
         if not remote_region and source:
             dutch_sources = ['freelance.nl', 'interimnetwerk']
             if any(dutch_source in str(source).lower() for dutch_source in dutch_sources):
                 remote_region = 'dutch'
 
+        # Check source context (French job boards suggest French remote)
+        if not remote_region and source:
+            french_sources = ['comet', '404works', 'freelance-france', 'codeur.com']
+            if any(french_source in str(source).lower() for french_source in french_sources):
+                remote_region = 'french'
+
     # 3. APPLY REMOTE REGIONAL LOGIC
     if is_remote and remote_region:
         if remote_region == 'dutch':
-            return {'Dutch': True, 'EU': False, 'Rest_of_World': False}
+            return {'Dutch': True, 'French': False, 'EU': False, 'Rest_of_World': False}
+        elif remote_region == 'french':
+            return {'Dutch': False, 'French': True, 'EU': False, 'Rest_of_World': False}
         elif remote_region.startswith('eu'):
-            return {'Dutch': False, 'EU': True, 'Rest_of_World': False}
+            return {'Dutch': False, 'French': False, 'EU': True, 'Rest_of_World': False}
 
-    # For unspecified remote, use company context
-    if is_remote and not remote_region:
-        if company and not pd.isna(company):
-            company_clean = str(company).lower().strip()
-            dutch_companies = ['ing', 'rabobank', 'abn amro', 'philips', 'shell', 'unilever']
-            if any(dutch_company in company_clean for dutch_company in dutch_companies):
-                return {'Dutch': True, 'EU': False, 'Rest_of_World': False}
 
     # 4. REGULAR LOCATION ANALYSIS (for non-remote or hybrid office locations)
-    eu_countries_excluding_nl = [
-        'germany', 'france', 'italy', 'spain', 'poland', 'belgium', 'austria',
+    
+    # 4.1. Check for Dutch cities and regions FIRST
+    dutch_cities_regions = [
+        'amsterdam', 'rotterdam', 'den haag', 'the hague', 'utrecht', 'eindhoven',
+        'tilburg', 'groningen', 'almere', 'breda', 'nijmegen', 'enschede',
+        'haarlem', 'arnhem', 'zaanstad', 'haarlemmermeer', 'amersfoort', 'apeldoorn',
+        'hoofddorp', 'maastricht', 'leiden', 'dordrecht', 'zoetermeer', 'zwolle',
+        'emmen', 'westland', 'delft', 'venlo', 'deventer', 'helmond', 'sittard-geleen',
+        'ede', 'purmerend', 'rijswijk', 'schiedam', 'amstelveen', 'katwijk',
+        'noord-holland', 'zuid-holland', 'utrecht', 'gelderland', 'overijssel',
+        'flevoland', 'friesland', 'groningen', 'drenthe', 'noord-brabant', 'limburg',
+        'zeeland', 'friesland', 'drenthe', 'groningen', 'flevoland', 'overijssel',
+        'gelderland', 'utrecht', 'noord-holland', 'zuid-holland', 'zeeland',
+        'noord-brabant', 'limburg'
+    ]
+    
+    # 4.2. Check for French cities and regions
+    french_cities_regions = [
+        'paris', 'marseille', 'lyon', 'toulouse', 'nice', 'nantes', 'strasbourg',
+        'montpellier', 'bordeaux', 'lille', 'rennes', 'reims', 'saint-étienne',
+        'toulon', 'grenoble', 'dijon', 'angers', 'nîmes', 'villeurbanne', 'saint-denis',
+        'le havre', 'tours', 'limoges', 'amiens', 'perpignan', 'metz', 'boulogne-billancourt',
+        'orléans', 'mulhouse', 'rouen', 'caen', 'nancy', 'saint-pierre', 'argenteuil',
+        # Paris variations and areas
+        'paris region', 'greater paris', 'paris area', 'la défense', 'paris centre',
+        'paris nord', 'paris sud', 'paris est', 'paris ouest', 'paris metropolitan area',
+        'région parisienne', 'zone parisienne', 'quartier d\'affaires', 'cbd paris',
+        'paris cdg', 'paris orly', 'gare du nord', 'paris 75001', 'paris 75002', 'paris 75003',
+        'paris 75004', 'paris 75005', 'paris 75006', 'paris 75007', 'paris 75008',
+        'paris 75009', 'paris 75010', 'paris 75011', 'paris 75012', 'paris 75013',
+        'paris 75014', 'paris 75015', 'paris 75016', 'paris 75017', 'paris 75018',
+        'paris 75019', 'paris 75020', '1er arrondissement', '2ème arrondissement',
+        '3ème arrondissement', '4ème arrondissement', '5ème arrondissement',
+        '6ème arrondissement', '7ème arrondissement', '8ème arrondissement',
+        '9ème arrondissement', '10ème arrondissement', '11ème arrondissement',
+        '12ème arrondissement', '13ème arrondissement', '14ème arrondissement',
+        '15ème arrondissement', '16ème arrondissement', '17ème arrondissement',
+        '18ème arrondissement', '19ème arrondissement', '20ème arrondissement',
+        # French regions and departments
+        'auvergne-rhône-alpes', 'bourgogne-franche-comté', 'bretagne', 'centre-val de loire',
+        'corse', 'grand est', 'hauts-de-france', 'île-de-france', 'normandie', 'nouvelle-aquitaine',
+        'occitanie', 'pays de la loire', 'provence-alpes-côte d\'azur', 'alsace', 'champagne-ardenne',
+        'franche-comté', 'lorraine', 'picardie', 'aquitaine', 'languedoc-roussillon',
+        'midi-pyrénées', 'poitou-charentes', 'rhône-alpes', 'basse-normandie', 'haute-normandie',
+        'nord-pas-de-calais', 'limousin', 'corsica', 'guadeloupe', 'martinique', 'réunion'
+    ]
+    
+    if location_clean:
+        for dutch_location in dutch_cities_regions:
+            if dutch_location in location_clean:
+                return {'Dutch': True, 'French': False, 'EU': False, 'Rest_of_World': False}
+        
+        for french_location in french_cities_regions:
+            if french_location in location_clean:
+                return {'Dutch': False, 'French': True, 'EU': False, 'Rest_of_World': False}
+    
+    # 4.3. Check for EU countries excluding Netherlands and France
+    eu_countries_excluding_nl_fr = [
+        'germany', 'italy', 'spain', 'poland', 'belgium', 'austria',
         'sweden', 'denmark', 'finland', 'portugal', 'greece', 'czech republic',
         'czechia', 'hungary', 'romania', 'bulgaria', 'croatia', 'slovakia',
         'slovenia', 'lithuania', 'latvia', 'estonia', 'ireland', 'luxembourg',
@@ -143,28 +216,23 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
     ]
 
     major_eu_cities = [
-        'berlin', 'munich', 'hamburg', 'cologne', 'frankfurt', 'paris', 'marseille',
-        'lyon', 'toulouse', 'nice', 'nantes', 'strasbourg', 'montpellier', 'bordeaux',
-        'lille', 'rennes', 'reims', 'saint-étienne', 'toulon', 'grenoble', 'dijon',
-        'angers', 'nîmes', 'villeurbanne', 'saint-denis', 'le havre', 'tours',
-        'limoges', 'amiens', 'perpignan', 'metz', 'boulogne-billancourt', 'orléans',
-        'mulhouse', 'rouen', 'caen', 'nancy', 'saint-pierre', 'argenteuil',
+        'berlin', 'munich', 'hamburg', 'cologne', 'frankfurt',
         'rome', 'milan', 'madrid', 'barcelona', 'warsaw', 'krakow',
         'brussels', 'vienna', 'stockholm', 'copenhagen', 'helsinki', 'lisbon'
     ]
 
     if location_clean:
-        for country in eu_countries_excluding_nl:
+        for country in eu_countries_excluding_nl_fr:
             if country in location_clean:
-                return {'Dutch': False, 'EU': True, 'Rest_of_World': False}
+                return {'Dutch': False, 'French': False, 'EU': True, 'Rest_of_World': False}
 
         for city in major_eu_cities:
             if city in location_clean:
-                return {'Dutch': False, 'EU': True, 'Rest_of_World': False}
+                return {'Dutch': False, 'French': False, 'EU': True, 'Rest_of_World': False}
 
     # 5. Check for "European Union" mentions
     if location_clean and 'european union' in location_clean:
-        return {'Dutch': False, 'EU': True, 'Rest_of_World': False}
+        return {'Dutch': False, 'French': False, 'EU': True, 'Rest_of_World': False}
 
     # 6. Check for non-EU countries
     rest_of_world_countries = [
@@ -178,16 +246,54 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
     if location_clean:
         for country in rest_of_world_countries:
             if country in location_clean:
-                return {'Dutch': False, 'EU': False, 'Rest_of_World': True}
+                return {'Dutch': False, 'French': False, 'EU': False, 'Rest_of_World': True}
 
     # 7. Check for USD currency
     if rate and not pd.isna(rate):
         rate_str = str(rate).lower().strip()
         usd_indicators = ['$', 'usd', 'dollar', 'dollars', '$/hr', '$/hour', '$/day', '$/month', '$/week', '$/year']
         if any(indicator in rate_str for indicator in usd_indicators):
-            return {'Dutch': False, 'EU': False, 'Rest_of_World': True}
+            return {'Dutch': False, 'French': False, 'EU': False, 'Rest_of_World': True}
 
-    # 7.5. LANGUAGE DETECTION - Check for French language indicators
+    # 7.5. LANGUAGE DETECTION - Check for Dutch and French language indicators
+    def detect_dutch_language(text_fields):
+        """Detect Dutch language in text fields."""
+        if not text_fields:
+            return False
+        
+        # Dutch language indicators
+        dutch_indicators = [
+            # Common Dutch words
+            'ontwikkelaar', 'programmeur', 'ingenieur', 'consultant', 'freelancer',
+            'zelfstandig', 'ondernemer', 'thuiswerk', 'werk', 'bedrijf', 'maatschappij',
+            'project', 'opdracht', 'vaardigheden', 'ervaring', 'jaren', 'jaar',
+            'niveau', 'beheersing', 'kennis', 'technologieën', 'ontwikkeling',
+            'ontwerp', 'analyse', 'beheer', 'team', 'klant', 'specificaties',
+            'functionele', 'technische', 'architectuur', 'systeem', 'applicatie',
+            'software', 'programmering', 'code', 'database', 'interface', 'gebruiker',
+            'web', 'mobiel', 'desktop', 'cloud', 'beveiliging', 'prestaties',
+            'kwaliteit', 'testen', 'implementatie', 'onderhoud', 'ondersteuning',
+            'training', 'documentatie',
+            # Dutch articles and prepositions
+            'de', 'het', 'een', 'van', 'in', 'op', 'met', 'voor', 'door', 'zonder',
+            'onder', 'naar', 'bij', 'tussen', 'tijdens', 'over', 'rond', 'door',
+            # Dutch job-related terms
+            'functie', 'baan', 'aanbieding', 'werving', 'sollicitatie', 'cv',
+            'gesprek', 'salaris', 'beloning', 'voordelen', 'vakantie', 'verlof',
+            'thuiswerk', 'kantoor', 'locatie', 'adres', 'telefoon', 'e-mail',
+            'contact', 'referentie', 'urgent', 'onmiddellijk', 'start', 'einde',
+            'duur', 'periode', 'contract', 'vast', 'tijdelijk', 'stage', 'leerling'
+        ]
+        
+        # Combine all text fields
+        combined_text = ' '.join([str(field).lower() for field in text_fields if field and not pd.isna(field)])
+        
+        # Count Dutch indicators
+        dutch_count = sum(1 for indicator in dutch_indicators if indicator in combined_text)
+        
+        # If we find 3 or more Dutch indicators, consider it Dutch
+        return dutch_count >= 3
+
     def detect_french_language(text_fields):
         """Detect French language in text fields."""
         if not text_fields:
@@ -226,13 +332,99 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
         # If we find 3 or more French indicators, consider it French
         return french_count >= 3
     
-    # Check for French language in available text fields
+    # Check for language in available text fields
     text_fields = [location, title, summary, company]
+    
+    # Check French language first (more specific)
     if detect_french_language(text_fields):
-        return {'Dutch': False, 'EU': True, 'Rest_of_World': False}
+        return {'Dutch': False, 'French': True, 'EU': False, 'Rest_of_World': False}
+    
+    # Check Dutch language
+    if detect_dutch_language(text_fields):
+        return {'Dutch': True, 'French': False, 'EU': False, 'Rest_of_World': False}
 
     # 8. Default to Dutch
-    return {'Dutch': True, 'EU': False, 'Rest_of_World': False}
+    return {'Dutch': True, 'French': False, 'EU': False, 'Rest_of_World': False}
+
+def classify_job_industry(title, summary=''):
+    """Classify job into industry category"""
+    if pd.isna(title):
+        return 'Other/General'
+    
+    text = str(title).lower()
+    if summary and not pd.isna(summary):
+        text += ' ' + str(summary).lower()
+    
+    # Preprocessing: Remove seniority prefixes to focus on core role
+    import re
+    text = re.sub(r'\b(senior|junior|medior|lead)\s+', '', text)
+    
+    # Handle work arrangement tags - Enhanced filtering
+    skip_patterns = ['zzp', 'aanbevolen', 'tijdelijk', 'fulltime', 'parttime', 'zelfstandig', 'opdracht', 'uurloon', 'langdurig', 'stage', 'weekendwerk', 'avonddienst', 'ochtenddienst', 'nachtdienst', 'dagdienst', 'frontoffice', 'bijbaan', 'leerbaan', 'tussenjaar', 'fysiekwerk', 'banenafspraak', 'vast contract', 'jaarcontract', 'ploegen']
+    
+    # Enhanced work arrangement tag detection
+    words = text.split()
+    if len(words) <= 8:  # Increased from 3 to catch more complex work arrangement combinations
+        if any(pattern in text for pattern in skip_patterns):
+            # Additional check for hour specifications
+            if any(hour_pattern in text for hour_pattern in ['uur week', 'uur per week', 'dagen week']):
+                return 'No title information'  # Mark as insufficient data for industry classification
+            # Check for basic work arrangement patterns
+            if any(basic_pattern in text for basic_pattern in ['zzp', 'zelfstandig', 'aanbevolen', 'opdracht']):
+                return 'No title information'  # Mark as insufficient data for industry classification
+    
+    # Special title-based rules
+    title_lower = str(title).lower()
+    if 'front-end' in title_lower or 'frontend' in title_lower:
+        return 'IT & Software Development'
+    if 'developer' in title_lower:
+        return 'IT & Software Development'
+    
+    # Check for "IT" with strict word boundaries in title
+    import re
+    if re.search(r'\bit\b', title_lower):
+        return 'IT & Software Development'
+    
+    # Check for "security" anywhere in title
+    if 'security' in title_lower:
+        return 'Security & Safety'
+    
+    # Industry keywords (expanded)
+    keywords = {
+        'IT & Software Development': ['developer', 'programmer', 'software', 'architect', 'project architect', 'solution architect', 'enterprise architect', 'domeinarchitect', 'développeur', 'développeuse', 'programmeur', 'programmeuse', 'java', 'python', 'react', 'javascript', 'typescript', 'node.js', 'angular', 'vue', 'php', 'c#', 'c++', 'ruby', 'go', 'swift', 'kotlin', 'flutter', 'dart', 'scala', 'rust', 'perl', '.net', 'dotnet', 'html', 'css', 'bootstrap', 'jquery', 'laravel', 'django', 'spring', 'express', 'mongodb', 'postgresql', 'mysql', 'redis', 'docker', 'kubernetes', 'aws', 'azure', 'devops', 'frontend', 'backend', 'fullstack', 'mobile', 'ios', 'android', 'web development', 'app development', 'test engineer', 'iam specialist', 'test', 'testing', 'testautomatiseerder', 'testcoördinator', 'platform', 'api', 'microservices', 'cloud', 'serverless', 'automation', 'delivery professional', 'systeembeheerder', 'system engineer', 'testmanager', 'linux', 'tester', 'identity & access management', 'iam', 'scrum master', 'ux', 'ui', 'ux designer', 'ui designer', 'ux/ui designer', 'werkplek specialist', 'wordpress', 'website', 'google', 'google ads', 'exact online', 'ontwikkelaar', 'sap', 'btp', 'integratiespecialist', 'microsoft', 'wordpress website', 'website revamp', 'optimization', 'odoo', 'hotel management system', 'system development', 'visual studio', 'autocad', 'e-commerce', 'ecommerce', 'salesforce pro suite', 'iot', 'internet of things', 'cto', 'email setup', 'email', 'development', 'magento', 'quickbooks', 'designer', 'engineer', 'shopify design', 'sketchup', 'qa', 'lead developer', 'web design', 'ui/ux designer', 'interaction designer', 'experience designer', 'product designer', 'digital designer', 'ux-writer', 'ui designer game', 'design consultant', 'design thinking facilitator'],
+        'Data & Analytics': ['data analyst', 'data scientist', 'data engineer', 'analyst', 'business intelligence', 'bi analyst', 'bi developer', 'sql', 'analytics', 'machine learning', 'tableau', 'power bi', 'excel', 'r programming', 'r language', 'sas', 'spss', 'hadoop', 'spark', 'tensorflow', 'pytorch', 'artificial intelligence', 'ai engineer', 'ai specialist', 'statistics', 'reporting', 'dashboard', 'etl', 'nlp', 'data', 'data consultant', 'datacenter', 'data architect', 'data manager', 'data specialist', 'data coordinator', 'data administrator', 'database administrator', 'dba', 'data warehouse', 'data mining', 'predictive analytics', 'descriptive analytics', 'prescriptive analytics', 'statistical analysis', 'quantitative analysis', 'qualitative analysis', 'data visualization', 'data modeling', 'statistical modeling', 'regression analysis', 'time series analysis', 'forecasting', 'trend analysis', 'cohort analysis', 'segmentation analysis', 'cluster analysis', 'classification', 'neural networks', 'deep learning', 'computer vision', 'natural language processing', 'big data', 'data lakes', 'data pipelines', 'data governance', 'data quality', 'data cleansing', 'data transformation', 'data integration', 'data migration', 'master data management', 'metadata management', 'data catalog', 'data lineage', 'data privacy', 'data security', 'gdpr compliance', 'data ethics', 'research analyst', 'market research analyst', 'business analyst data', 'operations analyst', 'financial analyst data', 'product analyst', 'web analyst', 'digital analyst', 'marketing analyst data', 'customer analyst', 'risk analyst data', 'fraud analyst', 'credit analyst data', 'pricing analyst', 'revenue analyst', 'performance analyst', 'kpi analyst', 'metrics analyst', 'insights analyst', 'intelligence analyst', 'competitive intelligence', 'market intelligence', 'business intelligence developer', 'reporting analyst', 'dashboard developer', 'visualization specialist', 'tableau developer', 'power bi developer', 'qlik developer', 'looker developer', 'data storytelling', 'presentation analytics', 'informatiemanagement', 'informatie analist', 'informatie', 'data entry'],
+        'Finance & Accounting': ['controller', 'accountant', 'finance', 'financial', 'fec', 'boekhouder', 'administrateur', 'treasury', 'audit', 'auditor', 'crediteuren', 'debiteuren', 'salarisadministratie', 'cfo', 'bookkeeping', 'payroll', 'tax', 'billing', 'budget', 'kredietacceptant', 'inkomen', 'financieel', 'bookkeeper', 'salaris', 'salarisadministratie', 'investment manager', 'kosten bezwaren', 'bezwaren', 'financial analyst', 'financial controller', 'financial manager', 'treasury manager', 'cash management', 'risk analyst', 'credit analyst', 'financial planning', 'budget analyst', 'cost accountant', 'cost engineer', 'financiële', 'boekhouder'],
+        'Project Management': ['project manager', 'scrum', 'agile', 'projectleider', 'projectmanager', 'program manager', 'pmo', 'project coordinator', 'product owner', 'kanban', 'waterfall', 'milestone', 'delivery', 'planning', 'project management office', 'portfolio manager', 'program coordinator', 'project analyst', 'project specialist', 'project lead', 'project director', 'senior project manager', 'junior project manager', 'technical project manager', 'it project manager', 'construction project manager', 'engineering project manager', 'marketing project manager', 'project consultant', 'project advisor', 'scrum master', 'agile coach', 'agile consultant', 'product manager', 'product coordinator', 'release manager', 'delivery manager', 'sprint master', 'iteration manager', 'project planner', 'project scheduler', 'project controller', 'project administrator', 'project assistant', 'project support', 'project officer', 'project executive', 'stakeholder manager', 'change manager', 'risk manager', 'quality manager', 'resource manager', 'budget manager', 'cost controller', 'timeline manager', 'scope manager', 'integration manager', 'communication manager', 'vendor manager', 'contract manager', 'procurement manager', 'team leader', 'workstream lead', 'task manager', 'activity coordinator', 'phase manager', 'gate keeper', 'project governance', 'project methodology', 'project framework', 'project standards', 'project processes', 'project procedures', 'project documentation', 'project reporting', 'project dashboard', 'project metrics', 'project kpis', 'project analytics', 'project tracking', 'project monitoring', 'project control', 'project evaluation', 'project assessment', 'project review', 'project audit', 'project closure', 'project handover', 'project transition', 'project transformation', 'project improvement', 'project optimization', 'project innovation', 'project excellence', 'project success', 'project delivery', 'project execution', 'project implementation', 'project initiation', 'project startup', 'project kickoff', 'project launch', 'project rollout', 'project management', 'consultant', 'projectmanager'],
+        'Creative & Media': ['photo', 'video', 'creative', 'editor', 'content', 'motion', 'graphics', 'motion graphics', 'animation', 'animatie', 'design', 'designer', 'graphic design', 'visual design', 'illustrator', 'photoshop', '3d', 'adobe', 'branding', 'photography', 'videography', 'cinematography', 'storytelling', '3d graphic', 'contentspecialist', 'fotograaf', 'productfotograaf', 'dtp', 'modelador', 'typographer', '3d presentaties', 'youtube editing', 'youtube', 'growth expert', 'editing', 'create unique', 'streetwear', 't-shirt designs', 'designs', 'creative director', 'art director', 'visual artist', 'multimedia designer', 'logo designer', 'brand designer', 'icon designer', 'print designer', 'packaging designer', 'publication designer', 'book designer', 'magazine designer', 'poster designer', 'flyer designer', 'brochure designer', 'infographic designer', 'character designer', 'concept artist', 'storyboard artist', 'animator', '2d animator', '3d animator', 'motion designer', 'video editor', 'film editor', 'sound editor', 'color grader', 'colorist', 'vfx artist', 'visual effects artist', 'compositor', 'matte painter', 'texture artist', 'lighting artist', 'rigging artist', 'modeler', '3d modeler', 'sculptor', 'digital sculptor', 'photographer', 'portrait photographer', 'wedding photographer', 'event photographer', 'commercial photographer', 'fashion photographer', 'landscape photographer', 'nature photographer', 'street photographer', 'documentary photographer', 'photojournalist', 'studio photographer', 'retoucher', 'photo editor', 'image editor', 'digital artist', 'digital painter', 'concept designer', 'production designer', 'set designer', 'costume designer', 'makeup artist', 'hair stylist', 'wardrobe stylist', 'prop designer', 'scenic artist', 'mural artist', 'tattoo artist', 'jewelry designer', 'fashion designer', 'textile designer', 'pattern designer', 'interior designer', 'furniture designer', 'industrial designer', 'game designer', 'level designer', 'environment artist', 'game artist', 'technical artist', 'shader artist', 'particle effects artist', 'audio designer', 'sound designer', 'music producer', 'composer', 'songwriter', 'audio engineer', 'mixing engineer', 'mastering engineer', 'podcast producer', 'radio producer', 'voice actor', 'narrator', 'content creator', 'influencer', 'social media creator', 'tiktok creator', 'instagram creator', 'youtube creator', 'streamer', 'live streamer', 'twitch streamer', 'content strategist creative', 'creative producer', 'creative manager', 'studio manager', 'gallery manager', 'exhibition designer', 'museum designer', 'display designer', 'event designer', 'stage designer', 'lighting designer', 'projection designer', 'interactive designer', 'installation artist', 'performance artist', 'dance choreographer', 'theater director', 'film director', 'documentary filmmaker', 'screenwriter', 'script writer', 'playwright', 'creative writer', 'fiction writer', 'non-fiction writer', 'travel writer', 'lifestyle writer', 'arts critic', 'film critic', 'music critic', 'culture writer', 'entertainment writer', 'arts journalist', 'creative consultant', 'brand consultant', 'creative strategist', 'innovation consultant', 'social media specialist', 'marketingtalent', 'logo- en huisstijlontwerp', 'logo', 'huisstijlontwerp', 'tekening', 'tekst', 'writer', 'schrijver', 'content writer', 'copywriter', 'tekstschrijver', 'redacteur', 'journalist', 'blogger', 'content specialist', 'technical writer', 'ghostwriter', 'proofreader', 'translator', 'vertaler', 'content manager', 'editorial', 'redactioneel', 'writing', 'schrijven', 'publishing', 'manuscript', 'documentation', 'proposal', 'script', 'notulisten', 'content strategist', 'content marketing', 'seo writer', 'blog writer', 'social media writer', 'email writer', 'newsletter writer', 'web content writer', 'marketing writer', 'advertising copywriter', 'brand writer', 'documentalist', 'tekstredacteur'],
+        'Engineering': ['elektrotechniek', 'electrical engineering', 'mechanical engineering', 'civil engineering', 'engineer', 'ingenieur', 'technical', 'technisch', 'mechanical', 'electrical', 'civil', 'process engineer', 'quality engineer', 'systems engineer', 'project engineer', 'design engineer', 'maintenance engineer', 'installation engineer', 'werktuigbouwkunde', 'bouwkunde', 'techniek', 'monteur', 'mechanic', 'technician', 'bouwloket', 'bouwtechnische', 'manufacturing', 'production', 'automation', 'robotics', 'cad', 'bouwkundig tekenaar', 'schilder', 'stedenbouwkundige', 'elektromonteur', 'plc programming', 'plc', 'timmerman', 'installateur', 'loodgieter', 'renovatie', 'glaszetter', 'installatiemonteur', 'dakdekker', 'kozijn', 'bouwkundig inspecteur', 'minikraan machinist', 'lasser', 'stratenmaker', 'shovel', 'metselaar', 'tegelzetter', 'elektra', 'bouwleider', 'werktuigkundige', 'construction', 'bouw', 'dakwerk', 'fysiekwerk', 'werkvoorbereider', 'bouwpas', 'mechanical engineer', 'event design architect'],
+        'Food & Agriculture': ['food', 'voedsel', 'food auditor', 'food safety', 'agriculture', 'landbouw', 'farming', 'food industry', 'food production', 'food quality', 'food inspector', 'agricultural', 'agrarisch', 'voedingsmiddelen', 'horeca', 'restaurant', 'chef', 'cook', 'kok', 'catering', 'food delivery specialist', 'kitchen', 'baking', 'nutrition', 'fishery', 'livestock', 'agricultural engineer', 'farm manager', 'crop specialist', 'livestock manager', 'dairy farmer', 'poultry farmer', 'greenhouse manager', 'horticulture', 'viticulture', 'aquaculture', 'organic farming', 'sustainable agriculture', 'precision agriculture', 'agricultural consultant', 'agronomist', 'soil scientist', 'plant pathologist', 'entomologist', 'veterinarian', 'animal husbandry', 'feed specialist', 'seed specialist', 'fertilizer specialist', 'pesticide specialist', 'irrigation specialist', 'harvesting specialist', 'food technologist', 'food scientist', 'food engineer', 'food microbiologist', 'nutritionist', 'dietitian', 'food service manager', 'restaurant manager', 'kitchen manager', 'head chef', 'sous chef', 'pastry chef', 'baker', 'butcher', 'fishmonger', 'sommelier', 'barista', 'food stylist', 'menu developer', 'recipe developer', 'food photographer', 'culinary instructor', 'food blogger', 'food critic', 'food writer', 'catering manager', 'banquet manager', 'food procurement', 'supply chain food', 'food logistics', 'cold chain management', 'food packaging', 'food processing', 'food manufacturing', 'quality assurance food', 'haccp coordinator', 'food compliance', 'food regulation', 'food labeling', 'food marketing', 'food sales', 'agricultural sales', 'farm equipment sales', 'seed sales', 'fertilizer sales', 'agricultural insurance', 'farm finance', 'agricultural credit', 'rural development', 'cooperative management', 'farmers market', 'organic certification', 'fair trade certification', 'food traceability', 'food sustainability', 'environmental agriculture', 'climate agriculture', 'biodiversity agriculture', 'agroecology', 'permaculture', 'biodynamic farming', 'hydroponics', 'vertical farming', 'urban farming', 'community supported agriculture', 'agricultural research', 'plant breeding', 'genetic modification', 'biotechnology agriculture', 'agricultural economics', 'agricultural policy', 'agricultural extension', 'agricultural education', 'agricultural journalism', 'agricultural photography', 'agricultural marketing', 'agricultural communications', 'agricultural law', 'agricultural real estate', 'agricultural appraisal', 'agricultural land management', 'agricultural water management', 'agricultural waste management', 'voedingsverzorging'],
+        'Education & Training': ['teacher', 'leraar', 'docent', 'instructor', 'taalinstructor', 'language instructor', 'education', 'onderwijs', 'training', 'tutor', 'professor', 'lecturer', 'coach', 'mentor', 'cursus', 'les', 'lesson', 'school', 'university', 'universiteit', 'college', 'academy', 'academie', 'educational', 'pedagoog', 'pedagogisch', 'curriculum', 'pedagogy', 'e-learning', 'workshop', 'facilitator', 'portfoliobegeleider', 'afstudeerbegeleider', 'studiecoach', 'groep 8', 'speeltoestellen', 'sportles docent', 'alo sport docent', 'sport docent', 'trainer', 'freelance docent en examenbeoordelaar php programmeren en databases'],
+        'Customer Service & Support': ['klantenservice', 'customer service', 'customer support', 'helpdesk', 'support', 'klantondersteuning', 'call center', 'callcenter', 'telefonist', 'receptionist', 'customer care', 'client service', 'service desk', 'technical support', 'gebruikersondersteuning', 'klantbegeleiding', 'chat', 'ticket', 'complaint', 'assistance', 'retention', 'customer', 'frontoffice', 'afsprakenplanner', 'customer service manager', 'customer support manager', 'customer care manager', 'call center manager', 'contact center manager', 'customer experience manager', 'customer success manager', 'client relations manager', 'customer service representative', 'customer support representative', 'customer care representative', 'call center agent', 'contact center agent', 'customer service agent', 'support agent', 'help desk agent', 'technical support agent', 'customer service specialist', 'customer support specialist', 'customer care specialist', 'client services specialist', 'customer experience specialist', 'customer success specialist', 'customer service coordinator', 'customer support coordinator', 'customer care coordinator', 'help desk coordinator', 'support coordinator', 'customer service analyst', 'customer support analyst', 'customer experience analyst', 'customer success analyst', 'customer insights analyst', 'customer feedback analyst', 'customer satisfaction analyst', 'customer service trainer', 'customer support trainer', 'customer care trainer', 'quality assurance specialist', 'quality analyst', 'escalation specialist', 'escalation manager', 'dispute resolution specialist', 'complaint handler', 'customer advocate', 'client advocate', 'ombudsman', 'customer service consultant', 'customer support consultant', 'customer experience consultant', 'customer success consultant', 'live chat agent', 'chat support agent', 'email support agent', 'phone support agent', 'social media support', 'community support', 'forum moderator', 'knowledge base manager', 'faq manager', 'self-service specialist', 'customer onboarding specialist', 'customer retention specialist', 'churn prevention specialist', 'loyalty program manager', 'customer lifecycle manager', 'account management support', 'customer service operations', 'customer support operations', 'workforce management', 'schedule management', 'performance management', 'metrics analyst', 'reporting specialist', 'dashboard analyst', 'customer service technology', 'crm specialist', 'ticketing system admin', 'telephony specialist', 'ivr specialist', 'chatbot specialist', 'automation specialist', 'process improvement specialist', 'service delivery manager', 'service level manager', 'sla management', 'vendor management support', 'outsourcing management', 'back-office medewerker'],
+        'Human Resources': ['hr', 'hrm', 'human resources', 'personeel', 'hr manager', 'hr specialist', 'hr coordinator', 'hr administrator', 'hr assistant', 'hr business partner', 'hr consultant', 'hr director', 'hr generalist', 'hr recruiter', 'talent acquisition', 'recruitment', 'recruiter', 'headhunter', 'werving', 'selectie', 'sollicitatie', 'interviews', 'onboarding', 'offboarding', 'employee relations', 'arbeidsrelaties', 'performance management', 'prestatiemanagement', 'employee development', 'medewerkerontwikkeling', 'training & development', 'opleiding', 'learning & development', 'compensation & benefits', 'beloning', 'salaris', 'payroll', 'hr analytics', 'hr data', 'hr systems', 'hr technology', 'hr software', 'workforce planning', 'personeelsplanning', 'succession planning', 'opvolging', 'diversity & inclusion', 'diversiteit', 'inclusie', 'employee engagement', 'medewerkerbetrokkenheid', 'employee satisfaction', 'medewerkertevredenheid', 'employee retention', 'behoud', 'turnover', 'verloop', 'hr policies', 'hr procedures', 'hr processes', 'hr compliance', 'compliance', 'arbeidsrecht', 'labor law', 'employment law', 'hr legal', 'hr risk', 'hr audit', 'hr reporting', 'hr metrics', 'hr kpi', 'hr dashboard', 'hr analytics', 'people analytics', 'workforce analytics', 'talent management', 'talentontwikkeling', 'career development', 'carrièreontwikkeling', 'leadership development', 'leiderschapsontwikkeling', 'coaching', 'mentoring', 'mentor', 'coach', 'hr transformation', 'hr change', 'hr project', 'hr implementation', 'hr integration', 'hr merger', 'hr acquisition', 'hr due diligence', 'hr m&a', 'organizational development', 'organisatieontwikkeling', 'change management', 'verandermanagement', 'culture change', 'cultuurverandering', 'employee experience', 'medewerkerervaring', 'hr service delivery', 'hr shared services', 'hr center of excellence', 'hr operations', 'hr administration', 'hr support', 'hr helpdesk', 'hr service center', 'hr contact center', 'hr customer service', 'hr front office', 'hr back office', 'hr specialist', 'hr expert', 'hr advisor', 'hr consultant', 'hr partner', 'hr business partner', 'hr manager', 'hr director', 'hr vice president', 'hr executive', 'chief human resources officer', 'chro', 'chief people officer', 'cpo', 'people operations', 'people & culture', 'people team', 'hr team', 'hr department', 'human capital', 'menskracht', 'talent', 'talenten', 'skills', 'vaardigheden', 'competencies', 'competenties', 'capabilities', 'capaciteiten', 'potential', 'potentieel', 'performance', 'prestatie', 'productivity', 'productiviteit', 'engagement', 'betrokkenheid', 'satisfaction', 'tevredenheid', 'retention', 'behoud', 'turnover', 'verloop', 'attrition', 'uitval', 'absenteeism', 'verzuim', 'sick leave', 'ziekteverzuim', 'work life balance', 'werk privé balans', 'flexible working', 'flexibel werken', 'remote work', 'thuiswerken', 'hybrid work', 'hybride werken', 'workplace', 'werkplek', 'office', 'kantoor', 'facilities', 'faciliteiten', 'workplace design', 'werkplekontwerp', 'ergonomics', 'ergonomie', 'safety', 'veiligheid', 'health', 'gezondheid', 'wellbeing', 'welzijn', 'mental health', 'mentale gezondheid', 'stress management', 'stressbeheer', 'burnout prevention', 'burnout preventie', 'employee assistance', 'medewerkerondersteuning', 'eap', 'employee assistance program', 'counseling', 'begeleiding', 'therapy', 'therapie', 'support', 'ondersteuning', 'help', 'hulp', 'guidance', 'begeleiding', 'advice', 'advies', 'consultation', 'consultatie', 'coaching', 'coaching', 'mentoring', 'mentoring', 'development', 'ontwikkeling', 'growth', 'groei', 'career', 'carrière', 'path', 'pad', 'progression', 'progressie', 'advancement', 'vooruitgang', 'promotion', 'promotie', 'advancement', 'vooruitgang', 'succession', 'opvolging', 'planning', 'planning', 'pipeline', 'pijplijn', 'talent pipeline', 'talentenpijplijn', 'high potential', 'hoog potentieel', 'hippo', 'high performer', 'hoge presteerder', 'top performer', 'top presteerder', 'star performer', 'ster presteerder', 'key talent', 'sleuteltalent', 'critical talent', 'kritiek talent', 'essential talent', 'essentieel talent', 'core talent', 'kern talent', 'strategic talent', 'strategisch talent', 'leadership talent', 'leiderschapstalent', 'management talent', 'managementtalent', 'executive talent', 'executief talent', 'senior talent', 'senior talent', 'junior talent', 'junior talent', 'graduate talent', 'afgestudeerd talent', 'entry level', 'instapniveau', 'experienced', 'ervaren', 'senior', 'senior', 'lead', 'lead', 'principal', 'principal', 'director', 'directeur', 'manager', 'manager', 'supervisor', 'supervisor', 'team lead', 'teamleider', 'team leader', 'teamleider', 'group lead', 'groepsleider', 'group leader', 'groepsleider', 'department head', 'afdelingshoofd', 'department manager', 'afdelingsmanager', 'division head', 'divisiehoofd', 'division manager', 'divisiemanager', 'business unit head', 'business unit hoofd', 'business unit manager', 'business unit manager', 'regional manager', 'regionaal manager', 'country manager', 'landenmanager', 'area manager', 'gebiedsmanager', 'district manager', 'districtmanager', 'territory manager', 'territoriummanager', 'sales manager', 'verkoopmanager', 'marketing manager', 'marketingmanager', 'operations manager', 'operationsmanager', 'production manager', 'productiemanager', 'quality manager', 'kwaliteitsmanager', 'safety manager', 'veiligheidsmanager', 'environmental manager', 'milieumanager', 'sustainability manager', 'duurzaamheidsmanager', 'compliance manager', 'compliance manager', 'risk manager', 'risicomanager', 'security manager', 'beveiligingsmanager', 'it manager', 'it manager', 'finance manager', 'financieel manager', 'accounting manager', 'boekhoudkundig manager', 'controller', 'controller', 'cfo', 'cfo', 'ceo', 'ceo', 'coo', 'coo', 'cto', 'cto', 'cmo', 'cmo', 'cpo', 'cpo', 'chro', 'chro', 'chief', 'chief', 'executive', 'executief', 'director', 'directeur', 'vice president', 'vice president', 'senior vice president', 'senior vice president', 'executive vice president', 'executive vice president', 'president', 'president', 'chairman', 'voorzitter', 'chairwoman', 'voorzitster', 'board member', 'bestuurslid', 'board of directors', 'raad van bestuur', 'supervisory board', 'raad van commissarissen', 'advisory board', 'adviesraad', 'stakeholder', 'belanghebbende', 'shareholder', 'aandeelhouder', 'investor', 'investeerder', 'partner', 'partner', 'associate', 'associate', 'principal', 'principal', 'senior associate', 'senior associate', 'junior associate', 'junior associate', 'analyst', 'analist', 'senior analyst', 'senior analist', 'junior analyst', 'junior analist', 'assistant', 'assistent', 'senior assistant', 'senior assistent', 'junior assistant', 'junior assistent', 'coordinator', 'coördinator', 'senior coordinator', 'senior coördinator', 'junior coordinator', 'junior coördinator', 'specialist', 'specialist', 'senior specialist', 'senior specialist', 'junior specialist', 'junior specialist', 'expert', 'expert', 'senior expert', 'senior expert', 'junior expert', 'junior expert', 'advisor', 'adviseur', 'senior advisor', 'senior adviseur', 'junior advisor', 'junior adviseur', 'consultant', 'consultant', 'senior consultant', 'senior consultant', 'junior consultant', 'junior consultant', 'principal consultant', 'principal consultant', 'lead consultant', 'lead consultant', 'manager consultant', 'manager consultant', 'director consultant', 'director consultant', 'partner consultant', 'partner consultant', 'associate consultant', 'associate consultant', 'analyst consultant', 'analist consultant', 'specialist consultant', 'specialist consultant', 'expert consultant', 'expert consultant', 'advisor consultant', 'adviseur consultant', 'senior consultant', 'senior consultant', 'junior consultant', 'junior consultant', 'principal consultant', 'principal consultant', 'lead consultant', 'lead consultant', 'manager consultant', 'manager consultant', 'director consultant', 'director consultant', 'partner consultant', 'partner consultant', 'associate consultant', 'associate consultant', 'analyst consultant', 'analist consultant', 'specialist consultant', 'specialist consultant', 'expert consultant', 'expert consultant', 'advisor consultant', 'adviseur consultant', 'talent acquisition specialist', 'talent acquisition manager', 'talent acquisition coordinator', 'talent acquisition analyst', 'talent acquisition director', 'talent acquisition lead', 'talent acquisition consultant', 'talent acquisition advisor', 'talent acquisition recruiter', 'talent acquisition sourcer', 'talent acquisition researcher', 'talent acquisition administrator', 'talent acquisition assistant', 'talent acquisition intern', 'talent acquisition trainee', 'talent acquisition executive', 'talent acquisition vice president', 'talent acquisition senior manager', 'talent acquisition senior specialist', 'talent acquisition senior coordinator', 'talent acquisition senior analyst', 'talent acquisition senior director', 'talent acquisition senior lead', 'talent acquisition senior consultant', 'talent acquisition senior advisor', 'talent acquisition senior recruiter', 'talent acquisition senior sourcer', 'talent acquisition senior researcher', 'talent acquisition senior administrator', 'talent acquisition senior assistant', 'talent acquisition senior intern', 'talent acquisition senior trainee', 'talent acquisition senior executive', 'talent acquisition senior vice president', 'medewerker hr beheer', 'e-hrm', 'freelance projectmanager aanbesteding en implementatie e-hrm-systeem', 'freelance recruitment delivery consultant', 'strategisch recruitment marketeer', 'global recruitment franchise partner', 'freelance recruiter', 'global headhunters', 'freelance werving & selectie recruiter', 'werving & selectie recruiter', 'remote talent', 'hr medewerker', 'werving', 'selectie', 'salarisadministrateur', 'onderzoeker hrm', 'personeelsadviseur', 'wervingsadviseur', 'hr adviseur', 'recruitment consultant', 'corporate recruiter', 'talent manager', 'talent scout', 'people & culture', 'jobcoach', 'compensation', 'benefits', 'employee relations'],
+        'Healthcare & Medical': ['arts', 'basis arts', 'dokter', 'verpleegkundige', 'nurse', 'medical', 'healthcare', 'zorg', 'medisch', 'tandarts', 'fysiotherapeut', 'psycholoog', 'apotheker', 'specialist', 'huisarts', 'geneeskunde', 'farmaceutisch', 'klinisch', 'ziekenhuis', 'praktijk', 'gezondheidszorg', 'dierenwelzijn', 'verzorger', 'therapist', 'counselor', 'paramedic', 'radiologist', 'surgeon', 'zorgcoördinator', 'clinical trial manager', 'clinical', 'dental', 'physician', 'doctor', 'nurse practitioner', 'physician assistant', 'medical assistant', 'healthcare worker', 'medical technician', 'pharmacist', 'dental hygienist', 'psychiater'],
+        'Marketing & Communications': ['marketing', 'community', 'social media', 'communications', 'content marketing', 'digital marketing', 'community manager', 'social media manager', 'marketeer', 'seo', 'sem', 'communicatieprofessional', 'advertising', 'pr', 'public relations', 'campaign', 'brand', 'google tag manager', 'marketing manager', 'communications manager', 'communications director', 'communications specialist', 'communications coordinator', 'pr manager', 'pr specialist', 'pr coordinator', 'public affairs', 'media relations', 'press relations', 'spokesperson', 'brand manager', 'brand specialist', 'brand coordinator', 'brand strategist', 'marketing strategist', 'marketing coordinator', 'marketing analyst', 'marketing assistant', 'digital marketing specialist', 'online marketing', 'social media specialist', 'social media coordinator', 'content strategist', 'content creator', 'content writer', 'blog writer', 'copywriter', 'copywriting', 'email marketing', 'marketing automation', 'crm marketing', 'lead nurturing', 'conversion optimization', 'growth marketing', 'performance marketing', 'affiliate marketing', 'influencer marketing', 'partnership marketing', 'event marketing', 'trade marketing', 'field marketing', 'product marketing', 'b2b marketing', 'b2c marketing', 'marketing research', 'market research', 'consumer insights', 'marketing analytics', 'web analytics', 'google analytics', 'marketing metrics', 'media planning', 'media buying', 'advertising manager', 'creative director', 'art director', 'video marketing', 'podcast marketing', 'webinar marketing', 'newsletter marketing', 'direct marketing', 'inbound marketing', 'outbound marketing', 'demand generation', 'customer acquisition', 'customer retention', 'loyalty marketing', 'segmentation', 'targeting', 'positioning', 'competitive analysis', 'market analysis', 'persona development', 'customer journey', 'marketing funnel', 'landing pages', 'a/b testing', 'marketing technology', 'martech', 'hubspot', 'salesforce marketing', 'mailchimp', 'marketo', 'marketingondersteuning'],
+        'Consulting': ['consultant', 'advisory', 'interim', 'adviseur', 'interim manager', 'management consultant', 'strategy consultant', 'business consultant', 'transitiemanager', 'trainer', 'advisor', 'expertise', 'specialist', 'freelance', 'contractor', 'informatieanalist', 'veranderkundige', 'ceo', 'ecoloog', 'jeugdconsulent', 'gedragswetenschapper', 'business advisor', 'strategy advisor', 'management advisor', 'change consultant', 'transformation consultant', 'process consultant', 'organizational consultant', 'hr consultant', 'it consultant', 'communicatieadviseur', 'adviseur', 'strategisch adviseur', 'implementatie adviseur', 'projectadviseur', 'floormanager', 'adviseur traprenovaties'],
+        'Government & Public Sector': ['gemeente', 'overheid', 'publieke', 'burgerzaken', 'ministerie', 'provincie', 'rijksoverheid', 'beleid', 'beleidsadviseur', 'beleidsmedewerker', 'omgevingsprogramma', 'plantoetser', 'kwartiermaker', 'consulent', 'buurtsportcoach', 'public sector', 'civil service', 'administration', 'regulatory', 'compliance', 'programmamanager', 'raadsadviseur', 'medewerker', 'archiefbeheer', 'wijkcoach', 'openbare ruimte', 'gebiedsontwikkeling', 'cmk', 'vergunning', 'government', 'public administration', 'municipal', 'city council', 'public policy', 'public affairs', 'government relations', 'public service', 'civil servant', 'government official', 'manager infrastructuur', 'beleidsadviseur', 'staatssteun', 'openbare', 'secretaris', 'toezichthouder', 'casemanager', 'specialist team documenten', 'behandelzaken'],
+        'Sales & Business Development': ['sales', 'business development', 'account manager', 'commercieel', 'verkoop', 'sales manager', 'business developer', 'accountmanager', 'commercieel medewerker', 'verkoper', 'key account manager', 'revenue', 'leads', 'prospects', 'closing', 'partnership', 'verkooppartner', 'commercial', 'salesprofessional', 'appointment setter', 'telefonisch', 'salesforce', 'telecalling', 'lead generation', 'sales representative', 'sales executive', 'sales director', 'sales coordinator', 'sales analyst', 'sales consultant', 'sales specialist', 'sales assistant', 'sales support', 'inside sales', 'outside sales', 'field sales', 'territory sales', 'regional sales', 'national sales', 'international sales', 'enterprise sales', 'smb sales', 'retail sales', 'wholesale sales', 'direct sales', 'indirect sales', 'channel sales', 'partner sales', 'alliance sales', 'business development manager', 'business development director', 'business development executive', 'business development coordinator', 'business development analyst', 'business development consultant', 'business development specialist', 'business development assistant', 'business development support', 'new business development', 'strategic business development', 'corporate business development', 'international business development', 'partnership development', 'alliance development', 'channel development', 'market development', 'product development', 'client development', 'customer development', 'account development', 'relationship development', 'revenue development', 'growth development', 'expansion development', 'territory development', 'regional development', 'national development', 'international development', 'enterprise development', 'smb development', 'retail development', 'wholesale development', 'direct development', 'indirect development', 'channel development', 'partner development', 'alliance development', 'business development', 'sales development', 'market development', 'product development', 'client development', 'customer development', 'account development', 'relationship development', 'revenue development', 'growth development', 'expansion development', 'territory development', 'regional development', 'national development', 'international development', 'enterprise development', 'smb development', 'retail development', 'wholesale development', 'direct development', 'indirect development', 'channel development', 'partner development', 'alliance development', 'b2b salesprofessional', 'vertegenwoordiger', 'verkoopmedewerkerster', 'teamlead sales'],
+        'Security & Safety': ['security guard', 'bewaker', 'beveiliger', 'portier', 'nachtportier', 'security officer', 'safety officer', 'veiligheid', 'security', 'beveiliging', 'wachter', 'surveillant', 'security manager', 'fire safety', 'emergency', 'patrol', 'access control', 'risk management', 'cybersecurity', 'cyber security', 'information security', 'it security', 'safety', 'privacy & security', 'security specialist', 'safety specialist', 'security analyst', 'safety analyst', 'security consultant', 'safety consultant', 'security coordinator', 'safety coordinator', 'security supervisor', 'safety supervisor', 'informatiebeveiliging', 'zzp beveiliger'],
+        'Legal': ['juridisch', 'legal', 'advocaat', 'lawyer', 'attorney', 'notaris', 'paralegal', 'legal counsel', 'juridisch adviseur', 'legal advisor', 'contracts', 'litigation', 'compliance', 'regulatory affairs', 'corporate law', 'intellectual property', 'legal assistant', 'jurist', 'rechtskundig', 'legal officer', 'legal manager', 'legal director', 'chief legal officer', 'general counsel', 'in-house counsel', 'corporate counsel', 'legal consultant', 'legal specialist', 'legal analyst', 'legal researcher', 'contract manager', 'contract specialist', 'agreement specialist', 'legal documentation', 'legal drafting', 'document review', 'due diligence', 'legal research', 'case management', 'court filing', 'dispute resolution', 'arbitration', 'mediation', 'negotiation', 'settlement', 'employment law', 'labor law', 'immigration law', 'family law', 'estate planning', 'tax law', 'criminal law', 'personal injury', 'insurance law', 'real estate law', 'bankruptcy law', 'securities law', 'antitrust law', 'environmental law', 'healthcare law', 'privacy law', 'data protection', 'cybersecurity law', 'fintech law', 'legal ethics', 'legal technology', 'legal operations', 'legal project management', 'legal procurement', 'legal vendor management', 'legal outsourcing', 'e-discovery', 'legal analytics', 'legal automation', 'legal innovation', 'legal transformation', 'legal process improvement', 'legal cost management', 'legal budgeting', 'legal service delivery', 'legal client management', 'legal business development', 'legal marketing', 'legal communications', 'legal writing', 'legal editing', 'legal translation', 'court reporter', 'legal secretary', 'law clerk', 'judicial clerk', 'contractmanager', 'quickbooks'],
+        'Hospitality & Tourism': ['hotel', 'restaurant', 'hospitality', 'tourism', 'travel', 'accommodation', 'guest services', 'front desk', 'concierge', 'housekeeping', 'banquet', 'catering', 'bar', 'bartender', 'server', 'waiter', 'waitress', 'hostess', 'receptionist hotel', 'reservation', 'booking', 'event coordinator', 'wedding planner', 'tour guide', 'travel agent', 'cruise', 'resort', 'spa', 'wellness', 'fitness instructor', 'recreation', 'entertainment venue', 'guest relations', 'hospitality management', 'food service', 'beverage', 'sommelier', 'chef de partie', 'sous chef', 'kitchen staff', 'dishwasher', 'busser', 'valet', 'bellhop', 'doorman', 'night auditor', 'revenue manager hotel', 'conference services', 'meetings events', 'banquet manager', 'food & beverage', 'f&b', 'guest experience', 'lodging', 'inn', 'bed & breakfast', 'b&b', 'motel', 'hostel', 'vacation rental', 'airbnb management', 'hotel operations', 'resort management', 'casino', 'gaming', 'theme park', 'attraction', 'visitor services', 'tourist information', 'travel planning', 'destination management', 'hospitality consultant', 'hotel marketing', 'group sales', 'convention services', 'catering coordinator', 'banquet coordinator', 'hospitality trainer', 'service excellence', 'guest satisfaction', 'hospitality technology', 'pms', 'property management system', 'hotel accounting', 'hospitality hr', 'hotel maintenance', 'facilities hospitality', 'laundry services', 'linen services', 'hospitality procurement', 'hotel purchasing', 'quality assurance hospitality', 'mystery shopper', 'hospitality auditor', 'hotel inspector', 'food safety hospitality', 'haccp', 'culinary arts', 'culinary education', 'hotel school', 'hospitality academy', 'hospitality certification'],
+        'Supply Chain & Logistics': ['supply chain', 'logistics', 'procurement', 'purchasing', 'buyer', 'planner', 'supply planner', 'demand planner', 'logistiek', 'inkoop', 'supply chain manager', 'warehouse', 'distribution', 'supply chain coördinator', 'supply chain coordinator', 'logistiek administratief medewerker', 'supply chain analyst', 'logistics coordinator', 'logistics manager', 'logistics analyst', 'procurement manager', 'procurement specialist', 'purchasing manager', 'purchasing agent', 'sourcing manager', 'sourcing specialist', 'vendor manager', 'supplier manager', 'category manager', 'strategic sourcing', 'inventory manager', 'inventory analyst', 'inventory planner', 'inventory control', 'stock management', 'material management', 'warehouse manager', 'warehouse supervisor', 'distribution manager', 'transportation manager', 'freight manager', 'shipping manager', 'receiving manager', 'fulfillment manager', 'order management', 'production planning', 'master scheduling', 'materials planning', 'mrp', 'erp', 'wms', 'tms', 'warehouse management system', 'transportation management system', 'logistics optimization', 'supply chain optimization', 'lean logistics', 'supply chain visibility', 'supply chain analytics', 'forecasting', 'supply chain risk', 'global sourcing', 'international trade', 'import export', 'customs compliance', 'trade compliance', 'incoterms', 'freight forwarding', 'third party logistics', '3pl', 'fourth party logistics', '4pl', 'vendor management', 'contract management', 'spend analysis', 'ethical sourcing', 'supplier diversity', 'green logistics', 'sustainability initiatives'],
+        'Operations & Management': ['operations', 'operations manager', 'operations director', 'coo', 'chief operating officer', 'operationeel', 'operations specialist', 'business operations', 'operational excellence', 'process improvement', 'operations coordinator', 'operations analyst', 'facility manager', 'facilities management', 'office manager', 'administrative manager', 'general manager', 'plant manager', 'site manager', 'regional manager', 'district manager', 'branch manager', 'store manager', 'warehouse manager', 'production manager', 'manufacturing manager', 'quality manager', 'safety manager', 'compliance manager', 'risk manager', 'change manager', 'transformation manager', 'efficiency expert', 'lean specialist', 'six sigma', 'kaizen', 'continuous improvement', 'workflow optimization', 'resource planning', 'capacity planning', 'performance management', 'kpi management', 'metrics analysis', 'operational reporting', 'dashboard management', 'process mapping', 'standard operating procedures', 'sop', 'policy development', 'procedure documentation', 'training coordination', 'staff scheduling', 'shift management', 'inventory management', 'asset management', 'maintenance coordination', 'vendor management', 'supplier relations', 'contract administration', 'budget oversight', 'cost control', 'expense management', 'operational finance', 'business continuity', 'disaster recovery', 'crisis management', 'emergency planning', 'health safety coordination', 'environmental compliance', 'regulatory compliance', 'audit coordination', 'internal controls', 'governance oversight', 'stakeholder management', 'cross-functional coordination', 'interdepartmental liaison', 'communication facilitation', 'meeting coordination', 'project oversight', 'initiative management', 'strategic implementation', 'tactical execution', 'operational strategy', 'business process reengineering', 'organizational development'],
+        'No clear title': ['zzp', 'zelfstandig', 'aanbevolen', 'banenafspraak', 'stage', 'tijdelijk', 'september', 'we hebben een spoedopdracht', 'op de zee', '5 ploegen', 'avonddienst', 'nachtdienst', 'fysiekwerk', 'professional organizer zzp', 'zzp in de zorg 2025', 'met vast contract', 'ondernemingsplan'],
+        'Other/General': ['boekhouder', 'marketing', 'verkoper', 'dakwerk', 'b2b salesprofessional', 'vertegenwoordiger', 'verkoper', 'frontoffice', 'customer', 'reggae beatz', 'movement studio', 'assistant', 'chauffeur ce']
+    }
+    
+    import re
+    
+    for industry, words in keywords.items():
+        for word in words:
+            # Create word boundary pattern
+            pattern = r'\b' + re.escape(word) + r'\b'
+            if re.search(pattern, text, re.IGNORECASE):
+                return industry
+    
+    return 'Other/General'
 
 def detect_work_arrangement(location: str = None, title: str = None, summary: str = None,
                           company: str = None, source: str = None) -> str:
@@ -265,11 +457,11 @@ def detect_work_arrangement(location: str = None, title: str = None, summary: st
         else:
             # For unspecified remote, determine region from location classification
             region_classification = categorize_location(location, None, company, source, title, summary)
-            if region_classification['Dutch']:
+            if region_classification and region_classification.get('Dutch'):
                 return 'Remote (Netherlands)'
-            elif region_classification['EU']:
+            elif region_classification and region_classification.get('EU'):
                 return 'Remote (EU)'
-            elif region_classification['Rest_of_World']:
+            elif region_classification and region_classification.get('Rest_of_World'):
                 return 'Remote (Rest of World)'
             else:
                 return 'Remote'
@@ -332,10 +524,10 @@ def add_regional_columns(df: pd.DataFrame, location_column: str = 'Location') ->
 
     categorizations = df_copy.apply(categorize_row, axis=1)
 
-    # Extract regional boolean values
-    df_copy['Dutch'] = categorizations.apply(lambda x: x['Dutch'])
-    df_copy['EU'] = categorizations.apply(lambda x: x['EU'])
-    df_copy['Rest_of_World'] = categorizations.apply(lambda x: x['Rest_of_World'])
+    # Extract regional boolean values with safety checks
+    df_copy['Dutch'] = categorizations.apply(lambda x: x.get('Dutch', True) if x is not None else True)
+    df_copy['EU'] = categorizations.apply(lambda x: x.get('EU', False) if x is not None else False)
+    df_copy['Rest_of_World'] = categorizations.apply(lambda x: x.get('Rest_of_World', False) if x is not None else False)
 
     return df_copy
 
@@ -400,7 +592,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'twine'
+        'Source': 'twine',
+        'Type source': 'Job board',
     },
     # 2. LINKIT
     'LinkIT': {
@@ -417,7 +610,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'LinkIT'
+        'Source': 'LinkIT',
+        'Type source': 'Recruitment company',
     },
     # 3. FREELANCE.NL
     'freelance.nl': {
@@ -434,7 +628,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'freelance.nl'
+        'Source': 'freelance.nl',
+        'Type source': 'Job board',
     },
     # 4. YACHT
     'Yacht': {
@@ -444,14 +639,15 @@ COMPANY_MAPPINGS = {
         'URL': 'URL',
         'start': 'Not mentioned',
         'rate': 'Field4',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Text',
         'Company': 'Not mentioned',  # Probably mentioned in summary
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Yacht'
+        'Source': 'Yacht',
+        'Type source': 'Recruitment company',
     },
     # 5. FLEXTENDER
     'Flextender': {
@@ -468,7 +664,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Flextender'
+        'Source': 'Flextender',
+        'Type source': 'Job board',
     },
     # 6. KVK
     'KVK': {
@@ -485,7 +682,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'KVK'
+        'Source': 'KVK',
+        'Type source': 'Job board',
     },
     # 7. CIRCLE8
     'Circle8': {
@@ -502,7 +700,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Circle8'
+        'Source': 'Circle8',
+        'Type source': 'Recruitment company',
     },
     # 8. BEBEE
     'Bebee': {
@@ -519,7 +718,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Bebee'
+        'Source': 'Bebee',
+        'Type source': 'Job board',
     },
     # 9. LINKEDIN
     'LinkedIn': {
@@ -529,14 +729,15 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Company',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'LinkedIn'
+        'Source': 'LinkedIn',
+        'Type source': 'Job board',
     },
     # 10. LINKEDINZZP
     'LinkedInZZP': {
@@ -546,14 +747,15 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Company',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'LinkedIn'
+        'Source': 'LinkedIn',
+        'Type source': 'Job board',
     },
     # 11. LINKEDININTERIM
     'LinkedInInterim': {
@@ -563,14 +765,15 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Company',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'LinkedIn'
+        'Source': 'LinkedIn',
+        'Type source': 'Job board',
     },
     # 12. POLITIE
     'politie': {
@@ -587,7 +790,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'politie'
+        'Source': 'politie',
+        'Type source': 'Job board',
     },
     # 13. GELDERLAND
     'gelderland': {
@@ -604,7 +808,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'gelderland'
+        'Source': 'gelderland',
+        'Type source': 'Job board',
     },
     # 14. WERK.NL
     'werk.nl': {
@@ -621,7 +826,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'werk.nl'
+        'Source': 'werk.nl',
+        'Type source': 'Job board',
     },
     # 15. INDEED
     'indeed': {
@@ -631,14 +837,15 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'css18z4q2i',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'css1h7lukg',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'indeed'
+        'Source': 'indeed',
+        'Type source': 'Job board',
     },
     # 16. PLANET INTERIM
     'Planet Interim': {
@@ -655,7 +862,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Planet Interim'
+        'Source': 'Planet Interim',
+        'Type source': 'Job board',
     },
     # 17. NS
     'NS': {
@@ -665,14 +873,15 @@ COMPANY_MAPPINGS = {
         'URL': 'https://www.werkenbijns.nl/vacatures?keywords=Inhuur',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'NS',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'NS'
+        'Source': 'NS',
+        'Type source': 'Job board',
     },
     # 18. HOOFDKRAAN
     'hoofdkraan': {
@@ -689,7 +898,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'hoofdkraan'
+        'Source': 'hoofdkraan',
+        'Type source': 'Job board',
         },
     
     # 'Zoekklus': {
@@ -701,7 +911,8 @@ COMPANY_MAPPINGS = {
     #     'Hours': 'Field3',
     #     'Duration': 'Not mentioned',
     #     'Company': 'Not mentioned',
-    #     'Source': 'Zoekklus'
+    #     'Source': 'Zoekklus',
+        'Type source': 'Job board',
     # },
     
     # 19. OVERHEID
@@ -719,7 +930,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Overheid'
+        'Source': 'Overheid',
+        'Type source': 'Job board',
     },
     # 20. RIJKSWATERSTAAT
     'rijkswaterstaat': {
@@ -736,7 +948,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'rijkswaterstaat'
+        'Source': 'rijkswaterstaat',
+        'Type source': 'Job board',
     },
     # 21. ZOP OPDACHTEN
     'zzp opdrachten': {
@@ -753,7 +966,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'zzp opdrachten'
+        'Source': 'zzp opdrachten',
+        'Type source': 'Job board',
     },
     # 22. HARVEY NASH
     'Harvey Nash': {
@@ -770,7 +984,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Harvey Nash'
+        'Source': 'Harvey Nash',
+        'Type source': 'Recruitment company',
     },
     # 23. BEHANCE
     'Behance': {
@@ -780,14 +995,15 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Company',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Behance'
+        'Source': 'Behance',
+        'Type source': 'Job board',
     },
     # 24. SCHIPHOL
     'Schiphol': {
@@ -804,41 +1020,44 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Schiphol'
+        'Source': 'Schiphol',
+        'Type source': 'Job board',
     },
     # 25. JOOBLE
     'Jooble': {
-        'Title': 'Keywords',
+        'Title': 'Field1_text',
         'Location': 'caption',
         'Summary': 'geyos4,geyos41,geyos42,geyos43',
         'URL': 'Time_links',
         'start': 'ASAP',
         'rate': 'not mentioned',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'z6wlhx',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Jooble'
+        'Source': 'Jooble',
+        'Type source': 'Job board',
     },
     # 26. WERKZOEKEN.NL
     'werkzoeken.nl': {
-        'Title': 'Title1',
+        'Title': 'Title',
         'Location': 'Company_name1',
-        'Summary': 'Field3',
+        'Summary': 'Not mentioned',
         'URL': 'Title_URL',
         'start': 'ASAP',
-        'rate': 'requestedwrapper5',  # Will be processed to remove entries with "p/m"
+        'rate': 'offer',
         'Hours': 'requestedwrapper',
         'Duration': 'Not mentioned',
-        'Company': 'Field1',
+        'Company': 'Company_name',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'werkzoeken.nl'
+        'Source': 'werkzoeken.nl',
+        'Type source': 'Job board',
     },
     # 27. CODEUR.COM
     'Codeur.com': {
@@ -855,14 +1074,15 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': 'Keywords',
         'Offers': 'Text2',
-        'Source': 'Codeur.com'
+        'Source': 'Codeur.com',
+        'Type source': 'Job board',
     },
     # 28. UMC
     'UMC': {
         'Title': 'Text',
         'Location': 'Text2',
         'Summary': 'See Vacancy',
-        'URL': 'Field2_links',
+        'URL': 'URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
         'Hours': 'Text3',  # Will be processed to remove "p.w."
@@ -872,7 +1092,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'UMC'
+        'Source': 'UMC',
+        'Type source': 'Job board',
     },
     # 29. FLEXVALUE_B.V.
     'FlexValue_B.V.': {
@@ -889,41 +1110,44 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'FlexValue_B.V.'
+        'Source': 'FlexValue_B.V.',
+        'Type source': 'Job board',
     },
     # 30. CENTRIC
     'Centric': {
-        'Title': 'Field1',
-        'Location': 'Field2',
+        'Title': 'Title',
+        'Location': 'tag1 ',
         'Summary': 'Text',
-        'URL': 'URL',
+        'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'Text',
-        'Hours': 'Text',
+        'Hours': 'Tag',
         'Duration': 'Not mentioned',
         'Company': 'Centric',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Centric'
+        'Source': 'Centric',
+        'Type source': 'Recruitment company',
     },
     # 31. FREELANCER.COM
     'freelancer.com': {
         'Title': 'Like',
         'Location': 'Remote',
-        'Summary': 'Field4',
+        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
         'URL': 'Like_URL',
         'start': 'ASAP',
         'rate': 'Price',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'freelancer.com'
+        'Source': 'freelancer.com',
+        'Type source': 'Job board',
     },
     # 32. FREELANCER.NL
     'Freelancer.nl': {
@@ -940,7 +1164,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Freelancer.nl'
+        'Source': 'Freelancer.nl',
+        'Type source': 'Job board',
     },
     # 33. SALTA GROUP
     'Salta Group': {
@@ -957,24 +1182,26 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Salta Group'
+        'Source': 'Salta Group',
+        'Type source': 'Job board',
     },
     # 34. PROLINKER.COM
     'ProLinker.com': {
         'Title': 'Field4_text',
         'Location': 'Field11',
-        'Summary': 'Field4',
+        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
         'URL': 'Field4_links',
         'start': 'ASAP',
         'rate': 'Field15',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'ProLinker.com'
+        'Source': 'ProLinker.com',
+        'Type source': 'Job board',
     },
     # 35. FLEX WEST-BRABANT
     'Flex West-Brabant': {
@@ -984,14 +1211,15 @@ COMPANY_MAPPINGS = {
         'URL': 'Field4',
         'start': 'Not mentioned',
         'rate': 'Not mentioned',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'org',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Flex West-Brabant'
+        'Source': 'Flex West-Brabant',
+        'Type source': 'Job board',
     },
     # 36. AMSTELVEENHUURTIN
     'Amstelveenhuurtin': {
@@ -1008,7 +1236,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Amstelveenhuurtin'
+        'Source': 'Amstelveenhuurtin',
+        'Type source': 'Job board',
     },
     # 37. NOORDOOSTBRABANT
     'noordoostbrabant': {
@@ -1025,7 +1254,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'noordoostbrabant'
+        'Source': 'noordoostbrabant',
+        'Type source': 'Job board',
     },
     # 38. FLEVOLAND
     'flevoland': {
@@ -1041,7 +1271,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'flevoland'
+        'Source': 'flevoland',
+        'Type source': 'Job board',
     },
     # 39. NOORD-HOLLAND
     'Noord-Holland': {
@@ -1058,7 +1289,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Noord-Holland'
+        'Source': 'Noord-Holland',
+        'Type source': 'Job board',
     },
     # 40. GRONINGENHUURTIN
     'groningenhuurtin': {
@@ -1075,7 +1307,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'groningenhuurtin'
+        'Source': 'groningenhuurtin',
+        'Type source': 'Job board',
     },
     # 41. TALENTENREGIO
     'TalentenRegio': {
@@ -1092,7 +1325,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'TalentenRegio'
+        'Source': 'TalentenRegio',
+        'Type source': 'Job board',
     },
     # 42. HINTTECH
     'HintTech': {
@@ -1109,7 +1343,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'HintTech'
+        'Source': 'HintTech',
+        'Type source': 'Recruitment company',
     },
 
     # 43. SELECT
@@ -1127,13 +1362,14 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Select'
+        'Source': 'Select',
+        'Type source': 'Recruitment company',
     },
     # 44. OVERHEIDZZP
     'overheidzzp': {
         'Title': 'Field7_text',
         'Location': 'Field3',
-        'Summary': 'Field4',
+        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
         'URL': 'Field1_links',
         'start': 'ASAP',
         'rate': 'Not mentioned',
@@ -1144,7 +1380,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'overheidzzp'
+        'Source': 'overheidzzp',
+        'Type source': 'Job board',
     },
     # 45. POOQ
     'POOQ': {
@@ -1154,14 +1391,15 @@ COMPANY_MAPPINGS = {
         'URL': 'Title_URL',
         'start': 'hidden',
         'rate': 'Field2',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'Not mentioned',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'POOQ'
+        'Source': 'POOQ',
+        'Type source': 'Job board',
     },
     # 46. GEMEENTE-PROJECTEN
     'gemeente-projecten': {
@@ -1178,7 +1416,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'gemeente-projecten'
+        'Source': 'gemeente-projecten',
+        'Type source': 'Job board',
     },
     # 47. GGDZWHUURTIN.NL
     'ggdzwhuurtin.nl': {
@@ -1195,13 +1434,14 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'ggdzwhuurtin.nl'
+        'Source': 'ggdzwhuurtin.nl',
+        'Type source': 'Job board',
     },
     # 48. FREEP
     'freep': {
         'Title': 'Title',
         'Location': 'flex3',
-        'Summary': 'Field4',
+        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
         'URL': 'Title_URL',
         'start': 'ASAP',
         'rate': 'flex2',
@@ -1212,7 +1452,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'freep'
+        'Source': 'freep',
+        'Type source': 'Job board',
     },
     # 49. ONLYHUMAN
     'onlyhuman': {
@@ -1222,14 +1463,15 @@ COMPANY_MAPPINGS = {
         'URL': 'URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'vacancycard',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'onlyhuman'
+        'Source': 'onlyhuman',
+        'Type source': 'Recruitment company',
     },
     # 50. STAFFINGMS
     'StaffingMS': {
@@ -1246,7 +1488,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'StaffingMS'
+        'Source': 'StaffingMS',
+        'Type source': 'Recruitment company',
     },
     # 51. 4-FREELANCERS.NL
     '4-Freelancers.nl': {
@@ -1255,7 +1498,7 @@ COMPANY_MAPPINGS = {
         'Location': 'Plaats',
         'Summary': 'Text6',
         'rate': 'Not mentioned',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Text2',
         'Company': 'Not mentioned',
         'Views': '',
@@ -1265,24 +1508,25 @@ COMPANY_MAPPINGS = {
         'Source': '4-Freelancers.nl',
         'start': 'ASAP'
     },
-    # 51. FLEXSPOT.IO
+    # 52. FLEXSPOT.IO
     'flexSpot.io': {
         'Title': 'Title',
         'Location': 'reset',
-        'Summary': 'Field4',
+        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
         'URL': 'button_URL',
         'start': 'ASAP',
         'rate': 'Text1',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Text3',
         'Company': 'Company',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'flexSpot.io'
+        'Source': 'flexSpot.io',
+        'Type source': 'Job board',
     },
-    # 52. ASNBANK
+    # 53. ASNBANK
     'ASNBank': {
         'Title': 'Field2',
         'Location': 'Text',  # Will be processed to extract first part after splitting on space
@@ -1297,26 +1541,28 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'ASNBank'
+        'Source': 'ASNBank',
+        'Type source': 'Job board',
     },
-    # 53. TENNET
+    # 54. TENNET
     'tennet': {
-        'Title': 'widgetheader',
-        'Location': 'feature1',  # Will be processed to remove everything after "/"
-        'Summary': 'Field4',
+        'Title': 'Title',
+        'Location': 'feature2',  # Will be processed to remove everything after "/"
+        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
         'URL': 'Title_URL',
         'start': 'ASAP',
-        'rate': 'feature2',
-        'Hours': 'feature',
+        'rate': 'feature3',
+        'Hours': 'feature1',
         'Duration': 'Not mentioned',
         'Company': 'TenneT',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'tennet'
+        'Source': 'tennet',
+        'Type source': 'Job board',
     },
-    # 54. INTERIMNETWERK
+    # 55. INTERIMNETWERK
     'InterimNetwerk': {
         'Title': 'Title',
         'Location': 'Location',
@@ -1324,40 +1570,42 @@ COMPANY_MAPPINGS = {
         'URL': 'URL',
         'start': 'ASAP',
         'rate': 'Not mentioned',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Duration',
         'Company': 'InterimNetwerk',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'InterimNetwerk'
+        'Source': 'InterimNetwerk',
+        'Type source': 'Job board',
     },
-    # 55. FRIESLAND
+    # 56. FRIESLAND
     'Friesland': {
         'Title': 'Title',
         'URL': 'Title_URL',
         'Location': 'Field2',
-        'Summary': 'Field4',
+        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
         'start': 'Not mentioned',
         'rate': 'Not mentioned',
-        'Hours': 'Field3',
+        'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
         'Company': 'caption',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Friesland'
+        'Source': 'Friesland',
+        'Type source': 'Job board',
     },
-    # 56. ZUID-HOLLAND
+    # 57. ZUID-HOLLAND
     'Zuid-Holland': {
         'Title': 'Title',
         'URL': 'Title_URL',
         'Company': 'Company',
         'Location': 'Location',
         'Hours': 'hfp_cardiconsblockitem',
-        'Summary': 'Field4',
+        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
         'start': 'Date',
         'rate': 'Not mentioned',
         'Duration': 'Not mentioned',
@@ -1365,9 +1613,10 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'Zuid-Holland'
+        'Source': 'Zuid-Holland',
+        'Type source': 'Job board',
     },
-    # 57. COMET
+    # 58. COMET
     'comet': {
         'Title': 'Mission',
         'URL': 'Page_URL',
@@ -1382,9 +1631,10 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': 'Compétences_requises',
         'Offers': '',
-        'Source': 'comet'
+        'Source': 'comet',
+        'Type source': 'Job board',
     },
-    # 58. FREELANCE-INFORMATIQUE
+    # 59. FREELANCE-INFORMATIQUE
     'Freelance-Informatique': {
         'Title': 'stretchedlink',
         'URL': 'Page_URL',
@@ -1399,7 +1649,8 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': 'Keywords',
         'Offers': '',
-        'Source': 'Freelance-Informatique'
+        'Source': 'Freelance-Informatique',
+        'Type source': 'Job board',
     },
     # 60. 404WORKS
     '404Works': {
@@ -1416,9 +1667,10 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': 'Keywords',
         'Offers': '',
-        'Source': '404Works'
+        'Source': '404Works',
+        'Type source': 'Job board',
     },
-    # 59. HAARLEMMERMEERHUURTIN
+    # 61. HAARLEMMERMEERHUURTIN
     'haarlemmermeerhuurtin': {
         'Title': 'Title',
         'Location': 'Pub_Time',  # Will be processed to extract text between "Standplaats:" and "|"
@@ -1433,9 +1685,10 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'haarlemmermeerhuurtin'
+        'Source': 'haarlemmermeerhuurtin',
+        'Type source': 'Job board',
     },
-    # 60. HAYS
+    # 62. HAYS
     'hays': {
         'Title': 'Description',
         'Location': 'Location',
@@ -1450,10 +1703,11 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': 'hays'
+        'Source': 'Hays',
+        'Type source': 'Recruitment company',
     },
-    # 61. WELCOMETOTHEJUNGLE
-    'welcometothejungle': {
+    # 63. WELCOMETOTHEJUNGLE
+    'Welcome to the Jungle': {
         'Title': 'scbrzpdj',
         'URL': 'scjcbmet_URL',
         'Company': 'scizxthl',
@@ -1467,44 +1721,47 @@ COMPANY_MAPPINGS = {
         'Likes': '',
         'Keywords': 'scfibhhp5, scfibhhp4',
         'Offers': '',
-        'Source': 'welcometothejungle'
+        'Source': 'Welcome to the Jungle',
+        'Type source': 'Job board',
     },
-    # 62. 404WORKS
-    '404Works': {
-        'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'Text',
-        'URL': 'Title_URL',
+    # 63. CONSULTANT.NL
+    'Consultant.nl': {
+        'Title': 'Field3',
+        'URL': 'Field1_links',
+        'Company': 'Not mentioned',
+        'Location': 'Field4',
+        'Summary': 'Not mentioned',  # Will be processed post-mapping to merge Field6, Field7, Field8, Field9, Field10
+        'rate': 'Field5',
         'start': 'ASAP',
-        'rate': 'Not mentioned',
         'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': '404works'
+        'Source': 'Consultant.nl',
+        'Type source': 'Job board',
     },
-    # 63. 4-FREELANCERS.NL
-    '4-Freelancers.nl': {
+    # 64. HAARLEMMERMEERHUURT
+    'haarlemmermeerhuurt': {
         'Title': 'Title',
+        'URL': 'Title_URL',
+        'Company': 'Not mentioned',
         'Location': 'Location',
         'Summary': 'Text',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
         'rate': 'Not mentioned',
+        'start': 'ASAP',
         'Hours': 'Not mentioned',
         'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
         'Views': '',
         'Likes': '',
         'Keywords': '',
         'Offers': '',
-        'Source': '4_freelancers_nl'
+        'Source': 'haarlemmermeerhuurt',
+        'Type source': 'Job board',
     },
-}
 
+}
 def timestamp():
     """Get current timestamp in YYYY-MM-DD format."""
     return datetime.now().strftime("%Y-%m-%d")
@@ -1788,7 +2045,7 @@ def generate_source_id(source, is_from_input=True):
             # 17. HARVEY NASH
             'Harvey Nash': 'harvey_nash',
             # 18. BEHANCE
-            'Behance': 'behance',
+            'Behance': 'behance',            
             # 19. JOOBLE
             'Jooble': 'jooble',
             # 20. CENTRIC
@@ -1876,11 +2133,11 @@ def generate_source_id(source, is_from_input=True):
             # 61. 404WORKS
             '404Works': '404works',
             # 62. WELCOMETOTHEJUNGLE
-            'welcometothejungle': 'welcome_to_the_jungle',
-            # 63. 404WORKS
-            '404Works': '404works',
-            # 64. 4-FREELANCERS.NL
-            '4-Freelancers.nl': '4_freelancers_nl',
+            'Welcome to the Jungle': 'welcome_to_the_jungle',
+            # 63. CONSULTANT.NL
+            'Consultant.nl': 'Consultant_nl',
+            # 64. HAARLEMMERMEERHUURT
+            'haarlemmermeerhuurt': 'haarlemmermeerhuurt',
             # 'zoekklus': 'zoekklus'
         }
         
@@ -2017,7 +2274,7 @@ def freelance_directory(files_read, company_name):
                 logging.warning(f"Behance pre-mapping filter: 'Text4' column not found in the input CSV for {company_name}. Skipping filter.")
         elif company_name == 'Bebee':
             # Step 1: Keep rows that mention freelance-related terms in either Field1_text or Text (case-insensitive, substring allowed)
-            freelance_keywords = ['freelance', 'interim', 'zzp', 'flexibele', 'remote']
+            freelance_keywords = ['freelance', 'interim', 'zzp', 'flexibele', 'remote', 'contract', 'zelfstandig']
             if 'Field1_text' in files_read.columns or 'Text' in files_read.columns:
                 initial_count = len(files_read)
 
@@ -2036,7 +2293,7 @@ def freelance_directory(files_read, company_name):
                 post_freelance_count = len(files_read)
 
                 # Step 2: Remove rows that contain permanent job markers (salary, baan, etc.)
-                permanent_job_markers = ['salaris', 'base salary', 'startersbaan', 'salary', 'salarisrange', 'baan', 'maandsalaris', 'monthly salary', 'loon', 'wage']
+                permanent_job_markers = ['salaris', 'base salary', 'startersbaan', 'salary', 'salarisrange', 'baan', 'maandsalaris', 'monthly salary', 'loon', 'wage', 'permanent', 'vast contract', 'vast dienstverband']
 
                 def contains_permanent_markers(value):
                     try:
@@ -2071,19 +2328,75 @@ def freelance_directory(files_read, company_name):
                     logging.info(f"Bebee permanent job filter: No rows removed, final count: {final_count}")
             else:
                 logging.warning(f"Bebee filtering: Neither 'Field1_text' nor 'Text' column found in the input CSV for {company_name}. Skipping all filters.")
-        elif company_name == 'Codeur.com':
-            if 'Text' in files_read.columns:
+        elif company_name == 'hays':
+            # Step 1: Keep rows that mention freelance-related terms in either Description or Text (case-insensitive, substring allowed)
+            freelance_keywords = ['freelance', 'interim', 'zzp', 'flexibele', 'remote', 'contract', 'zelfstandig']
+            if 'Description' in files_read.columns or 'Text' in files_read.columns:
                 initial_count = len(files_read)
-                # Drop rows where 'Text' column contains "Fermé" (case-insensitive)
-                files_read = files_read[~files_read['Text'].astype(str).str.contains("Fermé", case=False, na=False)]
+
+                def contains_freelance_keywords(value):
+                    try:
+                        text = str(value).lower()
+                        return any(keyword in text for keyword in freelance_keywords)
+                    except Exception:
+                        return False
+
+                mask_description = files_read['Description'].apply(contains_freelance_keywords) if 'Description' in files_read.columns else False
+                mask_text = files_read['Text'].apply(contains_freelance_keywords) if 'Text' in files_read.columns else False
+                # If only one column exists, the other mask will be a scalar False, bitwise OR will still work
+                freelance_mask = mask_description | mask_text
+                files_read = files_read[freelance_mask]
+                post_freelance_count = len(files_read)
+
+                # Step 2: Remove rows that contain permanent job markers (salary, baan, etc.)
+                permanent_job_markers = ['salaris', 'base salary', 'startersbaan', 'salary', 'salarisrange', 'baan', 'maandsalaris', 'monthly salary', 'loon', 'wage', 'permanent', 'vast contract', 'vast dienstverband']
+
+                def contains_permanent_markers(value):
+                    try:
+                        text = str(value).lower()
+                        return any(marker in text for marker in permanent_job_markers)
+                    except Exception:
+                        return False
+
+                # Check both Text and Summary columns for permanent job markers
+                permanent_mask = pd.Series([False] * len(files_read), index=files_read.index)
+                
+                if 'Text' in files_read.columns:
+                    text_mask = files_read['Text'].apply(contains_permanent_markers)
+                    permanent_mask = permanent_mask | text_mask
+                
+                if 'Summary' in files_read.columns:
+                    summary_mask = files_read['Summary'].apply(contains_permanent_markers)
+                    permanent_mask = permanent_mask | summary_mask
+                
+                permanent_count = permanent_mask.sum()
+                files_read = files_read[~permanent_mask]  # Remove rows with permanent markers
+                final_count = len(files_read)
+
+                # Log results
+                if initial_count > post_freelance_count:
+                    logging.info(f"Applied Hays freelance filter: rows {initial_count} → {post_freelance_count} (kept freelance terms)")
+
+                if permanent_count > 0:
+                    logging.info(f"Applied Hays permanent job filter: removed {permanent_count} rows with markers {permanent_job_markers} from Text/Summary columns, final count: {final_count}")
+                    logging.info(f"Hays filtering complete: {initial_count} → {final_count} rows (reason: not freelance jobs)")
+                else:
+                    logging.info(f"Hays permanent job filter: No rows removed, final count: {final_count}")
+            else:
+                logging.warning(f"Hays filtering: Neither 'Description' nor 'Text' column found in the input CSV for {company_name}. Skipping all filters.")
+        elif company_name == 'Codeur.com':
+            if 'whitespacenowrap' in files_read.columns:
+                initial_count = len(files_read)
+                # Drop rows where 'whitespacenowrap' column contains "Fermé" (case-insensitive)
+                files_read = files_read[files_read['whitespacenowrap'].astype(str).str.contains("Ouvert", case=False, na=False)]
                 filtered_count = len(files_read)
                 if initial_count > filtered_count:
-                    logging.info(f"Applied Codeur.com pre-mapping filter on 'Text' column to remove 'Fermé' rows, rows changed from {initial_count} to {filtered_count}")
+                    logging.info(f"Applied Codeur.com pre-mapping filter on 'whitespacenowrap' column to keep only 'Ouvert' rows, rows changed from {initial_count} to {filtered_count}")
                 elif initial_count == filtered_count and initial_count > 0:
-                    logging.info(f"Codeur.com pre-mapping filter: 'Text' column checked for 'Fermé' content, no rows removed from {initial_count} rows.")
+                    logging.info(f"Codeur.com pre-mapping filter: 'whitespacenowrap' column checked for 'Ouvert' content, no rows removed from {initial_count} rows.")
             else:
-                logging.warning(f"Codeur.com pre-mapping filter: 'Text' column not found in the input CSV for {company_name}. Skipping filter.")
-        elif company_name == 'welcometothejungle':
+                logging.warning(f"Codeur.com pre-mapping filter: 'whitespacenowrap' column not found in the input CSV for {company_name}. Skipping filter.")
+        elif company_name == 'Welcome to the Jungle':
             if 'scfibhhp' in files_read.columns:
                 initial_count = len(files_read)
                 # Keep only rows where 'scfibhhp' column contains "freelance" (case-insensitive)
@@ -2272,7 +2585,8 @@ def freelance_directory(files_read, company_name):
                             'rate': 'Not mentioned',
                             'Hours': 'Field3',
                                                     'Company': 'InterimNetwerk',
-                        'Source': 'InterimNetwerk'
+                        'Source': 'InterimNetwerk',
+        'Type source': 'Job board',
                         })
                     
                     # Convert to DataFrame
@@ -2324,57 +2638,10 @@ def freelance_directory(files_read, company_name):
                 else:
                     result[std_col] = src_col_mapping_value
 
-        # NEW SAFEGUARD: If data matches the mapping key string, blank it, unless it's an intentional literal.
-        for std_col, src_col_mapping_value in mapping.items():
-            if std_col in result.columns and isinstance(src_col_mapping_value, str) and not result[std_col].empty:
-                # Determine if src_col_mapping_value should be preserved (not blanked out)
-                # Check if it's a column name in the original CSV
-                is_column_name = src_col_mapping_value in files_read.columns
-                
-                # Also check for common column names that should be preserved
-                # Note: Field4 is removed from this list to prevent showing "Field4" as literal text
-                # Note: Field1 is removed from this list to prevent blanking out legitimate Field1 data
-                common_column_names = {'Text2', 'Location', 'searchresultorganisation', 'Keywords'}
-                is_common_column = src_col_mapping_value in common_column_names
-                
-                # Check if it's a common literal value
-                is_literal_value = src_col_mapping_value in {'ASAP', 'Not mentioned', 'See Vacancy', '36', 'Hybrid', 'Remote', 'Hilversum', 'Gelderland', 'Amsterdam', 'not mentioned'}
-                
-                # Check if it's a special case
-                is_special_case = (
-                    (std_col == 'URL' and (src_col_mapping_value.startswith('http://') or src_col_mapping_value.startswith('https://'))) or \
-                    std_col == 'Company' or \
-                    std_col == 'Source' or \
-                    std_col == 'Hours'  # Hours field values are always intentional literals
-                )
-                
-                # Don't blank out if it's a column name, literal value, or special case
-                is_intentional_literal = is_column_name or is_common_column or is_literal_value or is_special_case
-                # Special case: For freelancer.com, treat 'Price' as intentional literal
-                if company_name == 'freelancer.com' and src_col_mapping_value == 'Price':
-                    is_intentional_literal = True
-                
-                # If the current column IS 'URL', we give it special treatment: 
-                # it should NOT be blanked if its mapping value is a placeholder like 'Title_URL' or 'URL_Column_Name'
-                # UNLESS that placeholder is ALSO a generic http/https link (which is handled above)
-                # This effectively means: only blank URL if the mapping value was a generic placeholder AND the data matches it.
-                # However, if the mapping value itself was a specific URL (like a base URL for a site), and data matches, it should be KEPT.
-                # The original logic before the last user request was to always keep URLs if their mapping value started with http/https.
-                # The request before this one was to blank them out even if they were http/https.
-                # This request is to NOT blank them out if std_col is URL, regardless of what src_col_mapping_value is, as long as data matches.
-                # Actually, the most straightforward way to implement "in the URL section it does not matter if it is placeholder" 
-                # is to simply NOT apply the blanking logic IF std_col == 'URL'.
-
-                if std_col == 'URL': # If it's the URL column, we don't apply the placeholder blanking based on this user request.
-                    pass # Do nothing, leave URL as is from the mapping.
-                elif not is_intentional_literal and not (std_col == 'Location' and src_col_mapping_value == 'Remote'):
-                    # If it's not an intentional literal (and not 'URL'), check if data matches the mapping value (placeholder scenario)
-                    condition = result[std_col].astype(str) == src_col_mapping_value
-                    if condition.any():
-                        actual_matches = result.loc[condition, std_col].unique()
-                        logging.info(f"INFO: For {company_name}, blanking out {condition.sum()} instance(s) in '{std_col}' because data {list(actual_matches)} matched mapping value '{src_col_mapping_value}' (which is treated as a placeholder).")
-                        result.loc[condition, std_col] = ''
-        # End of new safeguard block
+        # PLACEHOLDER DETECTION DISABLED per user request
+        # The aggressive placeholder blanking logic has been disabled to preserve all data
+        # that matches mapping values, as these may be legitimate data rather than placeholders
+        pass
         
         # Clean the data
         standard_columns = ['Title', 'Location', 'Summary', 'URL', 'start', 'rate', 'Company', 'Views', 'Likes', 'Keywords', 'Offers']
@@ -2543,6 +2810,63 @@ def freelance_directory(files_read, company_name):
                 
                 result['Location'] = result['Location'].apply(clean_location_tennet)
                 logging.info(f"tennet post-mapping: Processed location field to remove content after '/'")
+            
+            # Process Summary field - combine Field5 through Field14
+            if 'Summary' in result.columns:
+                def combine_summary_fields_tennet(index):
+                    # Get the original row from the input DataFrame
+                    if index >= len(files_read):
+                        return 'Not mentioned'
+                    
+                    row = files_read.iloc[index]
+                    
+                    # List of field names to combine
+                    field_names = ['Field5', 'Field6', 'Field7', 'Field8', 'Field9', 'Field10', 'Field11', 'Field12', 'Field13', 'Field14']
+                    
+                    # Collect non-empty values
+                    values = []
+                    for field_name in field_names:
+                        if field_name in files_read.columns:
+                            value = row[field_name]
+                            if not pd.isna(value) and str(value).strip():
+                                values.append(str(value).strip())
+                    
+                    # Combine with spaces, or return default if no content
+                    return ' '.join(values) if values else 'See Vacancy'
+                
+                # Apply the processing to each row by index
+                result['Summary'] = [combine_summary_fields_tennet(i) for i in range(len(result))]
+                logging.info(f"tennet post-mapping: Combined Field5-Field14 into Summary field")
+        
+        # FIELD MERGING POST-MAPPING PROCESSING
+        # Handle sources that use Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14 mapping
+        field_merging_sources = ['flexSpot.io', 'freep', 'Friesland', 'freelancer.com', 'ProLinker.com', 'overheidzzp', 'Zuid-Holland']
+        if company_name in field_merging_sources:
+            # Process Summary field - combine Field5-Field14
+            if 'Summary' in result.columns:
+                def combine_summary_fields(index):
+                    if index >= len(files_read):
+                        return 'Not mentioned'
+                    
+                    row = files_read.iloc[index]
+                    
+                    # List of field names to combine
+                    field_names = ['Field5', 'Field6', 'Field7', 'Field8', 'Field9', 'Field10', 'Field11', 'Field12', 'Field13', 'Field14']
+                    
+                    # Collect non-empty values
+                    values = []
+                    for field_name in field_names:
+                        if field_name in files_read.columns:
+                            value = row[field_name]
+                            if not pd.isna(value) and str(value).strip():
+                                values.append(str(value).strip())
+                    
+                    # Combine with spaces, or return default if no content
+                    return ' '.join(values) if values else 'See Vacancy'
+                
+                # Apply the processing to each row by index
+                result['Summary'] = [combine_summary_fields(i) for i in range(len(result))]
+                logging.info(f"{company_name} post-mapping: Combined Field5-Field14 into Summary field")
         
         # CIRCLE8 POST-MAPPING PROCESSING
         if company_name == 'Circle8':
@@ -2729,10 +3053,10 @@ def freelance_directory(files_read, company_name):
         if duplicates_removed > 0:
             logging.info(f"Removed {duplicates_removed} duplicate entries from {company_name}")
         
-        # Specific filtering for freelancer.com
-        if company_name == 'freelancer.com':
-            if 'Title' in result.columns:
-                result = result[~result['Title'].str.contains('--', na=False)]
+        # Specific filtering for freelancer.com - REMOVED per user request
+        # if company_name == 'freelancer.com':
+        #     if 'Title' in result.columns:
+        #         result = result[~result['Title'].str.contains('--', na=False)]
         
         # COMPANY-SPECIFIC POST-MAPPING PROCESSING
         if company_name == 'HintTech':
@@ -3575,7 +3899,7 @@ def freelance_directory(files_read, company_name):
             if 'Text' in files_read.columns and len(result) == len(files_read):
                 try:
                     initial_count = len(result)
-                    mask = ~files_read['Text'].astype(str).str.contains('Detachering', case=False, na=False)
+                    mask = ~files_read['whitespacenowrap'].astype(str).str.contains('Detachering', case=False, na=False)
                     result = result[mask.reset_index(drop=True)]
                     filtered = initial_count - len(result)
                     if filtered > 0:
@@ -4491,6 +4815,101 @@ def freelance_directory(files_read, company_name):
                 
                 result['Duration'] = result['Duration'].apply(process_duration_linkit)
                 logging.info(f"LinkIT post-mapping: Processed Duration field to check for 'months' marker")
+        
+        # FREELANCE.NL POST-MAPPING PROCESSING
+        if company_name == 'freelance.nl':
+            if 'Hours' in result.columns:
+                def extract_hours_freelance_nl(index):
+                    if index >= len(files_read):
+                        return 'Not mentioned'
+                    field2_val = files_read.iloc[index]['Field2'] if 'Field2' in files_read.columns else None
+                    if pd.isna(field2_val) or field2_val == '':
+                        return 'Not mentioned'
+                    field2_str = str(field2_val).lower()
+                    import re
+                    patterns = [r'aantal uur per week[:s]*(d+)', r'(d+)s*uurs*pers*week', r'hours[:s]*.*?(d+)s*hourss*pers*week', r'(d+)s*hours?s*pers*week', r'full-times*((d+)s*hours?s*pers*week)']
+                    for pattern in patterns:
+                        match = re.search(pattern, field2_str)
+                        if match:
+                            return match.group(1)
+                    return 'Not mentioned'
+                result['Hours'] = [extract_hours_freelance_nl(i) for i in range(len(result))]
+                logging.info(f"freelance.nl post-mapping: Extracted hours information from Field2")
+        
+        # CONSULTANT.NL POST-MAPPING PROCESSING
+        if company_name == 'Consultant.nl':
+            # Process Summary field - merge Field6, Field7, Field8, Field9, Field10
+            if 'Summary' in result.columns:
+                def process_summary_consultant_nl(index):
+                    if index >= len(files_read):
+                        return 'Not mentioned'
+                    
+                    row = files_read.iloc[index]
+                    
+                    # Get Field6, Field7, Field8, Field9, Field10 values from the original data
+                    field6_value = row.get('Field6', '') if 'Field6' in files_read.columns else ''
+                    field7_value = row.get('Field7', '') if 'Field7' in files_read.columns else ''
+                    field8_value = row.get('Field8', '') if 'Field8' in files_read.columns else ''
+                    field9_value = row.get('Field9', '') if 'Field9' in files_read.columns else ''
+                    field10_value = row.get('Field10', '') if 'Field10' in files_read.columns else ''
+                    
+                    # Convert to strings and clean up
+                    field6_clean = str(field6_value).strip() if field6_value else ''
+                    field7_clean = str(field7_value).strip() if field7_value else ''
+                    field8_clean = str(field8_value).strip() if field8_value else ''
+                    field9_clean = str(field9_value).strip() if field9_value else ''
+                    field10_clean = str(field10_value).strip() if field10_value else ''
+                    
+                    # Combine all fields with space separators
+                    fields_to_merge = [field6_clean, field7_clean, field8_clean, field9_clean, field10_clean]
+                    non_empty_fields = [field for field in fields_to_merge if field]
+                    
+                    if non_empty_fields:
+                        combined_summary = ' '.join(non_empty_fields)
+                    else:
+                        combined_summary = 'Not mentioned'
+                    
+                    # Clean up extra spaces
+                    combined_summary = re.sub(r'\s+', ' ', combined_summary).strip()
+                    
+                    return combined_summary if combined_summary else 'Not mentioned'
+                
+                # Apply the processing to each row by index
+                result['Summary'] = [process_summary_consultant_nl(i) for i in range(len(result))]
+                logging.info(f"Consultant.nl post-mapping: Processed Summary field to merge Field6, Field7, Field8, Field9, Field10")
+        
+        # INDUSTRY CLASSIFICATION - Apply to all jobs
+        # Create Industry column for all jobs
+        result['Industry'] = result.apply(lambda row: classify_job_industry(row['Title'], row.get('Summary', '')), axis=1)
+        logging.info(f"Applied industry classification to {len(result)} jobs")
+        
+        # REGIONAL CATEGORIZATION - Apply to all jobs
+        # Create Dutch, French, EU, Rest_of_World boolean columns
+        logging.info("Applying regional categorization...")
+        regional_categories = result.apply(
+            lambda row: categorize_location(
+                location=row.get('Location', ''),
+                rate=row.get('rate', ''),
+                company=row.get('Company', ''),
+                source=row.get('Source', ''),
+                title=row.get('Title', ''),
+                summary=row.get('Summary', '')
+            ), 
+            axis=1
+        )
+        
+        # Extract the boolean values into separate columns
+        result['Dutch'] = regional_categories.apply(lambda x: x.get('Dutch', False))
+        result['French'] = regional_categories.apply(lambda x: x.get('French', False))
+        result['EU'] = regional_categories.apply(lambda x: x.get('EU', False))
+        result['Rest_of_World'] = regional_categories.apply(lambda x: x.get('Rest_of_World', False))
+        
+        # Log regional distribution
+        dutch_count = result['Dutch'].sum()
+        french_count = result['French'].sum()
+        eu_count = result['EU'].sum()
+        rest_count = result['Rest_of_World'].sum()
+        logging.info(f"Regional categorization complete: Dutch={dutch_count}, French={french_count}, EU={eu_count}, Rest_of_World={rest_count}")
         
         # Remove validation and cleaning logic - just return the processed data
         return result
@@ -5621,6 +6040,52 @@ def main():
         result.to_csv(local_csv_path, index=False)
         logging.info(f"Saved local copy to {local_csv_path}")
         
+        # SIMPLE FRENCH JOB SPLIT
+        logging.info("Splitting data between French and non-French sources...")
+        
+        # French sources list
+        french_sources = ['404Works', 'Codeur.com', 'Welcome to the Jungle', 'comet', 'Freelance-Informatique']
+        
+        # Split the data - handle case sensitivity robustly
+        # Normalize both the data and the source list for comparison
+        result_sources_normalized = result['Source'].astype(str).str.lower().str.strip()
+        french_sources_normalized = [source.lower().strip() for source in french_sources]
+        
+        # Create mask for French sources
+        french_mask = result_sources_normalized.isin(french_sources_normalized)
+        french_jobs = result[french_mask].copy()
+        non_french_jobs = result[~french_mask].copy()
+        
+        french_count = len(french_jobs)
+        non_french_count = len(non_french_jobs)
+        
+        # Clear notification about the split
+        logging.info("="*80)
+        logging.info("🇫🇷 FRENCH JOB SPLIT NOTIFICATION 🇫🇷")
+        logging.info("="*80)
+        logging.info(f"📊 TOTAL JOBS PROCESSED: {len(result)}")
+        logging.info(f"🇫🇷 FRENCH JOBS: {french_count} → 'french freelance jobs' table")
+        logging.info(f"🌍 NON-FRENCH JOBS: {non_french_count} → 'Allgigs_All_vacancies_NEW' table")
+        
+        if french_count > 0:
+            french_sources_found = french_jobs['Source'].value_counts().to_dict()
+            logging.info(f"🇫🇷 French sources found: {french_sources_found}")
+            
+            # Debug: Show all unique sources in the data for comparison
+            all_sources_in_data = result['Source'].value_counts().to_dict()
+            logging.info(f"🔍 All sources in data: {list(all_sources_in_data.keys())}")
+            logging.info(f"🔍 Expected French sources: {french_sources}")
+        else:
+            logging.info("🇫🇷 No French jobs found in current data")
+            
+            # Debug: Show all unique sources in the data for comparison
+            all_sources_in_data = result['Source'].value_counts().to_dict()
+            logging.info(f"🔍 All sources in data: {list(all_sources_in_data.keys())}")
+            logging.info(f"🔍 Expected French sources: {french_sources}")
+            logging.info(f"🔍 Normalized French sources: {french_sources_normalized}")
+        
+        logging.info("="*80)
+        
         # Only upload to Supabase if there are no errors, source failures, or broken URLs
         if error_messages or source_failures or broken_urls:
             if broken_urls:
@@ -5628,32 +6093,75 @@ def main():
             else:
                 logging.error("Upload to Supabase skipped due to errors. See error summary above.")
         else:
-            # Upload to both Supabase tables with transaction-like behavior
-            # Both tables must succeed together, or both fail together
+            # Use the already split data from above
+            logging.info(f"Using split data: {french_count} French jobs, {non_french_count} non-French jobs")
+            
+            # Upload to Supabase tables with transaction-like behavior
             upload_results = []
             upload_successful = True
             
-            # First, attempt to upload to NEW table
-            try:
-                logging.info(f"Attempting to upload to {NEW_TABLE}...")
-                upload_result_new = supabase_upload(result, NEW_TABLE, is_historical=False)
-                upload_results.append(upload_result_new)
-                if upload_result_new.get('status') == 'Failed':
+            # Upload French jobs to dedicated table
+            if french_count > 0:
+                try:
+                    logging.info(f"Uploading {french_count} French jobs to {FRENCH_JOBS_TABLE}...")
+                    upload_result_french = supabase_upload(french_jobs, FRENCH_JOBS_TABLE, is_historical=False)
+                    upload_results.append(upload_result_french)
+                    if upload_result_french.get('status') == 'Failed':
+                        upload_successful = False
+                        logging.error(f"French jobs table upload failed: {upload_result_french.get('error', 'Unknown error')}")
+                except Exception as e:
                     upload_successful = False
-                    logging.error(f"NEW table upload failed: {upload_result_new.get('error', 'Unknown error')}")
-            except Exception as e:
-                upload_successful = False
+                    upload_results.append({
+                        'table_name': FRENCH_JOBS_TABLE,
+                        'status': 'Failed',
+                        'error': str(e)
+                    })
+                    logging.error(f"Exception during French jobs table upload: {str(e)}")
+            else:
+                logging.info("No French jobs found - skipping French jobs table upload")
+                upload_results.append({
+                    'table_name': FRENCH_JOBS_TABLE,
+                    'status': 'Skipped',
+                    'error': 'No French jobs found'
+                })
+            
+            # Upload non-French jobs to NEW table (only if French upload succeeded or was skipped)
+            if upload_successful and non_french_count > 0:
+                try:
+                    logging.info(f"Uploading {non_french_count} non-French jobs to {NEW_TABLE}...")
+                    upload_result_new = supabase_upload(non_french_jobs, NEW_TABLE, is_historical=False)
+                    upload_results.append(upload_result_new)
+                    if upload_result_new.get('status') == 'Failed':
+                        upload_successful = False
+                        logging.error(f"NEW table upload failed: {upload_result_new.get('error', 'Unknown error')}")
+                except Exception as e:
+                    upload_successful = False
+                    upload_results.append({
+                        'table_name': NEW_TABLE,
+                        'status': 'Failed',
+                        'error': str(e)
+                    })
+                    logging.error(f"Exception during NEW table upload: {str(e)}")
+            elif non_french_count == 0:
+                logging.info("No non-French jobs found - skipping NEW table upload")
                 upload_results.append({
                     'table_name': NEW_TABLE,
-                    'status': 'Failed',
-                    'error': str(e)
+                    'status': 'Skipped',
+                    'error': 'No non-French jobs found'
                 })
-                logging.error(f"Exception during NEW table upload: {str(e)}")
+            else:
+                # French upload failed, so skip NEW table
+                upload_results.append({
+                    'table_name': NEW_TABLE,
+                    'status': 'Skipped',
+                    'error': 'Skipped because French jobs upload failed'
+                })
+                logging.warning(f"Skipping {NEW_TABLE} upload because French jobs upload failed")
             
-            # Only proceed to historical table if NEW table succeeded
+            # Only proceed to historical table if both previous uploads succeeded
             if upload_successful:
                 try:
-                    logging.info(f"NEW table upload successful. Attempting to upload to {HISTORICAL_TABLE}...")
+                    logging.info("Main uploads successful. Attempting to upload to historical table...")
                     upload_result_historical = supabase_upload(result, HISTORICAL_TABLE, is_historical=True)
                     upload_results.append(upload_result_historical)
                     if upload_result_historical.get('status') == 'Failed':
@@ -5668,13 +6176,13 @@ def main():
                     })
                     logging.error(f"Exception during HISTORICAL table upload: {str(e)}")
             else:
-                # NEW table failed, so skip historical table and add a placeholder
+                # Main uploads failed, so skip historical table
                 upload_results.append({
                     'table_name': HISTORICAL_TABLE,
                     'status': 'Skipped',
-                    'error': 'Skipped because NEW table upload failed'
+                    'error': 'Skipped because main uploads failed'
                 })
-                logging.warning(f"Skipping {HISTORICAL_TABLE} upload because {NEW_TABLE} upload failed")
+                logging.warning(f"Skipping {HISTORICAL_TABLE} upload because main uploads failed")
             
             # Print Supabase upload results table
             print_supabase_upsert_table(upload_results)
@@ -5684,9 +6192,9 @@ def main():
 
             # Log the transaction result
             if upload_successful:
-                logging.info("✅ Both tables uploaded successfully - transaction completed")
+                logging.info("✅ All tables uploaded successfully - transaction completed")
             else:
-                logging.error("❌ Upload transaction failed - no tables were updated")
+                logging.error("❌ Upload transaction failed - some tables may not have been updated")
         
     except Exception as e:
         msg = f"FAILED: Main process - {str(e)}"
