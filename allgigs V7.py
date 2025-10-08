@@ -456,15 +456,19 @@ def detect_work_arrangement(location: str = None, title: str = None, summary: st
             return 'Remote (Specified Country)'
         else:
             # For unspecified remote, determine region from location classification
-            region_classification = categorize_location(location, None, company, source, title, summary)
-            if region_classification and region_classification.get('Dutch'):
-                return 'Remote (Netherlands)'
-            elif region_classification and region_classification.get('EU'):
-                return 'Remote (EU)'
-            elif region_classification and region_classification.get('Rest_of_World'):
-                return 'Remote (Rest of World)'
-            else:
-                return 'Remote'
+            try:
+                region_classification = categorize_location(location, None, company, source, title, summary)
+            except Exception:
+                region_classification = None
+
+            if isinstance(region_classification, dict):
+                if region_classification.get('Dutch'):
+                    return 'Remote (Netherlands)'
+                if region_classification.get('EU'):
+                    return 'Remote (EU)'
+                if region_classification.get('Rest_of_World'):
+                    return 'Remote (Rest of World)'
+            return 'Remote'
 
     # Hybrid patterns
     hybrid_patterns = ['hybrid', 'hybrid work', 'office + remote', 'remote + office',
