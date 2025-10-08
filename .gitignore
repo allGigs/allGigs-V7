@@ -1,0 +1,21 @@
+# Logs
+allgigs_v7.out.log
+allgigs_v7.out.log.*
+allgigs_v7.err.log
+allgigs.log
+
+# Generated CSV outputs
+allgigs_v7_processed.csv
+other_general_sample_100.csv
+
+# Environment and secrets
+dotenv
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
