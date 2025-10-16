@@ -1,0 +1,26 @@
+{
+  "freelance.nl": {
+    "type": "special_freelance_processing",
+    "_company_number": 3
+  },
+  "hoofdkraan": {
+    "type": "special_hoofdkraan_processing",
+    "_company_number": 1
+  },
+  "UMC": {
+    "type": "special_umc_processing",
+    "_company_number": 25
+  },
+  "LinkedIn": {
+    "type": "special_linkedin_processing",
+    "_company_number": 67
+  },
+  "Harvey Nash": {
+    "type": "special_harvey_nash_processing",
+    "_company_number": 19
+  },
+  "InterimNetwerk": {
+    "type": "special_interimnetwerk_processing",
+    "_company_number": 52
+  }
+}

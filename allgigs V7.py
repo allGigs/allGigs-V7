@@ -1,4 +1,5 @@
 import os
+import json
 import pandas as pd
 from datetime import datetime
 import hashlib
@@ -7,8 +8,8 @@ from dotenv import load_dotenv
 import logging
 from pathlib import Path
 import time
-import re
-
+    import re
+    
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -27,8 +28,16 @@ _logging.getLogger("supabase_py").setLevel(_logging.WARNING)
 # Load environment variables
 load_dotenv('dotenv')
 
+# Load configuration from config.json
+    try:
+    with open('config.json', 'r', encoding='utf-8') as f:
+            config = json.load(f)
+    except FileNotFoundError:
+    print("Warning: config.json not found, using default values")
+    config = {}
+
 # Supabase configuration
-SUPABASE_URL = "https://lfwgzoltxrfutexrjahr.supabase.co"
+SUPABASE_URL = config.get('supabase_url', "https://lfwgzoltxrfutexrjahr.supabase.co")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
 if not SUPABASE_SERVICE_ROLE_KEY:
     raise ValueError("SUPABASE_SERVICE_ROLE_KEY environment variable is not set")
@@ -36,25 +45,119 @@ if not SUPABASE_SERVICE_ROLE_KEY:
 # Create Supabase client with service role key to bypass RLS
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-# Constants
-BATCH_SIZE = 500  # Number of records to upload in each batch
-NEW_TABLE = "Allgigs_All_vacancies_NEW"
-HISTORICAL_TABLE = "Allgigs_All_vacancies"
-FRENCH_JOBS_TABLE = "french freelance jobs"
+# Load configuration values
+BATCH_SIZE = config.get('batch_size', 500)
+TABLES = config.get('tables', {})
+NEW_TABLE = TABLES.get('new_table', "Allgigs_All_vacancies_NEW")
+HISTORICAL_TABLE = TABLES.get('historical_table', "Allgigs_All_vacancies")
+FRENCH_JOBS_TABLE = TABLES.get('french_jobs_table', "french freelance jobs")
 
 # French job sources that should go to French_Freelance_Jobs table
-FRENCH_SOURCES = [
+FRENCH_SOURCES = config.get('french_sources', [
     '404Works',
-    'Codeur.com', 
+    'Codeur.com',
     'Welcome to the Jungle',
     'comet',
     'Freelance-Informatique'
-]
+])
+
+# Skip companies configuration
+SKIP_COMPANIES = set(config.get('skip_companies', []))
+
+# Source mappings configuration
+SOURCE_MAPPINGS = config.get('source_mappings', {})
 
 # Directory structure
 BASE_DIR = Path('/Users/jaapjanlammers/Desktop/Freelancedirectory')
 FREELANCE_DIR = BASE_DIR / 'Freelance Directory'
 IMPORTANT_DIR = BASE_DIR / 'Important_allGigs'
+
+# Load company mappings from JSON file
+def load_company_mappings():
+    """Load company mappings from JSON file."""
+    json_path = Path(__file__).parent / 'company_mappings.json'
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            # Remove the _comment key if it exists
+            return {k: v for k, v in data.items() if k != '_comment'}
+    except FileNotFoundError:
+        logging.error(f"Company mappings file not found at {json_path}")
+        return {}
+    except json.JSONDecodeError as e:
+        logging.error(f"Error parsing company mappings JSON: {e}")
+        return {}
+
+# Load company mappings at module level
+COMPANY_MAPPINGS = load_company_mappings()
+
+# Load French patterns from JSON file
+def load_french_patterns():
+    """Load French patterns from JSON file."""
+    json_path = Path(__file__).parent / 'french_patterns.json'
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logging.error(f"French patterns file not found at {json_path}")
+        return {}
+    except json.JSONDecodeError as e:
+        logging.error(f"Error parsing French patterns JSON: {e}")
+        return {}
+
+# Load French patterns at module level
+FRENCH_PATTERNS = load_french_patterns()
+
+# Load geographical patterns from JSON file
+def load_geographic_patterns():
+    """Load geographical patterns from JSON file."""
+    json_path = Path(__file__).parent / 'geographic_patterns.json'
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logging.error(f"Geographic patterns file not found at {json_path}")
+        return {}
+    except json.JSONDecodeError as e:
+        logging.error(f"Error parsing geographic patterns JSON: {e}")
+        return {}
+
+# Load geographical patterns at module level
+GEOGRAPHIC_PATTERNS = load_geographic_patterns()
+
+# Load remote patterns from JSON file
+def load_remote_patterns():
+    """Load remote patterns from JSON file."""
+    json_path = Path(__file__).parent / 'remote_patterns.json'
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logging.error(f"Remote patterns file not found at {json_path}")
+        return {}
+    except json.JSONDecodeError as e:
+        logging.error(f"Error parsing remote patterns JSON: {e}")
+        return {}
+
+# Load remote patterns at module level
+REMOTE_PATTERNS = load_remote_patterns()
+
+# Load language patterns from JSON file
+def load_language_patterns():
+    """Load language patterns from JSON file."""
+    json_path = Path(__file__).parent / 'language_patterns.json'
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logging.error(f"Language patterns file not found at {json_path}")
+        return {}
+    except json.JSONDecodeError as e:
+        logging.error(f"Error parsing language patterns JSON: {e}")
+        return {}
+
+# Load language patterns at module level
+LANGUAGE_PATTERNS = load_language_patterns()
 
 # ==================================================
 # REGIONAL CATEGORIZATION SYSTEM
@@ -88,9 +191,8 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
     remote_region = None
 
     # 1. DETECT REMOTE/HYBRID PATTERNS FIRST
-    remote_patterns = ['remote', 'remote work', 'work from home', 'wfh', 'telecommute',
-                      'home office', 'work remotely', 'remote position', 'virtual']
-    hybrid_patterns = ['hybrid', 'hybrid work', 'office + remote', 'mixed', 'flexible location']
+    remote_patterns = REMOTE_PATTERNS.get('remote_patterns', [])
+    hybrid_patterns = REMOTE_PATTERNS.get('hybrid_patterns', [])
 
     # Check for remote patterns
     for pattern in remote_patterns:
@@ -135,8 +237,9 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
 
         # Check source context (French job boards suggest French remote)
         if not remote_region and source:
-            french_sources = ['comet', '404works', 'freelance-france', 'codeur.com']
-            if any(french_source in str(source).lower() for french_source in french_sources):
+            # Use FRENCH_SOURCES from config (normalize to lowercase for comparison)
+            french_sources_normalized = [s.lower().strip() for s in FRENCH_SOURCES]
+            if any(french_source in str(source).lower() for french_source in french_sources_normalized):
                 remote_region = 'french'
 
     # 3. APPLY REMOTE REGIONAL LOGIC
@@ -152,50 +255,10 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
     # 4. REGULAR LOCATION ANALYSIS (for non-remote or hybrid office locations)
     
     # 4.1. Check for Dutch cities and regions FIRST
-    dutch_cities_regions = [
-        'amsterdam', 'rotterdam', 'den haag', 'the hague', 'utrecht', 'eindhoven',
-        'tilburg', 'groningen', 'almere', 'breda', 'nijmegen', 'enschede',
-        'haarlem', 'arnhem', 'zaanstad', 'haarlemmermeer', 'amersfoort', 'apeldoorn',
-        'hoofddorp', 'maastricht', 'leiden', 'dordrecht', 'zoetermeer', 'zwolle',
-        'emmen', 'westland', 'delft', 'venlo', 'deventer', 'helmond', 'sittard-geleen',
-        'ede', 'purmerend', 'rijswijk', 'schiedam', 'amstelveen', 'katwijk',
-        'noord-holland', 'zuid-holland', 'utrecht', 'gelderland', 'overijssel',
-        'flevoland', 'friesland', 'groningen', 'drenthe', 'noord-brabant', 'limburg',
-        'zeeland', 'friesland', 'drenthe', 'groningen', 'flevoland', 'overijssel',
-        'gelderland', 'utrecht', 'noord-holland', 'zuid-holland', 'zeeland',
-        'noord-brabant', 'limburg'
-    ]
+    dutch_cities_regions = GEOGRAPHIC_PATTERNS.get('dutch_cities_regions', [])
     
     # 4.2. Check for French cities and regions
-    french_cities_regions = [
-        'paris', 'marseille', 'lyon', 'toulouse', 'nice', 'nantes', 'strasbourg',
-        'montpellier', 'bordeaux', 'lille', 'rennes', 'reims', 'saint-étienne',
-        'toulon', 'grenoble', 'dijon', 'angers', 'nîmes', 'villeurbanne', 'saint-denis',
-        'le havre', 'tours', 'limoges', 'amiens', 'perpignan', 'metz', 'boulogne-billancourt',
-        'orléans', 'mulhouse', 'rouen', 'caen', 'nancy', 'saint-pierre', 'argenteuil',
-        # Paris variations and areas
-        'paris region', 'greater paris', 'paris area', 'la défense', 'paris centre',
-        'paris nord', 'paris sud', 'paris est', 'paris ouest', 'paris metropolitan area',
-        'région parisienne', 'zone parisienne', 'quartier d\'affaires', 'cbd paris',
-        'paris cdg', 'paris orly', 'gare du nord', 'paris 75001', 'paris 75002', 'paris 75003',
-        'paris 75004', 'paris 75005', 'paris 75006', 'paris 75007', 'paris 75008',
-        'paris 75009', 'paris 75010', 'paris 75011', 'paris 75012', 'paris 75013',
-        'paris 75014', 'paris 75015', 'paris 75016', 'paris 75017', 'paris 75018',
-        'paris 75019', 'paris 75020', '1er arrondissement', '2ème arrondissement',
-        '3ème arrondissement', '4ème arrondissement', '5ème arrondissement',
-        '6ème arrondissement', '7ème arrondissement', '8ème arrondissement',
-        '9ème arrondissement', '10ème arrondissement', '11ème arrondissement',
-        '12ème arrondissement', '13ème arrondissement', '14ème arrondissement',
-        '15ème arrondissement', '16ème arrondissement', '17ème arrondissement',
-        '18ème arrondissement', '19ème arrondissement', '20ème arrondissement',
-        # French regions and departments
-        'auvergne-rhône-alpes', 'bourgogne-franche-comté', 'bretagne', 'centre-val de loire',
-        'corse', 'grand est', 'hauts-de-france', 'île-de-france', 'normandie', 'nouvelle-aquitaine',
-        'occitanie', 'pays de la loire', 'provence-alpes-côte d\'azur', 'alsace', 'champagne-ardenne',
-        'franche-comté', 'lorraine', 'picardie', 'aquitaine', 'languedoc-roussillon',
-        'midi-pyrénées', 'poitou-charentes', 'rhône-alpes', 'basse-normandie', 'haute-normandie',
-        'nord-pas-de-calais', 'limousin', 'corsica', 'guadeloupe', 'martinique', 'réunion'
-    ]
+    french_cities_regions = FRENCH_PATTERNS.get('french_cities_regions', [])
     
     if location_clean:
         for dutch_location in dutch_cities_regions:
@@ -207,19 +270,9 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
                 return {'Dutch': False, 'French': True, 'EU': False, 'Rest_of_World': False}
     
     # 4.3. Check for EU countries excluding Netherlands and France
-    eu_countries_excluding_nl_fr = [
-        'germany', 'italy', 'spain', 'poland', 'belgium', 'austria',
-        'sweden', 'denmark', 'finland', 'portugal', 'greece', 'czech republic',
-        'czechia', 'hungary', 'romania', 'bulgaria', 'croatia', 'slovakia',
-        'slovenia', 'lithuania', 'latvia', 'estonia', 'ireland', 'luxembourg',
-        'malta', 'cyprus'
-    ]
+    eu_countries_excluding_nl_fr = GEOGRAPHIC_PATTERNS.get('eu_countries_excluding_nl_fr', [])
 
-    major_eu_cities = [
-        'berlin', 'munich', 'hamburg', 'cologne', 'frankfurt',
-        'rome', 'milan', 'madrid', 'barcelona', 'warsaw', 'krakow',
-        'brussels', 'vienna', 'stockholm', 'copenhagen', 'helsinki', 'lisbon'
-    ]
+    major_eu_cities = GEOGRAPHIC_PATTERNS.get('major_eu_cities', [])
 
     if location_clean:
         for country in eu_countries_excluding_nl_fr:
@@ -235,13 +288,7 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
         return {'Dutch': False, 'French': False, 'EU': True, 'Rest_of_World': False}
 
     # 6. Check for non-EU countries
-    rest_of_world_countries = [
-        'united states', 'usa', 'america', 'canada', 'australia', 'new zealand',
-        'india', 'china', 'japan', 'singapore', 'hong kong', 'south korea',
-        'brazil', 'mexico', 'argentina', 'chile', 'south africa', 'israel',
-        'turkey', 'russia', 'ukraine', 'belarus', 'switzerland', 'norway',
-        'united kingdom', 'uk', 'britain', 'england', 'scotland', 'wales'
-    ]
+    rest_of_world_countries = GEOGRAPHIC_PATTERNS.get('rest_of_world_countries', [])
 
     if location_clean:
         for country in rest_of_world_countries:
@@ -251,7 +298,7 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
     # 7. Check for USD currency
     if rate and not pd.isna(rate):
         rate_str = str(rate).lower().strip()
-        usd_indicators = ['$', 'usd', 'dollar', 'dollars', '$/hr', '$/hour', '$/day', '$/month', '$/week', '$/year']
+        usd_indicators = LANGUAGE_PATTERNS.get('currency_indicators', {}).get('usd_indicators', [])
         if any(indicator in rate_str for indicator in usd_indicators):
             return {'Dutch': False, 'French': False, 'EU': False, 'Rest_of_World': True}
 
@@ -262,28 +309,7 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
             return False
         
         # Dutch language indicators
-        dutch_indicators = [
-            # Common Dutch words
-            'ontwikkelaar', 'programmeur', 'ingenieur', 'consultant', 'freelancer',
-            'zelfstandig', 'ondernemer', 'thuiswerk', 'werk', 'bedrijf', 'maatschappij',
-            'project', 'opdracht', 'vaardigheden', 'ervaring', 'jaren', 'jaar',
-            'niveau', 'beheersing', 'kennis', 'technologieën', 'ontwikkeling',
-            'ontwerp', 'analyse', 'beheer', 'team', 'klant', 'specificaties',
-            'functionele', 'technische', 'architectuur', 'systeem', 'applicatie',
-            'software', 'programmering', 'code', 'database', 'interface', 'gebruiker',
-            'web', 'mobiel', 'desktop', 'cloud', 'beveiliging', 'prestaties',
-            'kwaliteit', 'testen', 'implementatie', 'onderhoud', 'ondersteuning',
-            'training', 'documentatie',
-            # Dutch articles and prepositions
-            'de', 'het', 'een', 'van', 'in', 'op', 'met', 'voor', 'door', 'zonder',
-            'onder', 'naar', 'bij', 'tussen', 'tijdens', 'over', 'rond', 'door',
-            # Dutch job-related terms
-            'functie', 'baan', 'aanbieding', 'werving', 'sollicitatie', 'cv',
-            'gesprek', 'salaris', 'beloning', 'voordelen', 'vakantie', 'verlof',
-            'thuiswerk', 'kantoor', 'locatie', 'adres', 'telefoon', 'e-mail',
-            'contact', 'referentie', 'urgent', 'onmiddellijk', 'start', 'einde',
-            'duur', 'periode', 'contract', 'vast', 'tijdelijk', 'stage', 'leerling'
-        ]
+        dutch_indicators = LANGUAGE_PATTERNS.get('dutch_indicators', [])
         
         # Combine all text fields
         combined_text = ' '.join([str(field).lower() for field in text_fields if field and not pd.isna(field)])
@@ -300,28 +326,7 @@ def categorize_location(location: str, rate: str = None, company: str = None, so
             return False
         
         # French language indicators
-        french_indicators = [
-            # Common French words
-            'développeur', 'développeuse', 'ingénieur', 'consultant', 'consultante',
-            'freelance', 'indépendant', 'indépendante', 'télétravail', 'travail',
-            'entreprise', 'société', 'projet', 'mission', 'compétences', 'expérience',
-            'années', 'ans', 'niveau', 'maîtrise', 'connaissance', 'technologies',
-            'développement', 'conception', 'analyse', 'gestion', 'équipe', 'client',
-            'cahier', 'charges', 'spécifications', 'fonctionnelles', 'techniques',
-            'architecture', 'système', 'application', 'logiciel', 'programmation',
-            'code', 'base', 'données', 'interface', 'utilisateur', 'web', 'mobile',
-            'desktop', 'cloud', 'sécurité', 'performance', 'qualité', 'tests',
-            'déploiement', 'maintenance', 'support', 'formation', 'documentation',
-            # French articles and prepositions
-            'le', 'la', 'les', 'un', 'une', 'des', 'du', 'de', 'dans', 'sur', 'avec',
-            'pour', 'par', 'sans', 'sous', 'vers', 'chez', 'entre', 'pendant',
-            # French job-related terms
-            'poste', 'emploi', 'offre', 'recrutement', 'candidature', 'cv',
-            'entretien', 'salaire', 'rémunération', 'avantages', 'congés',
-            'télétravail', 'bureau', 'lieu', 'adresse', 'téléphone', 'email',
-            'contact', 'référence', 'urgent', 'immédiat', 'début', 'fin',
-            'durée', 'période', 'contrat', 'cdi', 'cdd', 'stage', 'alternance'
-        ]
+        french_indicators = FRENCH_PATTERNS.get('french_language_indicators', [])
         
         # Combine all text fields
         combined_text = ' '.join([str(field).lower() for field in text_fields if field and not pd.isna(field)])
@@ -360,17 +365,18 @@ def classify_job_industry(title, summary=''):
     text = re.sub(r'\b(senior|junior|medior|lead)\s+', '', text)
     
     # Handle work arrangement tags - Enhanced filtering
-    skip_patterns = ['zzp', 'aanbevolen', 'tijdelijk', 'fulltime', 'parttime', 'zelfstandig', 'opdracht', 'uurloon', 'langdurig', 'stage', 'weekendwerk', 'avonddienst', 'ochtenddienst', 'nachtdienst', 'dagdienst', 'frontoffice', 'bijbaan', 'leerbaan', 'tussenjaar', 'fysiekwerk', 'banenafspraak', 'vast contract', 'jaarcontract', 'ploegen']
+    skip_patterns = LANGUAGE_PATTERNS.get('work_arrangement_patterns', {}).get('skip_patterns', [])
     
     # Enhanced work arrangement tag detection
     words = text.split()
     if len(words) <= 8:  # Increased from 3 to catch more complex work arrangement combinations
         if any(pattern in text for pattern in skip_patterns):
             # Additional check for hour specifications
-            if any(hour_pattern in text for hour_pattern in ['uur week', 'uur per week', 'dagen week']):
+            hour_patterns = LANGUAGE_PATTERNS.get('work_arrangement_patterns', {}).get('hour_patterns', [])
+            if any(hour_pattern in text for hour_pattern in hour_patterns):
                 return 'No title information'  # Mark as insufficient data for industry classification
             # Check for basic work arrangement patterns
-            if any(basic_pattern in text for basic_pattern in ['zzp', 'zelfstandig', 'aanbevolen', 'opdracht']):
+            if any(basic_pattern in text for basic_pattern in skip_patterns):
                 return 'No title information'  # Mark as insufficient data for industry classification
     
     # Special title-based rules
@@ -389,31 +395,87 @@ def classify_job_industry(title, summary=''):
     if 'security' in title_lower:
         return 'Security & Safety'
     
-    # Industry keywords (expanded)
-    keywords = {
-        'IT & Software Development': ['developer', 'programmer', 'software', 'architect', 'project architect', 'solution architect', 'enterprise architect', 'domeinarchitect', 'développeur', 'développeuse', 'programmeur', 'programmeuse', 'java', 'python', 'react', 'javascript', 'typescript', 'node.js', 'angular', 'vue', 'php', 'c#', 'c++', 'ruby', 'go', 'swift', 'kotlin', 'flutter', 'dart', 'scala', 'rust', 'perl', '.net', 'dotnet', 'html', 'css', 'bootstrap', 'jquery', 'laravel', 'django', 'spring', 'express', 'mongodb', 'postgresql', 'mysql', 'redis', 'docker', 'kubernetes', 'aws', 'azure', 'devops', 'frontend', 'backend', 'fullstack', 'mobile', 'ios', 'android', 'web development', 'app development', 'test engineer', 'iam specialist', 'test', 'testing', 'testautomatiseerder', 'testcoördinator', 'platform', 'api', 'microservices', 'cloud', 'serverless', 'automation', 'delivery professional', 'systeembeheerder', 'system engineer', 'testmanager', 'linux', 'tester', 'identity & access management', 'iam', 'scrum master', 'ux', 'ui', 'ux designer', 'ui designer', 'ux/ui designer', 'werkplek specialist', 'wordpress', 'website', 'google', 'google ads', 'exact online', 'ontwikkelaar', 'sap', 'btp', 'integratiespecialist', 'microsoft', 'wordpress website', 'website revamp', 'optimization', 'odoo', 'hotel management system', 'system development', 'visual studio', 'autocad', 'e-commerce', 'ecommerce', 'salesforce pro suite', 'iot', 'internet of things', 'cto', 'email setup', 'email', 'development', 'magento', 'quickbooks', 'designer', 'engineer', 'shopify design', 'sketchup', 'qa', 'lead developer', 'web design', 'ui/ux designer', 'interaction designer', 'experience designer', 'product designer', 'digital designer', 'ux-writer', 'ui designer game', 'design consultant', 'design thinking facilitator'],
-        'Data & Analytics': ['data analyst', 'data scientist', 'data engineer', 'analyst', 'business intelligence', 'bi analyst', 'bi developer', 'sql', 'analytics', 'machine learning', 'tableau', 'power bi', 'excel', 'r programming', 'r language', 'sas', 'spss', 'hadoop', 'spark', 'tensorflow', 'pytorch', 'artificial intelligence', 'ai engineer', 'ai specialist', 'statistics', 'reporting', 'dashboard', 'etl', 'nlp', 'data', 'data consultant', 'datacenter', 'data architect', 'data manager', 'data specialist', 'data coordinator', 'data administrator', 'database administrator', 'dba', 'data warehouse', 'data mining', 'predictive analytics', 'descriptive analytics', 'prescriptive analytics', 'statistical analysis', 'quantitative analysis', 'qualitative analysis', 'data visualization', 'data modeling', 'statistical modeling', 'regression analysis', 'time series analysis', 'forecasting', 'trend analysis', 'cohort analysis', 'segmentation analysis', 'cluster analysis', 'classification', 'neural networks', 'deep learning', 'computer vision', 'natural language processing', 'big data', 'data lakes', 'data pipelines', 'data governance', 'data quality', 'data cleansing', 'data transformation', 'data integration', 'data migration', 'master data management', 'metadata management', 'data catalog', 'data lineage', 'data privacy', 'data security', 'gdpr compliance', 'data ethics', 'research analyst', 'market research analyst', 'business analyst data', 'operations analyst', 'financial analyst data', 'product analyst', 'web analyst', 'digital analyst', 'marketing analyst data', 'customer analyst', 'risk analyst data', 'fraud analyst', 'credit analyst data', 'pricing analyst', 'revenue analyst', 'performance analyst', 'kpi analyst', 'metrics analyst', 'insights analyst', 'intelligence analyst', 'competitive intelligence', 'market intelligence', 'business intelligence developer', 'reporting analyst', 'dashboard developer', 'visualization specialist', 'tableau developer', 'power bi developer', 'qlik developer', 'looker developer', 'data storytelling', 'presentation analytics', 'informatiemanagement', 'informatie analist', 'informatie', 'data entry'],
-        'Finance & Accounting': ['controller', 'accountant', 'finance', 'financial', 'fec', 'boekhouder', 'administrateur', 'treasury', 'audit', 'auditor', 'crediteuren', 'debiteuren', 'salarisadministratie', 'cfo', 'bookkeeping', 'payroll', 'tax', 'billing', 'budget', 'kredietacceptant', 'inkomen', 'financieel', 'bookkeeper', 'salaris', 'salarisadministratie', 'investment manager', 'kosten bezwaren', 'bezwaren', 'financial analyst', 'financial controller', 'financial manager', 'treasury manager', 'cash management', 'risk analyst', 'credit analyst', 'financial planning', 'budget analyst', 'cost accountant', 'cost engineer', 'financiële', 'boekhouder'],
-        'Project Management': ['project manager', 'scrum', 'agile', 'projectleider', 'projectmanager', 'program manager', 'pmo', 'project coordinator', 'product owner', 'kanban', 'waterfall', 'milestone', 'delivery', 'planning', 'project management office', 'portfolio manager', 'program coordinator', 'project analyst', 'project specialist', 'project lead', 'project director', 'senior project manager', 'junior project manager', 'technical project manager', 'it project manager', 'construction project manager', 'engineering project manager', 'marketing project manager', 'project consultant', 'project advisor', 'scrum master', 'agile coach', 'agile consultant', 'product manager', 'product coordinator', 'release manager', 'delivery manager', 'sprint master', 'iteration manager', 'project planner', 'project scheduler', 'project controller', 'project administrator', 'project assistant', 'project support', 'project officer', 'project executive', 'stakeholder manager', 'change manager', 'risk manager', 'quality manager', 'resource manager', 'budget manager', 'cost controller', 'timeline manager', 'scope manager', 'integration manager', 'communication manager', 'vendor manager', 'contract manager', 'procurement manager', 'team leader', 'workstream lead', 'task manager', 'activity coordinator', 'phase manager', 'gate keeper', 'project governance', 'project methodology', 'project framework', 'project standards', 'project processes', 'project procedures', 'project documentation', 'project reporting', 'project dashboard', 'project metrics', 'project kpis', 'project analytics', 'project tracking', 'project monitoring', 'project control', 'project evaluation', 'project assessment', 'project review', 'project audit', 'project closure', 'project handover', 'project transition', 'project transformation', 'project improvement', 'project optimization', 'project innovation', 'project excellence', 'project success', 'project delivery', 'project execution', 'project implementation', 'project initiation', 'project startup', 'project kickoff', 'project launch', 'project rollout', 'project management', 'consultant', 'projectmanager'],
-        'Creative & Media': ['photo', 'video', 'creative', 'editor', 'content', 'motion', 'graphics', 'motion graphics', 'animation', 'animatie', 'design', 'designer', 'graphic design', 'visual design', 'illustrator', 'photoshop', '3d', 'adobe', 'branding', 'photography', 'videography', 'cinematography', 'storytelling', '3d graphic', 'contentspecialist', 'fotograaf', 'productfotograaf', 'dtp', 'modelador', 'typographer', '3d presentaties', 'youtube editing', 'youtube', 'growth expert', 'editing', 'create unique', 'streetwear', 't-shirt designs', 'designs', 'creative director', 'art director', 'visual artist', 'multimedia designer', 'logo designer', 'brand designer', 'icon designer', 'print designer', 'packaging designer', 'publication designer', 'book designer', 'magazine designer', 'poster designer', 'flyer designer', 'brochure designer', 'infographic designer', 'character designer', 'concept artist', 'storyboard artist', 'animator', '2d animator', '3d animator', 'motion designer', 'video editor', 'film editor', 'sound editor', 'color grader', 'colorist', 'vfx artist', 'visual effects artist', 'compositor', 'matte painter', 'texture artist', 'lighting artist', 'rigging artist', 'modeler', '3d modeler', 'sculptor', 'digital sculptor', 'photographer', 'portrait photographer', 'wedding photographer', 'event photographer', 'commercial photographer', 'fashion photographer', 'landscape photographer', 'nature photographer', 'street photographer', 'documentary photographer', 'photojournalist', 'studio photographer', 'retoucher', 'photo editor', 'image editor', 'digital artist', 'digital painter', 'concept designer', 'production designer', 'set designer', 'costume designer', 'makeup artist', 'hair stylist', 'wardrobe stylist', 'prop designer', 'scenic artist', 'mural artist', 'tattoo artist', 'jewelry designer', 'fashion designer', 'textile designer', 'pattern designer', 'interior designer', 'furniture designer', 'industrial designer', 'game designer', 'level designer', 'environment artist', 'game artist', 'technical artist', 'shader artist', 'particle effects artist', 'audio designer', 'sound designer', 'music producer', 'composer', 'songwriter', 'audio engineer', 'mixing engineer', 'mastering engineer', 'podcast producer', 'radio producer', 'voice actor', 'narrator', 'content creator', 'influencer', 'social media creator', 'tiktok creator', 'instagram creator', 'youtube creator', 'streamer', 'live streamer', 'twitch streamer', 'content strategist creative', 'creative producer', 'creative manager', 'studio manager', 'gallery manager', 'exhibition designer', 'museum designer', 'display designer', 'event designer', 'stage designer', 'lighting designer', 'projection designer', 'interactive designer', 'installation artist', 'performance artist', 'dance choreographer', 'theater director', 'film director', 'documentary filmmaker', 'screenwriter', 'script writer', 'playwright', 'creative writer', 'fiction writer', 'non-fiction writer', 'travel writer', 'lifestyle writer', 'arts critic', 'film critic', 'music critic', 'culture writer', 'entertainment writer', 'arts journalist', 'creative consultant', 'brand consultant', 'creative strategist', 'innovation consultant', 'social media specialist', 'marketingtalent', 'logo- en huisstijlontwerp', 'logo', 'huisstijlontwerp', 'tekening', 'tekst', 'writer', 'schrijver', 'content writer', 'copywriter', 'tekstschrijver', 'redacteur', 'journalist', 'blogger', 'content specialist', 'technical writer', 'ghostwriter', 'proofreader', 'translator', 'vertaler', 'content manager', 'editorial', 'redactioneel', 'writing', 'schrijven', 'publishing', 'manuscript', 'documentation', 'proposal', 'script', 'notulisten', 'content strategist', 'content marketing', 'seo writer', 'blog writer', 'social media writer', 'email writer', 'newsletter writer', 'web content writer', 'marketing writer', 'advertising copywriter', 'brand writer', 'documentalist', 'tekstredacteur'],
-        'Engineering': ['elektrotechniek', 'electrical engineering', 'mechanical engineering', 'civil engineering', 'engineer', 'ingenieur', 'technical', 'technisch', 'mechanical', 'electrical', 'civil', 'process engineer', 'quality engineer', 'systems engineer', 'project engineer', 'design engineer', 'maintenance engineer', 'installation engineer', 'werktuigbouwkunde', 'bouwkunde', 'techniek', 'monteur', 'mechanic', 'technician', 'bouwloket', 'bouwtechnische', 'manufacturing', 'production', 'automation', 'robotics', 'cad', 'bouwkundig tekenaar', 'schilder', 'stedenbouwkundige', 'elektromonteur', 'plc programming', 'plc', 'timmerman', 'installateur', 'loodgieter', 'renovatie', 'glaszetter', 'installatiemonteur', 'dakdekker', 'kozijn', 'bouwkundig inspecteur', 'minikraan machinist', 'lasser', 'stratenmaker', 'shovel', 'metselaar', 'tegelzetter', 'elektra', 'bouwleider', 'werktuigkundige', 'construction', 'bouw', 'dakwerk', 'fysiekwerk', 'werkvoorbereider', 'bouwpas', 'mechanical engineer', 'event design architect'],
-        'Food & Agriculture': ['food', 'voedsel', 'food auditor', 'food safety', 'agriculture', 'landbouw', 'farming', 'food industry', 'food production', 'food quality', 'food inspector', 'agricultural', 'agrarisch', 'voedingsmiddelen', 'horeca', 'restaurant', 'chef', 'cook', 'kok', 'catering', 'food delivery specialist', 'kitchen', 'baking', 'nutrition', 'fishery', 'livestock', 'agricultural engineer', 'farm manager', 'crop specialist', 'livestock manager', 'dairy farmer', 'poultry farmer', 'greenhouse manager', 'horticulture', 'viticulture', 'aquaculture', 'organic farming', 'sustainable agriculture', 'precision agriculture', 'agricultural consultant', 'agronomist', 'soil scientist', 'plant pathologist', 'entomologist', 'veterinarian', 'animal husbandry', 'feed specialist', 'seed specialist', 'fertilizer specialist', 'pesticide specialist', 'irrigation specialist', 'harvesting specialist', 'food technologist', 'food scientist', 'food engineer', 'food microbiologist', 'nutritionist', 'dietitian', 'food service manager', 'restaurant manager', 'kitchen manager', 'head chef', 'sous chef', 'pastry chef', 'baker', 'butcher', 'fishmonger', 'sommelier', 'barista', 'food stylist', 'menu developer', 'recipe developer', 'food photographer', 'culinary instructor', 'food blogger', 'food critic', 'food writer', 'catering manager', 'banquet manager', 'food procurement', 'supply chain food', 'food logistics', 'cold chain management', 'food packaging', 'food processing', 'food manufacturing', 'quality assurance food', 'haccp coordinator', 'food compliance', 'food regulation', 'food labeling', 'food marketing', 'food sales', 'agricultural sales', 'farm equipment sales', 'seed sales', 'fertilizer sales', 'agricultural insurance', 'farm finance', 'agricultural credit', 'rural development', 'cooperative management', 'farmers market', 'organic certification', 'fair trade certification', 'food traceability', 'food sustainability', 'environmental agriculture', 'climate agriculture', 'biodiversity agriculture', 'agroecology', 'permaculture', 'biodynamic farming', 'hydroponics', 'vertical farming', 'urban farming', 'community supported agriculture', 'agricultural research', 'plant breeding', 'genetic modification', 'biotechnology agriculture', 'agricultural economics', 'agricultural policy', 'agricultural extension', 'agricultural education', 'agricultural journalism', 'agricultural photography', 'agricultural marketing', 'agricultural communications', 'agricultural law', 'agricultural real estate', 'agricultural appraisal', 'agricultural land management', 'agricultural water management', 'agricultural waste management', 'voedingsverzorging'],
-        'Education & Training': ['teacher', 'leraar', 'docent', 'instructor', 'taalinstructor', 'language instructor', 'education', 'onderwijs', 'training', 'tutor', 'professor', 'lecturer', 'coach', 'mentor', 'cursus', 'les', 'lesson', 'school', 'university', 'universiteit', 'college', 'academy', 'academie', 'educational', 'pedagoog', 'pedagogisch', 'curriculum', 'pedagogy', 'e-learning', 'workshop', 'facilitator', 'portfoliobegeleider', 'afstudeerbegeleider', 'studiecoach', 'groep 8', 'speeltoestellen', 'sportles docent', 'alo sport docent', 'sport docent', 'trainer', 'freelance docent en examenbeoordelaar php programmeren en databases'],
-        'Customer Service & Support': ['klantenservice', 'customer service', 'customer support', 'helpdesk', 'support', 'klantondersteuning', 'call center', 'callcenter', 'telefonist', 'receptionist', 'customer care', 'client service', 'service desk', 'technical support', 'gebruikersondersteuning', 'klantbegeleiding', 'chat', 'ticket', 'complaint', 'assistance', 'retention', 'customer', 'frontoffice', 'afsprakenplanner', 'customer service manager', 'customer support manager', 'customer care manager', 'call center manager', 'contact center manager', 'customer experience manager', 'customer success manager', 'client relations manager', 'customer service representative', 'customer support representative', 'customer care representative', 'call center agent', 'contact center agent', 'customer service agent', 'support agent', 'help desk agent', 'technical support agent', 'customer service specialist', 'customer support specialist', 'customer care specialist', 'client services specialist', 'customer experience specialist', 'customer success specialist', 'customer service coordinator', 'customer support coordinator', 'customer care coordinator', 'help desk coordinator', 'support coordinator', 'customer service analyst', 'customer support analyst', 'customer experience analyst', 'customer success analyst', 'customer insights analyst', 'customer feedback analyst', 'customer satisfaction analyst', 'customer service trainer', 'customer support trainer', 'customer care trainer', 'quality assurance specialist', 'quality analyst', 'escalation specialist', 'escalation manager', 'dispute resolution specialist', 'complaint handler', 'customer advocate', 'client advocate', 'ombudsman', 'customer service consultant', 'customer support consultant', 'customer experience consultant', 'customer success consultant', 'live chat agent', 'chat support agent', 'email support agent', 'phone support agent', 'social media support', 'community support', 'forum moderator', 'knowledge base manager', 'faq manager', 'self-service specialist', 'customer onboarding specialist', 'customer retention specialist', 'churn prevention specialist', 'loyalty program manager', 'customer lifecycle manager', 'account management support', 'customer service operations', 'customer support operations', 'workforce management', 'schedule management', 'performance management', 'metrics analyst', 'reporting specialist', 'dashboard analyst', 'customer service technology', 'crm specialist', 'ticketing system admin', 'telephony specialist', 'ivr specialist', 'chatbot specialist', 'automation specialist', 'process improvement specialist', 'service delivery manager', 'service level manager', 'sla management', 'vendor management support', 'outsourcing management', 'back-office medewerker'],
-        'Human Resources': ['hr', 'hrm', 'human resources', 'personeel', 'hr manager', 'hr specialist', 'hr coordinator', 'hr administrator', 'hr assistant', 'hr business partner', 'hr consultant', 'hr director', 'hr generalist', 'hr recruiter', 'talent acquisition', 'recruitment', 'recruiter', 'headhunter', 'werving', 'selectie', 'sollicitatie', 'interviews', 'onboarding', 'offboarding', 'employee relations', 'arbeidsrelaties', 'performance management', 'prestatiemanagement', 'employee development', 'medewerkerontwikkeling', 'training & development', 'opleiding', 'learning & development', 'compensation & benefits', 'beloning', 'salaris', 'payroll', 'hr analytics', 'hr data', 'hr systems', 'hr technology', 'hr software', 'workforce planning', 'personeelsplanning', 'succession planning', 'opvolging', 'diversity & inclusion', 'diversiteit', 'inclusie', 'employee engagement', 'medewerkerbetrokkenheid', 'employee satisfaction', 'medewerkertevredenheid', 'employee retention', 'behoud', 'turnover', 'verloop', 'hr policies', 'hr procedures', 'hr processes', 'hr compliance', 'compliance', 'arbeidsrecht', 'labor law', 'employment law', 'hr legal', 'hr risk', 'hr audit', 'hr reporting', 'hr metrics', 'hr kpi', 'hr dashboard', 'hr analytics', 'people analytics', 'workforce analytics', 'talent management', 'talentontwikkeling', 'career development', 'carrièreontwikkeling', 'leadership development', 'leiderschapsontwikkeling', 'coaching', 'mentoring', 'mentor', 'coach', 'hr transformation', 'hr change', 'hr project', 'hr implementation', 'hr integration', 'hr merger', 'hr acquisition', 'hr due diligence', 'hr m&a', 'organizational development', 'organisatieontwikkeling', 'change management', 'verandermanagement', 'culture change', 'cultuurverandering', 'employee experience', 'medewerkerervaring', 'hr service delivery', 'hr shared services', 'hr center of excellence', 'hr operations', 'hr administration', 'hr support', 'hr helpdesk', 'hr service center', 'hr contact center', 'hr customer service', 'hr front office', 'hr back office', 'hr specialist', 'hr expert', 'hr advisor', 'hr consultant', 'hr partner', 'hr business partner', 'hr manager', 'hr director', 'hr vice president', 'hr executive', 'chief human resources officer', 'chro', 'chief people officer', 'cpo', 'people operations', 'people & culture', 'people team', 'hr team', 'hr department', 'human capital', 'menskracht', 'talent', 'talenten', 'skills', 'vaardigheden', 'competencies', 'competenties', 'capabilities', 'capaciteiten', 'potential', 'potentieel', 'performance', 'prestatie', 'productivity', 'productiviteit', 'engagement', 'betrokkenheid', 'satisfaction', 'tevredenheid', 'retention', 'behoud', 'turnover', 'verloop', 'attrition', 'uitval', 'absenteeism', 'verzuim', 'sick leave', 'ziekteverzuim', 'work life balance', 'werk privé balans', 'flexible working', 'flexibel werken', 'remote work', 'thuiswerken', 'hybrid work', 'hybride werken', 'workplace', 'werkplek', 'office', 'kantoor', 'facilities', 'faciliteiten', 'workplace design', 'werkplekontwerp', 'ergonomics', 'ergonomie', 'safety', 'veiligheid', 'health', 'gezondheid', 'wellbeing', 'welzijn', 'mental health', 'mentale gezondheid', 'stress management', 'stressbeheer', 'burnout prevention', 'burnout preventie', 'employee assistance', 'medewerkerondersteuning', 'eap', 'employee assistance program', 'counseling', 'begeleiding', 'therapy', 'therapie', 'support', 'ondersteuning', 'help', 'hulp', 'guidance', 'begeleiding', 'advice', 'advies', 'consultation', 'consultatie', 'coaching', 'coaching', 'mentoring', 'mentoring', 'development', 'ontwikkeling', 'growth', 'groei', 'career', 'carrière', 'path', 'pad', 'progression', 'progressie', 'advancement', 'vooruitgang', 'promotion', 'promotie', 'advancement', 'vooruitgang', 'succession', 'opvolging', 'planning', 'planning', 'pipeline', 'pijplijn', 'talent pipeline', 'talentenpijplijn', 'high potential', 'hoog potentieel', 'hippo', 'high performer', 'hoge presteerder', 'top performer', 'top presteerder', 'star performer', 'ster presteerder', 'key talent', 'sleuteltalent', 'critical talent', 'kritiek talent', 'essential talent', 'essentieel talent', 'core talent', 'kern talent', 'strategic talent', 'strategisch talent', 'leadership talent', 'leiderschapstalent', 'management talent', 'managementtalent', 'executive talent', 'executief talent', 'senior talent', 'senior talent', 'junior talent', 'junior talent', 'graduate talent', 'afgestudeerd talent', 'entry level', 'instapniveau', 'experienced', 'ervaren', 'senior', 'senior', 'lead', 'lead', 'principal', 'principal', 'director', 'directeur', 'manager', 'manager', 'supervisor', 'supervisor', 'team lead', 'teamleider', 'team leader', 'teamleider', 'group lead', 'groepsleider', 'group leader', 'groepsleider', 'department head', 'afdelingshoofd', 'department manager', 'afdelingsmanager', 'division head', 'divisiehoofd', 'division manager', 'divisiemanager', 'business unit head', 'business unit hoofd', 'business unit manager', 'business unit manager', 'regional manager', 'regionaal manager', 'country manager', 'landenmanager', 'area manager', 'gebiedsmanager', 'district manager', 'districtmanager', 'territory manager', 'territoriummanager', 'sales manager', 'verkoopmanager', 'marketing manager', 'marketingmanager', 'operations manager', 'operationsmanager', 'production manager', 'productiemanager', 'quality manager', 'kwaliteitsmanager', 'safety manager', 'veiligheidsmanager', 'environmental manager', 'milieumanager', 'sustainability manager', 'duurzaamheidsmanager', 'compliance manager', 'compliance manager', 'risk manager', 'risicomanager', 'security manager', 'beveiligingsmanager', 'it manager', 'it manager', 'finance manager', 'financieel manager', 'accounting manager', 'boekhoudkundig manager', 'controller', 'controller', 'cfo', 'cfo', 'ceo', 'ceo', 'coo', 'coo', 'cto', 'cto', 'cmo', 'cmo', 'cpo', 'cpo', 'chro', 'chro', 'chief', 'chief', 'executive', 'executief', 'director', 'directeur', 'vice president', 'vice president', 'senior vice president', 'senior vice president', 'executive vice president', 'executive vice president', 'president', 'president', 'chairman', 'voorzitter', 'chairwoman', 'voorzitster', 'board member', 'bestuurslid', 'board of directors', 'raad van bestuur', 'supervisory board', 'raad van commissarissen', 'advisory board', 'adviesraad', 'stakeholder', 'belanghebbende', 'shareholder', 'aandeelhouder', 'investor', 'investeerder', 'partner', 'partner', 'associate', 'associate', 'principal', 'principal', 'senior associate', 'senior associate', 'junior associate', 'junior associate', 'analyst', 'analist', 'senior analyst', 'senior analist', 'junior analyst', 'junior analist', 'assistant', 'assistent', 'senior assistant', 'senior assistent', 'junior assistant', 'junior assistent', 'coordinator', 'coördinator', 'senior coordinator', 'senior coördinator', 'junior coordinator', 'junior coördinator', 'specialist', 'specialist', 'senior specialist', 'senior specialist', 'junior specialist', 'junior specialist', 'expert', 'expert', 'senior expert', 'senior expert', 'junior expert', 'junior expert', 'advisor', 'adviseur', 'senior advisor', 'senior adviseur', 'junior advisor', 'junior adviseur', 'consultant', 'consultant', 'senior consultant', 'senior consultant', 'junior consultant', 'junior consultant', 'principal consultant', 'principal consultant', 'lead consultant', 'lead consultant', 'manager consultant', 'manager consultant', 'director consultant', 'director consultant', 'partner consultant', 'partner consultant', 'associate consultant', 'associate consultant', 'analyst consultant', 'analist consultant', 'specialist consultant', 'specialist consultant', 'expert consultant', 'expert consultant', 'advisor consultant', 'adviseur consultant', 'senior consultant', 'senior consultant', 'junior consultant', 'junior consultant', 'principal consultant', 'principal consultant', 'lead consultant', 'lead consultant', 'manager consultant', 'manager consultant', 'director consultant', 'director consultant', 'partner consultant', 'partner consultant', 'associate consultant', 'associate consultant', 'analyst consultant', 'analist consultant', 'specialist consultant', 'specialist consultant', 'expert consultant', 'expert consultant', 'advisor consultant', 'adviseur consultant', 'talent acquisition specialist', 'talent acquisition manager', 'talent acquisition coordinator', 'talent acquisition analyst', 'talent acquisition director', 'talent acquisition lead', 'talent acquisition consultant', 'talent acquisition advisor', 'talent acquisition recruiter', 'talent acquisition sourcer', 'talent acquisition researcher', 'talent acquisition administrator', 'talent acquisition assistant', 'talent acquisition intern', 'talent acquisition trainee', 'talent acquisition executive', 'talent acquisition vice president', 'talent acquisition senior manager', 'talent acquisition senior specialist', 'talent acquisition senior coordinator', 'talent acquisition senior analyst', 'talent acquisition senior director', 'talent acquisition senior lead', 'talent acquisition senior consultant', 'talent acquisition senior advisor', 'talent acquisition senior recruiter', 'talent acquisition senior sourcer', 'talent acquisition senior researcher', 'talent acquisition senior administrator', 'talent acquisition senior assistant', 'talent acquisition senior intern', 'talent acquisition senior trainee', 'talent acquisition senior executive', 'talent acquisition senior vice president', 'medewerker hr beheer', 'e-hrm', 'freelance projectmanager aanbesteding en implementatie e-hrm-systeem', 'freelance recruitment delivery consultant', 'strategisch recruitment marketeer', 'global recruitment franchise partner', 'freelance recruiter', 'global headhunters', 'freelance werving & selectie recruiter', 'werving & selectie recruiter', 'remote talent', 'hr medewerker', 'werving', 'selectie', 'salarisadministrateur', 'onderzoeker hrm', 'personeelsadviseur', 'wervingsadviseur', 'hr adviseur', 'recruitment consultant', 'corporate recruiter', 'talent manager', 'talent scout', 'people & culture', 'jobcoach', 'compensation', 'benefits', 'employee relations'],
-        'Healthcare & Medical': ['arts', 'basis arts', 'dokter', 'verpleegkundige', 'nurse', 'medical', 'healthcare', 'zorg', 'medisch', 'tandarts', 'fysiotherapeut', 'psycholoog', 'apotheker', 'specialist', 'huisarts', 'geneeskunde', 'farmaceutisch', 'klinisch', 'ziekenhuis', 'praktijk', 'gezondheidszorg', 'dierenwelzijn', 'verzorger', 'therapist', 'counselor', 'paramedic', 'radiologist', 'surgeon', 'zorgcoördinator', 'clinical trial manager', 'clinical', 'dental', 'physician', 'doctor', 'nurse practitioner', 'physician assistant', 'medical assistant', 'healthcare worker', 'medical technician', 'pharmacist', 'dental hygienist', 'psychiater'],
-        'Marketing & Communications': ['marketing', 'community', 'social media', 'communications', 'content marketing', 'digital marketing', 'community manager', 'social media manager', 'marketeer', 'seo', 'sem', 'communicatieprofessional', 'advertising', 'pr', 'public relations', 'campaign', 'brand', 'google tag manager', 'marketing manager', 'communications manager', 'communications director', 'communications specialist', 'communications coordinator', 'pr manager', 'pr specialist', 'pr coordinator', 'public affairs', 'media relations', 'press relations', 'spokesperson', 'brand manager', 'brand specialist', 'brand coordinator', 'brand strategist', 'marketing strategist', 'marketing coordinator', 'marketing analyst', 'marketing assistant', 'digital marketing specialist', 'online marketing', 'social media specialist', 'social media coordinator', 'content strategist', 'content creator', 'content writer', 'blog writer', 'copywriter', 'copywriting', 'email marketing', 'marketing automation', 'crm marketing', 'lead nurturing', 'conversion optimization', 'growth marketing', 'performance marketing', 'affiliate marketing', 'influencer marketing', 'partnership marketing', 'event marketing', 'trade marketing', 'field marketing', 'product marketing', 'b2b marketing', 'b2c marketing', 'marketing research', 'market research', 'consumer insights', 'marketing analytics', 'web analytics', 'google analytics', 'marketing metrics', 'media planning', 'media buying', 'advertising manager', 'creative director', 'art director', 'video marketing', 'podcast marketing', 'webinar marketing', 'newsletter marketing', 'direct marketing', 'inbound marketing', 'outbound marketing', 'demand generation', 'customer acquisition', 'customer retention', 'loyalty marketing', 'segmentation', 'targeting', 'positioning', 'competitive analysis', 'market analysis', 'persona development', 'customer journey', 'marketing funnel', 'landing pages', 'a/b testing', 'marketing technology', 'martech', 'hubspot', 'salesforce marketing', 'mailchimp', 'marketo', 'marketingondersteuning'],
-        'Consulting': ['consultant', 'advisory', 'interim', 'adviseur', 'interim manager', 'management consultant', 'strategy consultant', 'business consultant', 'transitiemanager', 'trainer', 'advisor', 'expertise', 'specialist', 'freelance', 'contractor', 'informatieanalist', 'veranderkundige', 'ceo', 'ecoloog', 'jeugdconsulent', 'gedragswetenschapper', 'business advisor', 'strategy advisor', 'management advisor', 'change consultant', 'transformation consultant', 'process consultant', 'organizational consultant', 'hr consultant', 'it consultant', 'communicatieadviseur', 'adviseur', 'strategisch adviseur', 'implementatie adviseur', 'projectadviseur', 'floormanager', 'adviseur traprenovaties'],
-        'Government & Public Sector': ['gemeente', 'overheid', 'publieke', 'burgerzaken', 'ministerie', 'provincie', 'rijksoverheid', 'beleid', 'beleidsadviseur', 'beleidsmedewerker', 'omgevingsprogramma', 'plantoetser', 'kwartiermaker', 'consulent', 'buurtsportcoach', 'public sector', 'civil service', 'administration', 'regulatory', 'compliance', 'programmamanager', 'raadsadviseur', 'medewerker', 'archiefbeheer', 'wijkcoach', 'openbare ruimte', 'gebiedsontwikkeling', 'cmk', 'vergunning', 'government', 'public administration', 'municipal', 'city council', 'public policy', 'public affairs', 'government relations', 'public service', 'civil servant', 'government official', 'manager infrastructuur', 'beleidsadviseur', 'staatssteun', 'openbare', 'secretaris', 'toezichthouder', 'casemanager', 'specialist team documenten', 'behandelzaken'],
-        'Sales & Business Development': ['sales', 'business development', 'account manager', 'commercieel', 'verkoop', 'sales manager', 'business developer', 'accountmanager', 'commercieel medewerker', 'verkoper', 'key account manager', 'revenue', 'leads', 'prospects', 'closing', 'partnership', 'verkooppartner', 'commercial', 'salesprofessional', 'appointment setter', 'telefonisch', 'salesforce', 'telecalling', 'lead generation', 'sales representative', 'sales executive', 'sales director', 'sales coordinator', 'sales analyst', 'sales consultant', 'sales specialist', 'sales assistant', 'sales support', 'inside sales', 'outside sales', 'field sales', 'territory sales', 'regional sales', 'national sales', 'international sales', 'enterprise sales', 'smb sales', 'retail sales', 'wholesale sales', 'direct sales', 'indirect sales', 'channel sales', 'partner sales', 'alliance sales', 'business development manager', 'business development director', 'business development executive', 'business development coordinator', 'business development analyst', 'business development consultant', 'business development specialist', 'business development assistant', 'business development support', 'new business development', 'strategic business development', 'corporate business development', 'international business development', 'partnership development', 'alliance development', 'channel development', 'market development', 'product development', 'client development', 'customer development', 'account development', 'relationship development', 'revenue development', 'growth development', 'expansion development', 'territory development', 'regional development', 'national development', 'international development', 'enterprise development', 'smb development', 'retail development', 'wholesale development', 'direct development', 'indirect development', 'channel development', 'partner development', 'alliance development', 'business development', 'sales development', 'market development', 'product development', 'client development', 'customer development', 'account development', 'relationship development', 'revenue development', 'growth development', 'expansion development', 'territory development', 'regional development', 'national development', 'international development', 'enterprise development', 'smb development', 'retail development', 'wholesale development', 'direct development', 'indirect development', 'channel development', 'partner development', 'alliance development', 'b2b salesprofessional', 'vertegenwoordiger', 'verkoopmedewerkerster', 'teamlead sales'],
-        'Security & Safety': ['security guard', 'bewaker', 'beveiliger', 'portier', 'nachtportier', 'security officer', 'safety officer', 'veiligheid', 'security', 'beveiliging', 'wachter', 'surveillant', 'security manager', 'fire safety', 'emergency', 'patrol', 'access control', 'risk management', 'cybersecurity', 'cyber security', 'information security', 'it security', 'safety', 'privacy & security', 'security specialist', 'safety specialist', 'security analyst', 'safety analyst', 'security consultant', 'safety consultant', 'security coordinator', 'safety coordinator', 'security supervisor', 'safety supervisor', 'informatiebeveiliging', 'zzp beveiliger'],
-        'Legal': ['juridisch', 'legal', 'advocaat', 'lawyer', 'attorney', 'notaris', 'paralegal', 'legal counsel', 'juridisch adviseur', 'legal advisor', 'contracts', 'litigation', 'compliance', 'regulatory affairs', 'corporate law', 'intellectual property', 'legal assistant', 'jurist', 'rechtskundig', 'legal officer', 'legal manager', 'legal director', 'chief legal officer', 'general counsel', 'in-house counsel', 'corporate counsel', 'legal consultant', 'legal specialist', 'legal analyst', 'legal researcher', 'contract manager', 'contract specialist', 'agreement specialist', 'legal documentation', 'legal drafting', 'document review', 'due diligence', 'legal research', 'case management', 'court filing', 'dispute resolution', 'arbitration', 'mediation', 'negotiation', 'settlement', 'employment law', 'labor law', 'immigration law', 'family law', 'estate planning', 'tax law', 'criminal law', 'personal injury', 'insurance law', 'real estate law', 'bankruptcy law', 'securities law', 'antitrust law', 'environmental law', 'healthcare law', 'privacy law', 'data protection', 'cybersecurity law', 'fintech law', 'legal ethics', 'legal technology', 'legal operations', 'legal project management', 'legal procurement', 'legal vendor management', 'legal outsourcing', 'e-discovery', 'legal analytics', 'legal automation', 'legal innovation', 'legal transformation', 'legal process improvement', 'legal cost management', 'legal budgeting', 'legal service delivery', 'legal client management', 'legal business development', 'legal marketing', 'legal communications', 'legal writing', 'legal editing', 'legal translation', 'court reporter', 'legal secretary', 'law clerk', 'judicial clerk', 'contractmanager', 'quickbooks'],
-        'Hospitality & Tourism': ['hotel', 'restaurant', 'hospitality', 'tourism', 'travel', 'accommodation', 'guest services', 'front desk', 'concierge', 'housekeeping', 'banquet', 'catering', 'bar', 'bartender', 'server', 'waiter', 'waitress', 'hostess', 'receptionist hotel', 'reservation', 'booking', 'event coordinator', 'wedding planner', 'tour guide', 'travel agent', 'cruise', 'resort', 'spa', 'wellness', 'fitness instructor', 'recreation', 'entertainment venue', 'guest relations', 'hospitality management', 'food service', 'beverage', 'sommelier', 'chef de partie', 'sous chef', 'kitchen staff', 'dishwasher', 'busser', 'valet', 'bellhop', 'doorman', 'night auditor', 'revenue manager hotel', 'conference services', 'meetings events', 'banquet manager', 'food & beverage', 'f&b', 'guest experience', 'lodging', 'inn', 'bed & breakfast', 'b&b', 'motel', 'hostel', 'vacation rental', 'airbnb management', 'hotel operations', 'resort management', 'casino', 'gaming', 'theme park', 'attraction', 'visitor services', 'tourist information', 'travel planning', 'destination management', 'hospitality consultant', 'hotel marketing', 'group sales', 'convention services', 'catering coordinator', 'banquet coordinator', 'hospitality trainer', 'service excellence', 'guest satisfaction', 'hospitality technology', 'pms', 'property management system', 'hotel accounting', 'hospitality hr', 'hotel maintenance', 'facilities hospitality', 'laundry services', 'linen services', 'hospitality procurement', 'hotel purchasing', 'quality assurance hospitality', 'mystery shopper', 'hospitality auditor', 'hotel inspector', 'food safety hospitality', 'haccp', 'culinary arts', 'culinary education', 'hotel school', 'hospitality academy', 'hospitality certification'],
-        'Supply Chain & Logistics': ['supply chain', 'logistics', 'procurement', 'purchasing', 'buyer', 'planner', 'supply planner', 'demand planner', 'logistiek', 'inkoop', 'supply chain manager', 'warehouse', 'distribution', 'supply chain coördinator', 'supply chain coordinator', 'logistiek administratief medewerker', 'supply chain analyst', 'logistics coordinator', 'logistics manager', 'logistics analyst', 'procurement manager', 'procurement specialist', 'purchasing manager', 'purchasing agent', 'sourcing manager', 'sourcing specialist', 'vendor manager', 'supplier manager', 'category manager', 'strategic sourcing', 'inventory manager', 'inventory analyst', 'inventory planner', 'inventory control', 'stock management', 'material management', 'warehouse manager', 'warehouse supervisor', 'distribution manager', 'transportation manager', 'freight manager', 'shipping manager', 'receiving manager', 'fulfillment manager', 'order management', 'production planning', 'master scheduling', 'materials planning', 'mrp', 'erp', 'wms', 'tms', 'warehouse management system', 'transportation management system', 'logistics optimization', 'supply chain optimization', 'lean logistics', 'supply chain visibility', 'supply chain analytics', 'forecasting', 'supply chain risk', 'global sourcing', 'international trade', 'import export', 'customs compliance', 'trade compliance', 'incoterms', 'freight forwarding', 'third party logistics', '3pl', 'fourth party logistics', '4pl', 'vendor management', 'contract management', 'spend analysis', 'ethical sourcing', 'supplier diversity', 'green logistics', 'sustainability initiatives'],
-        'Operations & Management': ['operations', 'operations manager', 'operations director', 'coo', 'chief operating officer', 'operationeel', 'operations specialist', 'business operations', 'operational excellence', 'process improvement', 'operations coordinator', 'operations analyst', 'facility manager', 'facilities management', 'office manager', 'administrative manager', 'general manager', 'plant manager', 'site manager', 'regional manager', 'district manager', 'branch manager', 'store manager', 'warehouse manager', 'production manager', 'manufacturing manager', 'quality manager', 'safety manager', 'compliance manager', 'risk manager', 'change manager', 'transformation manager', 'efficiency expert', 'lean specialist', 'six sigma', 'kaizen', 'continuous improvement', 'workflow optimization', 'resource planning', 'capacity planning', 'performance management', 'kpi management', 'metrics analysis', 'operational reporting', 'dashboard management', 'process mapping', 'standard operating procedures', 'sop', 'policy development', 'procedure documentation', 'training coordination', 'staff scheduling', 'shift management', 'inventory management', 'asset management', 'maintenance coordination', 'vendor management', 'supplier relations', 'contract administration', 'budget oversight', 'cost control', 'expense management', 'operational finance', 'business continuity', 'disaster recovery', 'crisis management', 'emergency planning', 'health safety coordination', 'environmental compliance', 'regulatory compliance', 'audit coordination', 'internal controls', 'governance oversight', 'stakeholder management', 'cross-functional coordination', 'interdepartmental liaison', 'communication facilitation', 'meeting coordination', 'project oversight', 'initiative management', 'strategic implementation', 'tactical execution', 'operational strategy', 'business process reengineering', 'organizational development'],
-        'No clear title': ['zzp', 'zelfstandig', 'aanbevolen', 'banenafspraak', 'stage', 'tijdelijk', 'september', 'we hebben een spoedopdracht', 'op de zee', '5 ploegen', 'avonddienst', 'nachtdienst', 'fysiekwerk', 'professional organizer zzp', 'zzp in de zorg 2025', 'met vast contract', 'ondernemingsplan'],
-        'Other/General': ['boekhouder', 'marketing', 'verkoper', 'dakwerk', 'b2b salesprofessional', 'vertegenwoordiger', 'verkoper', 'frontoffice', 'customer', 'reggae beatz', 'movement studio', 'assistant', 'chauffeur ce']
-    }
+    # Load industry keywords from JSON file
+    try:
+        with open('industry_keywords.json', 'r', encoding='utf-8') as f:
+            industry_keywords_data = json.load(f)
+    except FileNotFoundError:
+        # Fallback to built-in keywords if JSON file not found
+        industry_keywords_data = {
+            'IT & Software Development': ['developer', 'programmer', 'software'],
+            'Other/General': ['general']
+        }
+
+    # Map JSON categories to our standard categories where possible
+    keywords = {}
+    for json_category, json_keywords in industry_keywords_data.items():
+        # Map JSON categories to our standard categories
+        if json_category == 'IT: Software Development':
+            category = 'IT & Software Development'
+        elif json_category == 'IT: Data & Analytics':
+            category = 'Data & Analytics'
+        elif json_category == 'Finance':
+            category = 'Finance & Accounting'
+        elif json_category == 'Project Management':
+            category = 'Project Management'
+        elif json_category == 'Arts and Design':
+            category = 'Creative & Media'
+        elif json_category == 'Customer Service':
+            category = 'Customer Service & Support'
+        elif json_category == 'Human Resources':
+            category = 'Human Resources'
+        elif json_category == 'Healthcare':
+            category = 'Healthcare & Medical'
+        elif json_category == 'Marketing':
+            category = 'Marketing & Communications'
+        elif json_category == 'Sales':
+            category = 'Sales & Business Development'
+        elif json_category == 'Law Enforcement & Security':
+            category = 'Security & Safety'
+        elif json_category == 'Hospitality':
+            category = 'Hospitality & Tourism'
+        elif json_category == 'Logistics':
+            category = 'Supply Chain & Logistics'
+        elif json_category == 'Education':
+            category = 'Education & Training'
+        elif json_category == 'Engineering':
+            category = 'Engineering'
+        elif json_category == 'Construction':
+            category = 'Engineering'  # Map construction to engineering
+        elif json_category == 'Food & Agriculture':
+            category = 'Food & Agriculture'
+        elif json_category == 'Government & Public Sector':
+            category = 'Government & Public Sector'
+        elif json_category == 'Consulting':
+            category = 'Consulting'
+        elif json_category == 'Legal':
+            category = 'Legal'
+        elif json_category == 'Retail':
+            category = 'Retail'
+        else:
+            # Keep original category name for unmapped ones
+            category = json_category
+
+        # Add all keywords from JSON to the category
+        if category not in keywords:
+            keywords[category] = []
+        keywords[category].extend(json_keywords)
+
+    # Ensure we have all the standard categories, even if not in JSON
+    standard_categories = [
+        'IT & Software Development', 'Data & Analytics', 'Finance & Accounting',
+        'Project Management', 'Creative & Media', 'Engineering', 'Food & Agriculture',
+        'Education & Training', 'Customer Service & Support', 'Human Resources',
+        'Healthcare & Medical', 'Marketing & Communications', 'Consulting',
+        'Government & Public Sector', 'Sales & Business Development',
+        'Security & Safety', 'Legal', 'Hospitality & Tourism',
+        'Supply Chain & Logistics', 'Operations & Management',
+        'No clear title', 'Other/General'
+    ]
+
+    for category in standard_categories:
+        if category not in keywords:
+            keywords[category] = []
     
     import re
     
@@ -444,8 +506,7 @@ def detect_work_arrangement(location: str = None, title: str = None, summary: st
         return 'Not Specified'
 
     # Remote patterns
-    remote_patterns = ['remote', 'remote work', 'work from home', 'wfh', 'telecommute',
-                      'home office', 'work remotely', 'remote position', 'virtual']
+    remote_patterns = REMOTE_PATTERNS.get('remote_patterns', [])
     if any(pattern in combined_text for pattern in remote_patterns):
         # First check for explicit region mentions
         if 'remote (eu)' in combined_text or 'eu remote' in combined_text:
@@ -472,13 +533,13 @@ def detect_work_arrangement(location: str = None, title: str = None, summary: st
 
     # Hybrid patterns
     hybrid_patterns = ['hybrid', 'hybrid work', 'office + remote', 'remote + office',
-                      'mixed work', 'flexible location', 'blended']
+                               'mixed work', 'flexible location', 'blended']
     if any(pattern in combined_text for pattern in hybrid_patterns):
         return 'Hybrid'
 
     # Onsite patterns
     onsite_patterns = ['onsite', 'on-site', 'office based', 'office-based', 'in office',
-                      'at office', 'office location', 'physical office']
+                               'at office', 'office location', 'physical office']
     if any(pattern in combined_text for pattern in onsite_patterns):
         return 'Onsite'
 
@@ -579,1193 +640,6 @@ def print_regional_summary(df: pd.DataFrame) -> None:
     logging.info(f"Total jobs: {distribution['Total']}")
     logging.info("=" * 50)
 
-# Company mappings dictionary
-COMPANY_MAPPINGS = {
-    # 1. TWINE
-    'twine': {
-        'Title': 'Title',
-        'URL': 'Title_URL',
-        'Company': '_17qbdj78',
-        'Location': '_3cvhfnlp',
-        'rate': '_3cvhfnlp1',
-        'Summary': '_1cgbvbmx',
-        'start': 'ASAP',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'twine',
-        'Type source': 'Job board',
-    },
-    # 2. LINKIT
-    'LinkIT': {
-        'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'Field3',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Field4',
-        'Duration': 'Field5',  # Will be processed to check for "months" marker
-        'Company': 'Field1',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'LinkIT',
-        'Type source': 'Recruitment company',
-    },
-    # 3. FREELANCE.NL
-    'freelance.nl': {
-        'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'Field2',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Field2',
-        'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'freelance.nl',
-        'Type source': 'Job board',
-    },
-    # 4. YACHT
-    'Yacht': {
-        'Title': 'Field1',
-        'Location': 'Field2',
-        'Summary': 'Text1',
-        'URL': 'URL',
-        'start': 'Not mentioned',
-        'rate': 'Field4',
-        'Hours': 'Not mentioned',
-        'Duration': 'Text',
-        'Company': 'Not mentioned',  # Probably mentioned in summary
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Yacht',
-        'Type source': 'Recruitment company',
-    },
-    # 5. FLEXTENDER
-    'Flextender': {
-        'Title': 'Field2',
-        'Location': 'Field3',
-        'Summary': 'See Vacancy',
-        'URL': 'URL',
-        'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Field5',
-        'Duration': 'Field4',
-        'Company': 'Field1',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Flextender',
-        'Type source': 'Job board',
-    },
-    # 6. KVK
-    'KVK': {
-        'Title': 'Field1',
-        'Location': 'Amsterdam',
-        'Summary': 'Text',
-        'URL': 'Page_URL',
-        'start': 'Not mentioned',
-        'rate': 'Field3',
-        'Hours': 'Not mentioned',
-        'Duration': 'Field2',
-        'Company': 'KVK',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'KVK',
-        'Type source': 'Job board',
-    },
-    # 7. CIRCLE8
-    'Circle8': {
-        'Title': 'Title',
-        'Location': 'cvacancygridcard_usp',
-        'Summary': 'Text',  # Will be processed to provide fallback if empty
-        'URL': 'Title_URL',
-        'start': 'Date',
-        'rate': 'Not mentioned',
-        'Hours': 'cvacancygridcard_usp2',
-        'Duration': 'cvacancygridcard_usp1',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Circle8',
-        'Type source': 'Recruitment company',
-    },
-    # 8. BEBEE
-    'Bebee': {
-        'Title': 'Field1_text',
-        'Location': 'Info1',
-        'Summary': 'Text',
-        'URL': 'Field2_links',
-        'start': 'ASAP',
-        'rate': 'Info2',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Bebee',
-        'Type source': 'Job board',
-    },
-    # 9. LINKEDIN
-    'LinkedIn': {
-        'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'About_the_job',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Company',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'LinkedIn',
-        'Type source': 'Job board',
-    },
-    # 10. LINKEDINZZP
-    'LinkedInZZP': {
-        'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'About_the_job',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Company',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'LinkedIn',
-        'Type source': 'Job board',
-    },
-    # 11. LINKEDININTERIM
-    'LinkedInInterim': {
-        'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'About_the_job',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Company',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'LinkedIn',
-        'Type source': 'Job board',
-    },
-    # 12. POLITIE
-    'politie': {
-        'Title': 'Field1',
-        'Location': 'Text2',
-        'Summary': 'Text5,Text6',  # Will be processed to merge Text5 and Text6
-        'URL': 'URL',
-        'start': 'Text',
-        'rate': 'Not mentioned',
-        'Hours': 'Text3',
-        'Duration': 'Not mentioned',
-        'Company': 'politie',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'politie',
-        'Type source': 'Job board',
-    },
-    # 13. GELDERLAND
-    'gelderland': {
-        'Title': 'Title',
-        'Location': 'Gelderland',
-        'Summary': 'Text1',
-        'URL': 'URL',
-        'start': 'vacancy_details1',
-        'rate': 'Not mentioned',
-        'Hours': 'Text',
-        'Duration': 'vacancy_details3',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'gelderland',
-        'Type source': 'Job board',
-    },
-    # 14. WERK.NL
-    'werk.nl': {
-        'Title': 'Title',
-        'Location': 'Description1',
-        'Summary': 'Text',
-        'URL': 'Page_URL1',
-        'start': 'ASAP',
-        'rate': 'Text',  # Will search for currency/number patterns in Text column
-        'Hours': 'Title3',
-        'Duration': 'Not mentioned',
-        'Company': 'Description',  # Will be processed to remove everything after "-"
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'werk.nl',
-        'Type source': 'Job board',
-    },
-    # 15. INDEED
-    'indeed': {
-        'Title': 'Title',
-        'Location': 'Field2',
-        'Summary': 'Field2',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'css18z4q2i',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'css1h7lukg',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'indeed',
-        'Type source': 'Job board',
-    },
-    # 16. PLANET INTERIM
-    'Planet Interim': {
-        'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'Text',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'Price',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Planet Interim',
-        'Type source': 'Job board',
-    },
-    # 17. NS
-    'NS': {
-        'Title': 'Field1',
-        'Location': 'Field2',
-        'Summary': 'See Vacancy',
-        'URL': 'https://www.werkenbijns.nl/vacatures?keywords=Inhuur',
-        'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'NS',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'NS',
-        'Type source': 'Job board',
-    },
-    # 18. HOOFDKRAAN
-    'hoofdkraan': {
-        'Title': 'Title',
-        'Location': 'colmd4',
-        'Summary': 'Text',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'fontweightbold',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'hoofdkraan',
-        'Type source': 'Job board',
-        },
-    
-    # 'Zoekklus': {
-    #     'Title': 'Field',
-    #     'URL': 'Field3_links',
-    #     'Location': 'Field2',
-    #     'Summary': 'Not mentioned',
-    #     'rate': 'Not mentioned',
-    #     'Hours': 'Field3',
-    #     'Duration': 'Not mentioned',
-    #     'Company': 'Not mentioned',
-    #     'Source': 'Zoekklus',
-        'Type source': 'Job board',
-    # },
-    
-    # 19. OVERHEID
-    'Overheid': {
-        'Title': 'Title',
-        'Location': 'Field1',
-        'Summary': 'Field2',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'Content',
-        'Hours': 'Content2',
-        'Duration': 'Not mentioned',
-        'Company': 'Description',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Overheid',
-        'Type source': 'Job board',
-    },
-    # 20. RIJKSWATERSTAAT
-    'rijkswaterstaat': {
-        'Title': 'widgetheader',
-        'Location': 'feature1',
-        'Summary': 'Text1',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'feature2',
-        'Hours': 'feature',
-        'Duration': 'Not mentioned',
-        'Company': 'Rijkswaterstaat',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'rijkswaterstaat',
-        'Type source': 'Job board',
-    },
-    # 21. ZOP OPDACHTEN
-    'zzp opdrachten': {
-        'Title': 'Title',
-        'Location': 'jobdetails6',
-        'Summary': '_Text',
-        'URL': '_Link',
-        'start': 'ASAP',
-        'rate': 'jobdetails',
-        'Hours': 'jobdetails4',
-        'Duration': 'jobdetails4',
-        'Company': 'Title2',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'zzp opdrachten',
-        'Type source': 'Job board',
-    },
-    # 22. HARVEY NASH
-    'Harvey Nash': {
-        'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'Text',
-        'URL': 'Title_URL',
-        'start': 'Not mentioned',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Harvey Nash',
-        'Type source': 'Recruitment company',
-    },
-    # 23. BEHANCE
-    'Behance': {
-        'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'Description',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Company',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Behance',
-        'Type source': 'Job board',
-    },
-    # 24. SCHIPHOL
-    'Schiphol': {
-        'Title': 'Field2',
-        'Location': 'Text2',
-        'Summary': 'Text6',
-        'URL': 'Field1_links',
-        'start': 'ASAP',
-        'rate': 'Text4',  # Will be processed to check Text2 and Text4
-        'Hours': 'Text3',
-        'Duration': 'Not mentioned',
-        'Company': 'Schiphol',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Schiphol',
-        'Type source': 'Job board',
-    },
-    # 25. JOOBLE
-    'Jooble': {
-        'Title': 'Field1_text',
-        'Location': 'caption',
-        'Summary': 'geyos4,geyos41,geyos42,geyos43',
-        'URL': 'Time_links',
-        'start': 'ASAP',
-        'rate': 'not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'z6wlhx',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Jooble',
-        'Type source': 'Job board',
-    },
-    # 26. WERKZOEKEN.NL
-    'werkzoeken.nl': {
-        'Title': 'Title',
-        'Location': 'Company_name1',
-        'Summary': 'Not mentioned',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'offer',
-        'Hours': 'requestedwrapper',
-        'Duration': 'Not mentioned',
-        'Company': 'Company_name',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'werkzoeken.nl',
-        'Type source': 'Job board',
-    },
-    # 27. CODEUR.COM
-    'Codeur.com': {
-        'Title': 'nounderline',
-        'URL': 'nounderline_URL',
-        'Location': 'Not mentioned',
-        'Summary': 'mt2',
-        'start': 'ASAP',
-        'rate': 'whitespacenowrap1',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
-        'Views': 'whitespacenowrap3',
-        'Likes': '',
-        'Keywords': 'Keywords',
-        'Offers': 'Text2',
-        'Source': 'Codeur.com',
-        'Type source': 'Job board',
-    },
-    # 28. UMC
-    'UMC': {
-        'Title': 'Text',
-        'Location': 'Text2',
-        'Summary': 'See Vacancy',
-        'URL': 'URL',
-        'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Text3',  # Will be processed to remove "p.w."
-        'Duration': 'Not mentioned',
-        'Company': 'Text1',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'UMC',
-        'Type source': 'Job board',
-    },
-    # 29. FLEXVALUE_B.V.
-    'FlexValue_B.V.': {
-        'Title': 'Title',
-        'Location': 'scjnlklf',
-        'Summary': 'Text',  # Will be processed to remove everything before "opdrachtbeschrijving"
-        'URL': 'Title_URL',
-        'start': 'Date1',
-        'rate': 'Text',  # Will be processed to extract text between "Tarief" and "all-in"
-        'Hours': 'Text',  # Will be processed to extract number after "Uren per week"
-        'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'FlexValue_B.V.',
-        'Type source': 'Job board',
-    },
-    # 30. CENTRIC
-    'Centric': {
-        'Title': 'Title',
-        'Location': 'tag1 ',
-        'Summary': 'Text',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'Text',
-        'Hours': 'Tag',
-        'Duration': 'Not mentioned',
-        'Company': 'Centric',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Centric',
-        'Type source': 'Recruitment company',
-    },
-    # 31. FREELANCER.COM
-    'freelancer.com': {
-        'Title': 'Like',
-        'Location': 'Remote',
-        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
-        'URL': 'Like_URL',
-        'start': 'ASAP',
-        'rate': 'Price',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'freelancer.com',
-        'Type source': 'Job board',
-    },
-    # 32. FREELANCER.NL
-    'Freelancer.nl': {
-        'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'Text',
-        'URL': 'btn_URL',
-        'start': 'ASAP',
-        'rate': 'budget',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Freelancer.nl',
-        'Type source': 'Job board',
-    },
-    # 33. SALTA GROUP
-    'Salta Group': {
-        'Title': 'Keywords',
-        'URL': 'Title_URL',
-        'Location': 'Not mentioned',
-        'Summary': 'Text',
-        'Company': 'Company',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'start': 'ASAP',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Salta Group',
-        'Type source': 'Job board',
-    },
-    # 34. PROLINKER.COM
-    'ProLinker.com': {
-        'Title': 'Field4_text',
-        'Location': 'Field11',
-        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
-        'URL': 'Field4_links',
-        'start': 'ASAP',
-        'rate': 'Field15',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'ProLinker.com',
-        'Type source': 'Job board',
-    },
-    # 35. FLEX WEST-BRABANT
-    'Flex West-Brabant': {
-        'Title': 'Field5',
-        'Location': 'Not mentioned',
-        'Summary': 'Text',
-        'URL': 'Field4',
-        'start': 'Not mentioned',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'org',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Flex West-Brabant',
-        'Type source': 'Job board',
-    },
-    # 36. AMSTELVEENHUURTIN
-    'Amstelveenhuurtin': {
-        'Title': 'Field1',
-        'Location': 'Text',  # Will be processed to extract text between "standplaats:" and "|"
-        'Summary': 'See Vacancy',
-        'URL': 'Page_URL',
-        'start': 'Field11',  # Will be processed to extract everything before "t/m"
-        'rate': 'Field8',
-        'Hours': 'Text',  # Will be processed to extract text between "Uren:" and "|"
-        'Duration': 'Not mentioned',
-        'Company': 'Field2',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Amstelveenhuurtin',
-        'Type source': 'Job board',
-    },
-    # 37. NOORDOOSTBRABANT
-    'noordoostbrabant': {
-        'Title': 'Field1',
-        'Location': 'Text',
-        'Summary': 'Text',
-        'URL': 'Page_URL',
-        'start': 'Text',
-        'rate': 'Field2',
-        'Hours': 'See Summary',
-        'Duration': 'Text',
-        'Company': 'Field3',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'noordoostbrabant',
-        'Type source': 'Job board',
-    },
-    # 38. FLEVOLAND
-    'flevoland': {
-        'Title': 'Field1',
-        'Location': 'Field2',
-        'Summary': 'Field7,Field8',  # Will be processed to merge Field7 and Field8
-        'URL': 'Field9_links',
-        'start': 'Field3',
-        'rate': 'Not mentioned',
-        'Hours': 'Field5',
-        'Company': 'Field6',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'flevoland',
-        'Type source': 'Job board',
-    },
-    # 39. NOORD-HOLLAND
-    'Noord-Holland': {
-        'Title': 'Text',
-        'Location': 'Field2',
-        'Summary': 'Text2',
-        'URL': 'Page_URL',
-        'start': 'See Summary',
-        'rate': 'Text2',  # Will be processed to extract text between "€" and "|"
-        'Hours': 'See Summary',
-        'Duration': 'See Summary',
-        'Company': 'Text2',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Noord-Holland',
-        'Type source': 'Job board',
-    },
-    # 40. GRONINGENHUURTIN
-    'groningenhuurtin': {
-        'Title': 'Text2',
-        'Location': 'Text',  # Will be processed to extract text between "Standplaats:" and "|"
-        'Summary': 'Text',
-        'URL': 'Page_URL',
-        'start': 'Text',
-        'rate': 'Text',  # Will be processed to extract number after "€"
-        'Hours': 'Text',  # Will be processed to extract number between "uren" and "|"
-        'Duration': 'Text',
-        'Company': 'Text1',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'groningenhuurtin',
-        'Type source': 'Job board',
-    },
-    # 41. TALENTENREGIO
-    'TalentenRegio': {
-        'Title': 'Field1',
-        'Location': 'Not mentioned',
-        'Summary': 'Text4,Text5',  # Will be processed to merge Text4 and Text5
-        'URL': 'Page_URL',
-        'start': 'Not mentioned',
-        'rate': 'Not mentioned',
-        'Hours': 'csscolumnflexer8',
-        'Duration': 'Not mentioned',
-        'Company': 'Field2',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'TalentenRegio',
-        'Type source': 'Job board',
-    },
-    # 42. HINTTECH
-    'HintTech': {
-        'Title': 'Title',
-        'URL': 'Title_URL',
-        'Company': 'vc_colmd6',
-        'Hours': 'vc_colmd62',
-        'rate': 'vc_colmd63',
-        'Duration': 'vc_colmd64',
-        'Location': 'vc_colmd61',
-        'Summary': 'Text7',
-        'start': 'ASAP',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'HintTech',
-        'Type source': 'Recruitment company',
-    },
-
-    # 43. SELECT
-    'Select': {
-        'Title': 'Title',
-        'Location': 'Field2', 
-        'Summary': 'See Vacancy',
-        'URL': 'Title_URL',
-        'start': 'Date',
-        'rate': 'Not mentioned',
-        'Hours': 'hfp_cardiconsblockitem',
-        'Duration': 'Not mentioned',
-        'Company': 'Company',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Select',
-        'Type source': 'Recruitment company',
-    },
-    # 44. OVERHEIDZZP
-    'overheidzzp': {
-        'Title': 'Field7_text',
-        'Location': 'Field3',
-        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
-        'URL': 'Field1_links',
-        'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Field4',
-        'Duration': 'Field5',
-        'Company': 'Field2',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'overheidzzp',
-        'Type source': 'Job board',
-    },
-    # 45. POOQ
-    'POOQ': {
-        'Title': 'Title',
-        'Location': 'ml5',
-        'Summary': 'Field1',
-        'URL': 'Title_URL',
-        'start': 'hidden',
-        'rate': 'Field2',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'POOQ',
-        'Type source': 'Job board',
-    },
-    # 46. GEMEENTE-PROJECTEN
-    'gemeente-projecten': {
-        'Title': 'Field1',  # Will be processed to remove text in () and () themselves
-        'Location': 'Field2',  # Will be processed to remove text in () and () themselves
-        'Summary': 'Text',
-        'URL': 'URL',
-        'start': 'ASAP',
-        'rate': 'Field4',  # Will be processed to extract currency from Field4
-        'Hours': 'Field3',
-        'Duration': 'Field4',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'gemeente-projecten',
-        'Type source': 'Job board',
-    },
-    # 47. GGDZWHUURTIN.NL
-    'ggdzwhuurtin.nl': {
-        'Title': 'Text',
-        'Location': 'Field2',
-        'Summary': 'Text11',
-        'URL': 'Page_URL',
-        'start': 'Text11',
-        'rate': 'Text11',
-        'Hours': 'Field3',
-        'Duration': 'Text11',  # Will be processed to calculate date difference in months
-        'Company': 'GGD Zaanstreek-Waterland',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'ggdzwhuurtin.nl',
-        'Type source': 'Job board',
-    },
-    # 48. FREEP
-    'freep': {
-        'Title': 'Title',
-        'Location': 'flex3',
-        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'flex2',
-        'Hours': 'flex4',
-        'Duration': 'Not mentioned',
-        'Company': 'mdcolspan2',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'freep',
-        'Type source': 'Job board',
-    },
-    # 49. ONLYHUMAN
-    'onlyhuman': {
-        'Title': 'Title',
-        'Location': 'flex3',
-        'Summary': 'See Vacancy',
-        'URL': 'URL',
-        'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'vacancycard',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'onlyhuman',
-        'Type source': 'Recruitment company',
-    },
-    # 50. STAFFINGMS
-    'StaffingMS': {
-        'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'See Vacancy',
-        'URL': 'Title_URL',
-        'start': 'Date',
-        'rate': 'Not mentioned',
-        'Hours': 'hfp_cardiconsblockitem',
-        'Duration': 'Not mentioned',
-        'Company': 'Company',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'StaffingMS',
-        'Type source': 'Recruitment company',
-    },
-    # 51. 4-FREELANCERS.NL
-    '4-Freelancers.nl': {
-        'Title': 'Functietitel',
-        'URL': 'Functietitel_URL',
-        'Location': 'Plaats',
-        'Summary': 'Text6',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Text2',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': '4-Freelancers.nl',
-        'start': 'ASAP'
-    },
-    # 52. FLEXSPOT.IO
-    'flexSpot.io': {
-        'Title': 'Title',
-        'Location': 'reset',
-        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
-        'URL': 'button_URL',
-        'start': 'ASAP',
-        'rate': 'Text1',
-        'Hours': 'Not mentioned',
-        'Duration': 'Text3',
-        'Company': 'Company',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'flexSpot.io',
-        'Type source': 'Job board',
-    },
-    # 53. ASNBANK
-    'ASNBank': {
-        'Title': 'Field2',
-        'Location': 'Text',  # Will be processed to extract first part after splitting on space
-        'Summary': 'Text1',
-        'URL': 'Field1_links',
-        'start': 'ASAP',
-        'rate': 'Text',  # Will be processed to extract rate after "€"
-        'Hours': 'Text',  # Will be processed to extract hours and remove "uur"
-        'Duration': 'Not mentioned',
-        'Company': 'ASNBank',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'ASNBank',
-        'Type source': 'Job board',
-    },
-    # 54. TENNET
-    'tennet': {
-        'Title': 'Title',
-        'Location': 'feature2',  # Will be processed to remove everything after "/"
-        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
-        'URL': 'Title_URL',
-        'start': 'ASAP',
-        'rate': 'feature3',
-        'Hours': 'feature1',
-        'Duration': 'Not mentioned',
-        'Company': 'TenneT',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'tennet',
-        'Type source': 'Job board',
-    },
-    # 55. INTERIMNETWERK
-    'InterimNetwerk': {
-        'Title': 'Title',
-        'Location': 'Location',
-        'Summary': 'Summary',
-        'URL': 'URL',
-        'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Duration',
-        'Company': 'InterimNetwerk',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'InterimNetwerk',
-        'Type source': 'Job board',
-    },
-    # 56. FRIESLAND
-    'Friesland': {
-        'Title': 'Title',
-        'URL': 'Title_URL',
-        'Location': 'Field2',
-        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
-        'start': 'Not mentioned',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'caption',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Friesland',
-        'Type source': 'Job board',
-    },
-    # 57. ZUID-HOLLAND
-    'Zuid-Holland': {
-        'Title': 'Title',
-        'URL': 'Title_URL',
-        'Company': 'Company',
-        'Location': 'Location',
-        'Hours': 'hfp_cardiconsblockitem',
-        'Summary': 'Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14',
-        'start': 'Date',
-        'rate': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Zuid-Holland',
-        'Type source': 'Job board',
-    },
-    # 58. COMET
-    'comet': {
-        'Title': 'Mission',
-        'URL': 'Page_URL',
-        'Location': 'Localisation',
-        'Summary': 'Not mentioned',
-        'start': 'ASAP',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'Durée',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': 'Compétences_requises',
-        'Offers': '',
-        'Source': 'comet',
-        'Type source': 'Job board',
-    },
-    # 59. FREELANCE-INFORMATIQUE
-    'Freelance-Informatique': {
-        'Title': 'stretchedlink',
-        'URL': 'Page_URL',
-        'Location': 'colmd101',  # Will be processed to remove everything before "-" and the marker itself
-        'Summary': 'lineclamp2',
-        'start': 'Date',
-        'rate': 'Not mentioned',
-        'Hours': 'Not mentioned',
-        'Duration': 'colmd102',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': 'Keywords',
-        'Offers': '',
-        'Source': 'Freelance-Informatique',
-        'Type source': 'Job board',
-    },
-    # 60. 404WORKS
-    '404Works': {
-        'Title': 'nomargin',
-        'URL': 'nomargin_URL',
-        'Location': 'pin',
-        'Summary': 'Field1',
-        'start': 'Field4',
-        'rate': 'cash',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': 'Keywords',
-        'Offers': '',
-        'Source': '404Works',
-        'Type source': 'Job board',
-    },
-    # 61. HAARLEMMERMEERHUURTIN
-    'haarlemmermeerhuurtin': {
-        'Title': 'Title',
-        'Location': 'Pub_Time',  # Will be processed to extract text between "Standplaats:" and "|"
-        'Summary': 'Pub_Time',
-        'URL': 'Page_URL',
-        'start': 'Pub_Time',
-        'rate': 'Pub_Time',  # Will be processed to extract currency marker "€"
-        'Hours': 'Pub_Time',
-        'Duration': 'Pub_Time',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'haarlemmermeerhuurtin',
-        'Type source': 'Job board',
-    },
-    # 62. HAYS
-    'hays': {
-        'Title': 'Description',
-        'Location': 'Location',
-        'Summary': 'Text',
-        'URL': 'Description_URL',
-        'start': '',
-        'rate': 'Salary',
-        'Hours': '',
-        'Duration': '',
-        'Company': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Hays',
-        'Type source': 'Recruitment company',
-    },
-    # 63. WELCOMETOTHEJUNGLE
-    'Welcome to the Jungle': {
-        'Title': 'scbrzpdj',
-        'URL': 'scjcbmet_URL',
-        'Company': 'scizxthl',
-        'Location': 'scgfgbys',
-        'Summary': 'scizxthl3',
-        'rate': 'Not mentioned',
-        'start': 'ASAP',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': 'scfibhhp5, scfibhhp4',
-        'Offers': '',
-        'Source': 'Welcome to the Jungle',
-        'Type source': 'Job board',
-    },
-    # 63. CONSULTANT.NL
-    'Consultant.nl': {
-        'Title': 'Field3',
-        'URL': 'Field1_links',
-        'Company': 'Not mentioned',
-        'Location': 'Field4',
-        'Summary': 'Not mentioned',  # Will be processed post-mapping to merge Field6, Field7, Field8, Field9, Field10
-        'rate': 'Field5',
-        'start': 'ASAP',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'Consultant.nl',
-        'Type source': 'Job board',
-    },
-    # 64. HAARLEMMERMEERHUURT
-    'haarlemmermeerhuurt': {
-        'Title': 'Title',
-        'URL': 'Title_URL',
-        'Company': 'Not mentioned',
-        'Location': 'Location',
-        'Summary': 'Text',
-        'rate': 'Not mentioned',
-        'start': 'ASAP',
-        'Hours': 'Not mentioned',
-        'Duration': 'Not mentioned',
-        'Views': '',
-        'Likes': '',
-        'Keywords': '',
-        'Offers': '',
-        'Source': 'haarlemmermeerhuurt',
-        'Type source': 'Job board',
-    },
-
-}
 def timestamp():
     """Get current timestamp in YYYY-MM-DD format."""
     return datetime.now().strftime("%Y-%m-%d")
@@ -1785,11 +659,11 @@ def generate_group_id(title):
         cleaned_title = title.lower()
         cleaned_title = re.sub(r'[^\w\s]', '', cleaned_title) # Remove punctuation
         cleaned_title = re.sub(r'\s+', ' ', cleaned_title).strip() # Standardize whitespace
-        
+
         # Log the transformation for debugging purposes (commented out for cleaner logs)
         # if title != cleaned_title:
         #     logging.info(f"group_id generation: Converted '{title}' to '{cleaned_title}'")
-            
+
         combined = cleaned_title.encode('utf-8')
         return hashlib.md5(combined).hexdigest()
     except Exception as e:
@@ -2012,138 +886,9 @@ def generate_source_id(source, is_from_input=True):
             if source_normalized.startswith(prefix):
                 source_normalized = source_normalized[len(prefix):].strip()
         
-        # Handle special cases for known sources
-        source_mappings = {
-            # 1. TWINE
-            'twine': 'twine',
-            # 2. LINKIT
-            'LinkIT': 'linkit',
-            # 3. FREELANCE.NL
-            'freelance.nl': 'freelance_nl',
-            # 4. YACHT
-            'Yacht': 'yacht',
-            # 5. FLEXTENDER
-            'Flextender': 'flextender',
-            # 6. KVK
-            'KVK': 'kvk',
-            # 7. CIRCLE8
-            'Circle8': 'circle8',
-            # 8. BEBEE
-            'Bebee': 'bebee',
-            # 9. LINKEDIN
-            'linkedin': 'linkedin',
-            # 10. LINKEDINZZP
-            'linkedinzzp': 'LinkedIn',
-            # 11. LINKEDININTERIM
-            'linkedininterim': 'LinkedIn',
-            # 12. POLITIE
-            'politie': 'politie',
-            # 13. GELDERLAND
-            'gelderland': 'gelderland',
-            # 14. WERK.NL
-            'werk.nl': 'werk_nl',
-            # 15. INDEED
-            'indeed': 'indeed',
-            # 16. PLANET INTERIM
-            'Planet Interim': 'planet_interim',
-            # 17. HARVEY NASH
-            'Harvey Nash': 'harvey_nash',
-            # 18. BEHANCE
-            'Behance': 'behance',            
-            # 19. JOOBLE
-            'Jooble': 'jooble',
-            # 20. CENTRIC
-            'Centric': 'centric',
-            # 21. CODEUR.COM
-            'Codeur.com': 'codeur_com',
-            # 22. SCHIPHOL
-            'Schiphol': 'schiphol',
-            # 23. RIJKSWATERSTAAT
-            'rijkswaterstaat': 'rijkswaterstaat',
-            # 24. NS
-            'ns': 'ns',
-            # 25. UMC
-            'UMC': 'umc',
-            # 26. HINTTECH
-            'HintTech': 'hinttech',
-            # 27. SELECT
-            'Select': 'select',
-            # 28. HOOFDKRAAN
-            'hoofdkraan': 'hoofdkraan',
-            # 29. ZOP OPDACHTEN
-            'zzp opdrachten': 'zzp_opdrachten',
-            # 30. FLEXVALUE_B.V.
-            'FlexValue_B.V.': 'flexvalue',
-            # 31. TALENTENREGIO
-            'TalentenRegio': 'talentenregio',
-            # 32. NOORD-HOLLAND
-            'Noord-Holland': 'noord_holland',
-            # 33. FLEVOLAND
-            'flevoland': 'flevoland',
-            # 34. GRONINGEN
-            'groningen': 'groningenhuurtin',
-            # 35. NOORDOOSTBRABANT
-            'noordoostbrabant': 'noordoostbrabant',
-            # 36. FLEX WEST-BRABANT
-            'Flex West-Brabant': 'flex_west_brabant',
-            # 37. AMSTELVEEN
-            'amstelveen': 'amstelveenhuurtin',
-            # 38. AMSTELVEENHUURTIN
-            'Amstelveenhuurtin': 'amstelveenhuurtin',
-            # 39. AMSTELVEENHUURTIN (ALT)
-            'amstelveenhuurtin': 'amstelveenhuurtin',
-            # 40. HAARLEMMERMEERHUURTIN
-            'haarlemmermeerhuurtin': 'haarlemmermeer',
-            # 41. HAYS
-            'hays': 'hays',
-            # 42. GRONINGENHUURTIN
-            'groningenhuurtin': 'groningenhuurtin',
-            # 43. GEMEENTE-PROJECTEN
-            'gemeente-projecten': 'gemeente_projecten',
-            # 44. GGDZWHUURTIN
-            'ggdzwhuurtin': 'ggdz_whuurtin',
-            # 45. GGDZWHUURTIN.NL
-            'ggdzwhuurtin.nl': 'ggdz_whuurtin_nl',
-            # 46. FREEP
-            'freep': 'freep',
-            # 47. ONLYHUMAN
-            'onlyhuman': 'onlyhuman',
-            # 48. STAFFINGMS
-            'StaffingMS': 'staffingms',
-            # 49. 4-FREELANCERS.NL
-            '4-Freelancers.nl': '4_freelancers_nl',
-            # 50. 4 FREELANCERS
-            '4 freelancers': '4_freelancers',
-            # 51. FLEXSPOT.IO
-            'flexSpot.io': 'flexspot',
-            # 52. ASNBANK
-            'ASNBank': 'asnbank',
-            # 53. FRIESLAND
-            'Friesland': 'friesland',
-            # 54. TENNET
-            'tennet': 'tennet',
-            # 55. INTERIMNETWERK
-            'InterimNetwerk': 'interim_netwerk',
-            # 56. ZUID-HOLLAND
-            'Zuid-Holland': 'zuid_holland',
-            # 57. OVERHEIDZZP
-            'overheidzzp': 'overheidzzp',
-            # 58. POOQ
-            'POOQ': 'POOQ',
-            # 59. COMET
-            'comet': 'comet',
-            # 60. FREELANCE-INFORMATIQUE
-            'Freelance-Informatique': 'freelance_informatique',
-            # 61. 404WORKS
-            '404Works': '404works',
-            # 62. WELCOMETOTHEJUNGLE
-            'Welcome to the Jungle': 'welcome_to_the_jungle',
-            # 63. CONSULTANT.NL
-            'Consultant.nl': 'Consultant_nl',
-            # 64. HAARLEMMERMEERHUURT
-            'haarlemmermeerhuurt': 'haarlemmermeerhuurt',
-            # 'zoekklus': 'zoekklus'
-        }
+        # Handle special cases for known sources using config file mappings
+        # Use the global SOURCE_MAPPINGS from config, but ensure it's a dictionary
+        source_mappings = SOURCE_MAPPINGS if isinstance(SOURCE_MAPPINGS, dict) else {}
         
         # Check if normalized source matches any known mapping
         for key, mapped_value in source_mappings.items():
@@ -2222,268 +967,104 @@ def validate_data_quality(df, required_columns):
         logging.error(f"Data validation error: {str(e)}")
         return False
 
-def freelance_directory(files_read, company_name):
-    """Process and standardize job listings from different sources."""
-    try:
-        # Get the mapping for this company
-        mapping = COMPANY_MAPPINGS.get(company_name)
-        if not mapping:
-            logging.warning(f"No mapping found for company {company_name}")
-            return pd.DataFrame()
+def special_freelance_processing(df, company_name):
+    """Special processing for freelance.nl - extract hours from Field2"""
+    if 'Hours' in df.columns and 'Field2' in df.columns:
+        def extract_hours_freelance(row):
+            field2_val = row.get('Field2', '')
+            if pd.isna(field2_val) or field2_val == '':
+                return 'Not mentioned'
+            field2_str = str(field2_val).lower()
+            import re
+            patterns = [
+                r'aantal uur per week[:s]*(\d+)', 
+                r'(\d+)\s*uurs*\s*per\s*week', 
+                r'hours[:s]*.*?(\d+)\s*hours?\s*per\s*week', 
+                r'(\d+)\s*hours?\s*per\s*week', 
+                r'full-time\s*((\d+)\s*hours?\s*per\s*week)'
+            ]
+            for pattern in patterns:
+                match = re.search(pattern, field2_str)
+                if match:
+                    return match.group(1) if match.group(1) else match.group(2)
+            return 'Not mentioned'
         
-        # First replace all NaN/None values with empty strings in the input DataFrame
-        files_read = files_read.fillna('')
+        df['Hours'] = df.apply(extract_hours_freelance, axis=1)
+        logging.info(f"🔧 {company_name}: Extracted hours information from Field2")
+        return df
+
+def special_hoofdkraan_processing(df, company_name):
+    """Special processing for Hoofdkraan - remove 'Locatie:' prefix from Location"""
+    if 'Location' in df.columns:
+        def process_location_hoofdkraan(location_str):
+            if pd.isna(location_str) or location_str == '':
+                return 'Not mentioned'
+            location_clean = str(location_str).replace('Locatie:', '').replace('locatie:', '').strip()
+            location_clean = ' '.join(location_clean.split())
+            return location_clean if location_clean else 'Not mentioned'
         
-        # COMPANY-SPECIFIC PRE-MAPPING FILTERS
-        if company_name == 'ProLinker.com':
-            # No pre-mapping filter - removed text column check for "Open"
-            pass
-        elif company_name == 'werkzoeken.nl':
-            if 'requestedwrapper2' in files_read.columns:
-                initial_count = len(files_read)
-                # Filter for rows where 'requestedwrapper2' column contains "Freelance" (case-insensitive)
-                files_read = files_read[files_read['requestedwrapper2'].astype(str).str.contains("Freelance", case=False, na=False)]
-                filtered_count = len(files_read)
-                if initial_count > filtered_count:
-                    logging.info(f"Applied werkzoeken.nl pre-mapping filter on 'requestedwrapper2' column for 'Freelance', rows changed from {initial_count} to {filtered_count}")
-                elif initial_count == filtered_count and initial_count > 0:
-                    logging.info(f"werkzoeken.nl pre-mapping filter: 'requestedwrapper2' column checked for 'Freelance', no rows removed from {initial_count} rows.")
-            else:
-                logging.warning(f"werkzoeken.nl pre-mapping filter: 'requestedwrapper2' column not found in the input CSV for {company_name}. Skipping filter.")
-        elif company_name == 'HintTech':
-            if 'Title' in files_read.columns:
-                initial_count = len(files_read)
-                # Filter out rows where 'Title' column contains "gesloten" (case-insensitive)
-                files_read = files_read[~files_read['Title'].astype(str).str.contains("gesloten", case=False, na=False)]
-                filtered_count = len(files_read)
-                if initial_count > filtered_count:
-                    logging.info(f"Applied HintTech pre-mapping filter on 'Title' column to remove 'gesloten', rows changed from {initial_count} to {filtered_count}")
-                elif initial_count == filtered_count and initial_count > 0:
-                    logging.info(f"HintTech pre-mapping filter: 'Title' column checked for 'gesloten', no rows removed from {initial_count} rows.")
-            else:
-                logging.warning(f"HintTech pre-mapping filter: 'Title' column not found in the input CSV for {company_name}. Skipping filter.")
-        elif company_name == 'Behance':
-            if 'Text4' in files_read.columns:
-                initial_count = len(files_read)
-                # Filter out rows where 'Text4' column is empty or contains only whitespace
-                files_read = files_read[files_read['Text4'].astype(str).str.strip() != '']
-                # Also filter out rows where Text4 is NaN or 'nan' string
-                files_read = files_read[~files_read['Text4'].astype(str).str.lower().isin(['nan', 'none', ''])]
-                filtered_count = len(files_read)
-                if initial_count > filtered_count:
-                    logging.info(f"Applied Behance pre-mapping filter on 'Text4' column to remove empty rows, rows changed from {initial_count} to {filtered_count}")
-                elif initial_count == filtered_count and initial_count > 0:
-                    logging.info(f"Behance pre-mapping filter: 'Text4' column checked for empty content, no rows removed from {initial_count} rows.")
-            else:
-                logging.warning(f"Behance pre-mapping filter: 'Text4' column not found in the input CSV for {company_name}. Skipping filter.")
-        elif company_name == 'Bebee':
-            # Step 1: Keep rows that mention freelance-related terms in either Field1_text or Text (case-insensitive, substring allowed)
-            freelance_keywords = ['freelance', 'interim', 'zzp', 'flexibele', 'remote', 'contract', 'zelfstandig']
-            if 'Field1_text' in files_read.columns or 'Text' in files_read.columns:
-                initial_count = len(files_read)
+        df['Location'] = df['Location'].apply(process_location_hoofdkraan)
+        logging.info(f"🔧 {company_name}: Processed Location to remove 'Locatie:' prefix")
+    return df
 
-                def contains_freelance_keywords(value):
-                    try:
-                        text = str(value).lower()
-                        return any(keyword in text for keyword in freelance_keywords)
-                    except Exception:
-                        return False
+def special_harvey_nash_processing(df, company_name):
+    """Special processing for Harvey Nash - remove words in parentheses and words starting with 'JP'"""
+    if 'Title' in df.columns:
+        def process_title_harvey_nash(title_str):
+            if pd.isna(title_str) or title_str == '':
+                return 'Not mentioned'
+            import re
+            title_clean = str(title_str)
+            title_clean = re.sub(r'\([^)]*\)', '', title_clean)
+            words = title_clean.split()
+            filtered_words = [word for word in words if not word.upper().startswith('JP')]
+            title_clean = ' '.join(filtered_words).strip()
+            title_clean = ' '.join(title_clean.split())
+            return title_clean if title_clean else 'Not mentioned'
+        
+        df['Title'] = df['Title'].apply(process_title_harvey_nash)
+        logging.info(f"🔧 {company_name}: Processed Title to remove parentheses and JP words")
+    return df
 
-                mask_field1 = files_read['Field1_text'].apply(contains_freelance_keywords) if 'Field1_text' in files_read.columns else False
-                mask_text = files_read['Text'].apply(contains_freelance_keywords) if 'Text' in files_read.columns else False
-                # If only one column exists, the other mask will be a scalar False, bitwise OR will still work
-                freelance_mask = mask_field1 | mask_text
-                files_read = files_read[freelance_mask]
-                post_freelance_count = len(files_read)
+def special_linkedin_processing(df, company_name):
+    """Special processing for LinkedIn - remove line breaks from Summary"""
+    if 'Summary' in df.columns:
+        def process_summary_linkedin(summary_str):
+            if pd.isna(summary_str) or summary_str == '':
+                return 'See Vacancy'
+            summary_clean = str(summary_str)
+            summary_clean = summary_clean.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+            summary_clean = ' '.join(summary_clean.split())
+            return summary_clean if summary_clean else 'See Vacancy'
+        
+        df['Summary'] = df['Summary'].apply(process_summary_linkedin)
+        logging.info(f"🔧 {company_name}: Processed Summary to remove line breaks")
+    return df
 
-                # Step 2: Remove rows that contain permanent job markers (salary, baan, etc.)
-                permanent_job_markers = ['salaris', 'base salary', 'startersbaan', 'salary', 'salarisrange', 'baan', 'maandsalaris', 'monthly salary', 'loon', 'wage', 'permanent', 'vast contract', 'vast dienstverband']
+def special_umc_processing(df, company_name):
+    """Special processing for UMC - remove 'p.w.' from Hours"""
+    if 'Hours' in df.columns:
+        def process_hours_umc(hours_str):
+            if pd.isna(hours_str) or hours_str == '':
+                return 'Not mentioned'
+            hours_clean = str(hours_str)
+            hours_clean = hours_clean.replace('p.w.', '').replace('P.W.', '').replace('P.w.', '').replace('p.W.', '')
+            hours_clean = hours_clean.strip()
+            return hours_clean if hours_clean else 'Not mentioned'
+        
+        df['Hours'] = df['Hours'].apply(process_hours_umc)
+        logging.info(f"🔧 {company_name}: Processed Hours to remove 'p.w.'")
+    return df
 
-                def contains_permanent_markers(value):
-                    try:
-                        text = str(value).lower()
-                        return any(marker in text for marker in permanent_job_markers)
-                    except Exception:
-                        return False
-
-                # Check both Text and Summary columns for permanent job markers
-                permanent_mask = pd.Series([False] * len(files_read), index=files_read.index)
-                
-                if 'Text' in files_read.columns:
-                    text_mask = files_read['Text'].apply(contains_permanent_markers)
-                    permanent_mask = permanent_mask | text_mask
-                
-                if 'Summary' in files_read.columns:
-                    summary_mask = files_read['Summary'].apply(contains_permanent_markers)
-                    permanent_mask = permanent_mask | summary_mask
-                
-                permanent_count = permanent_mask.sum()
-                files_read = files_read[~permanent_mask]  # Remove rows with permanent markers
-                final_count = len(files_read)
-
-                # Log results
-                if initial_count > post_freelance_count:
-                    logging.info(f"Applied Bebee freelance filter: rows {initial_count} → {post_freelance_count} (kept freelance terms)")
-
-                if permanent_count > 0:
-                    logging.info(f"Applied Bebee permanent job filter: removed {permanent_count} rows with markers {permanent_job_markers} from Text/Summary columns, final count: {final_count}")
-                    logging.info(f"Bebee filtering complete: {initial_count} → {final_count} rows (reason: not freelance jobs)")
-                else:
-                    logging.info(f"Bebee permanent job filter: No rows removed, final count: {final_count}")
-            else:
-                logging.warning(f"Bebee filtering: Neither 'Field1_text' nor 'Text' column found in the input CSV for {company_name}. Skipping all filters.")
-        elif company_name == 'hays':
-            # Step 1: Keep rows that mention freelance-related terms in either Description or Text (case-insensitive, substring allowed)
-            freelance_keywords = ['freelance', 'interim', 'zzp', 'flexibele', 'remote', 'contract', 'zelfstandig']
-            if 'Description' in files_read.columns or 'Text' in files_read.columns:
-                initial_count = len(files_read)
-
-                def contains_freelance_keywords(value):
-                    try:
-                        text = str(value).lower()
-                        return any(keyword in text for keyword in freelance_keywords)
-                    except Exception:
-                        return False
-
-                mask_description = files_read['Description'].apply(contains_freelance_keywords) if 'Description' in files_read.columns else False
-                mask_text = files_read['Text'].apply(contains_freelance_keywords) if 'Text' in files_read.columns else False
-                # If only one column exists, the other mask will be a scalar False, bitwise OR will still work
-                freelance_mask = mask_description | mask_text
-                files_read = files_read[freelance_mask]
-                post_freelance_count = len(files_read)
-
-                # Step 2: Remove rows that contain permanent job markers (salary, baan, etc.)
-                permanent_job_markers = ['salaris', 'base salary', 'startersbaan', 'salary', 'salarisrange', 'baan', 'maandsalaris', 'monthly salary', 'loon', 'wage', 'permanent', 'vast contract', 'vast dienstverband']
-
-                def contains_permanent_markers(value):
-                    try:
-                        text = str(value).lower()
-                        return any(marker in text for marker in permanent_job_markers)
-                    except Exception:
-                        return False
-
-                # Check both Text and Summary columns for permanent job markers
-                permanent_mask = pd.Series([False] * len(files_read), index=files_read.index)
-                
-                if 'Text' in files_read.columns:
-                    text_mask = files_read['Text'].apply(contains_permanent_markers)
-                    permanent_mask = permanent_mask | text_mask
-                
-                if 'Summary' in files_read.columns:
-                    summary_mask = files_read['Summary'].apply(contains_permanent_markers)
-                    permanent_mask = permanent_mask | summary_mask
-                
-                permanent_count = permanent_mask.sum()
-                files_read = files_read[~permanent_mask]  # Remove rows with permanent markers
-                final_count = len(files_read)
-
-                # Log results
-                if initial_count > post_freelance_count:
-                    logging.info(f"Applied Hays freelance filter: rows {initial_count} → {post_freelance_count} (kept freelance terms)")
-
-                if permanent_count > 0:
-                    logging.info(f"Applied Hays permanent job filter: removed {permanent_count} rows with markers {permanent_job_markers} from Text/Summary columns, final count: {final_count}")
-                    logging.info(f"Hays filtering complete: {initial_count} → {final_count} rows (reason: not freelance jobs)")
-                else:
-                    logging.info(f"Hays permanent job filter: No rows removed, final count: {final_count}")
-            else:
-                logging.warning(f"Hays filtering: Neither 'Description' nor 'Text' column found in the input CSV for {company_name}. Skipping all filters.")
-        elif company_name == 'Codeur.com':
-            if 'whitespacenowrap' in files_read.columns:
-                initial_count = len(files_read)
-                # Drop rows where 'whitespacenowrap' column contains "Fermé" (case-insensitive)
-                files_read = files_read[files_read['whitespacenowrap'].astype(str).str.contains("Ouvert", case=False, na=False)]
-                filtered_count = len(files_read)
-                if initial_count > filtered_count:
-                    logging.info(f"Applied Codeur.com pre-mapping filter on 'whitespacenowrap' column to keep only 'Ouvert' rows, rows changed from {initial_count} to {filtered_count}")
-                elif initial_count == filtered_count and initial_count > 0:
-                    logging.info(f"Codeur.com pre-mapping filter: 'whitespacenowrap' column checked for 'Ouvert' content, no rows removed from {initial_count} rows.")
-            else:
-                logging.warning(f"Codeur.com pre-mapping filter: 'whitespacenowrap' column not found in the input CSV for {company_name}. Skipping filter.")
-        elif company_name == 'Welcome to the Jungle':
-            if 'scfibhhp' in files_read.columns:
-                initial_count = len(files_read)
-                # Keep only rows where 'scfibhhp' column contains "freelance" (case-insensitive)
-                files_read = files_read[files_read['scfibhhp'].astype(str).str.contains("freelance", case=False, na=False)]
-                filtered_count = len(files_read)
-                if initial_count > filtered_count:
-                    logging.info(f"Applied Welcome to the Jungle pre-mapping filter on 'scfibhhp' column to keep only 'freelance' rows, rows changed from {initial_count} to {filtered_count}")
-                elif initial_count == filtered_count and initial_count > 0:
-                    logging.info(f"Welcome to the Jungle pre-mapping filter: 'scfibhhp' column checked for 'freelance' content, no rows removed from {initial_count} rows.")
-            else:
-                logging.warning(f"Welcome to the Jungle pre-mapping filter: 'scfibhhp' column not found in the input CSV for {company_name}. Skipping filter.")
-        elif company_name == 'Overheid':
-            if 'Field3' in files_read.columns:
-                initial_count = len(files_read)
-                # Filter out rows where 'Field3' column contains "Loondienst" (case-insensitive)
-                files_read = files_read[~files_read['Field3'].astype(str).str.contains("Loondienst", case=False, na=False)]
-                filtered_count = len(files_read)
-                if initial_count > filtered_count:
-                    logging.info(f"Applied Overheid pre-mapping filter on 'Field3' column to remove 'Loondienst', rows changed from {initial_count} to {filtered_count}")
-                elif initial_count == filtered_count and initial_count > 0:
-                    logging.info(f"Overheid pre-mapping filter: 'Field3' column checked for 'Loondienst', no rows removed from {initial_count} rows.")
-            else:
-                logging.warning(f"Overheid pre-mapping filter: 'Field3' column not found in the input CSV for {company_name}. Skipping filter.")
-        elif company_name == 'overheidzzp':
-            # No pre-mapping filter anymore as per new spec
-            pass
-        elif company_name == 'freep':
-            if 'flex1' in files_read.columns:
-                initial_count = len(files_read)
-                # Filter for rows where 'flex1' column contains "freelance" (case-insensitive)
-                files_read = files_read[files_read['flex1'].astype(str).str.contains("freelance", case=False, na=False)]
-                filtered_count = len(files_read)
-                if initial_count > filtered_count:
-                    logging.info(f"Applied freep pre-mapping filter on 'flex1' column for 'freelance', rows changed from {initial_count} to {filtered_count}")
-                elif initial_count == filtered_count and initial_count > 0:
-                    logging.info(f"freep pre-mapping filter: 'flex1' column checked for 'freelance', no rows removed from {initial_count} rows.")
-            else:
-                logging.warning(f"freep pre-mapping filter: 'flex1' column not found in the input CSV for {company_name}. Skipping filter.")
-        elif company_name == 'onlyhuman':
-            if 'px2' in files_read.columns:
-                initial_count = len(files_read)
-                # Filter for rows where 'px2' column contains "Actueel" (case-insensitive)
-                files_read = files_read[files_read['px2'].astype(str).str.contains("Actueel", case=False, na=False)]
-                filtered_count = len(files_read)
-                if initial_count > filtered_count:
-                    logging.info(f"Applied onlyhuman pre-mapping filter on 'px2' column for 'Actueel', rows changed from {initial_count} to {filtered_count}")
-                elif initial_count == filtered_count and initial_count > 0:
-                    logging.info(f"onlyhuman pre-mapping filter: 'px2' column checked for 'Actueel', no rows removed from {initial_count} rows.")
-            else:
-                logging.warning(f"onlyhuman pre-mapping filter: 'px2' column not found in the input CSV for {company_name}. Skipping filter.")
-        elif company_name == 'flexSpot.io':
-            if 'Text2' in files_read.columns:
-                initial_count = len(files_read)
-                # Filter for rows where 'Text2' column contains "Freelance" (case-insensitive)
-                files_read = files_read[files_read['Text2'].astype(str).str.contains("Freelance", case=False, na=False)]
-                filtered_count = len(files_read)
-                if initial_count > filtered_count:
-                    logging.info(f"Applied flexSpot.io pre-mapping filter on 'Text2' column for 'Freelance', rows changed from {initial_count} to {filtered_count}")
-                elif initial_count == filtered_count and initial_count > 0:
-                    logging.info(f"flexSpot.io pre-mapping filter: 'Text2' column checked for 'Freelance', no rows removed from {initial_count} rows.")
-            else:
-                logging.warning(f"flexSpot.io pre-mapping filter: 'Text2' column not found in the input CSV for {company_name}. Skipping filter.")
-        elif company_name == '404Works':
-            if 'Field6' in files_read.columns:
-                initial_count = len(files_read)
-                # Filter out rows where 'Field6' column contains "Status Closed" (case-insensitive, handles extra whitespace)
-                files_read = files_read[~files_read['Field6'].astype(str).str.contains(r"\s*Status\s+Closed\s*", case=False, na=False)]
-                filtered_count = len(files_read)
-                if initial_count > filtered_count:
-                    logging.info(f"Applied 404Works pre-mapping filter on 'Field6' column to remove 'Status Closed' rows, rows changed from {initial_count} to {filtered_count}")
-                elif initial_count == filtered_count and initial_count > 0:
-                    logging.info(f"404Works pre-mapping filter: 'Field6' column checked for 'Status Closed', no rows removed from {initial_count} rows.")
-            else:
-                logging.warning(f"404Works pre-mapping filter: 'Field6' column not found in the input CSV for {company_name}. Skipping filter.")
-        elif company_name == 'InterimNetwerk':
-            # Special processing for InterimNetwerk: extract data from Text column
-            if 'Text' in files_read.columns and 'Field1_links' in files_read.columns:
+def special_interimnetwerk_processing(df, company_name):
+    """Special processing for InterimNetwerk - extract data from Text column"""
+    if 'Text' in df.columns and 'Field1_links' in df.columns:
                 # Take only the first row of Text column but keep all Field1_links
-                if len(files_read) > 0:
-                    text_content = files_read['Text'].iloc[0]
+        if len(df) > 0:
+            text_content = df['Text'].iloc[0]
                     # Combine all Field1_links from all rows to get complete URL list
                     all_field1_links = []
-                    for idx, row in files_read.iterrows():
+            for idx, row in df.iterrows():
                         if pd.notna(row['Field1_links']) and row['Field1_links']:
                             all_field1_links.append(str(row['Field1_links']))
                     field1_links = " ".join(all_field1_links)
@@ -2545,8 +1126,6 @@ def freelance_directory(files_read, company_name):
                         title = re.sub(r'\s+', ' ', title).strip()
                         title = re.sub(r'^[,\-\s]+|[,\-\s]+$', '', title).strip()  # Remove leading/trailing punctuation
                         
-
-                        
                         # Extract location: text after "Plaats/regio:"
                         location_pattern = r'Plaats/regio:\s*([^\n\r]*?)(?=\n|\r|Profiel|$)'
                         location_match = re.search(location_pattern, job_block, re.DOTALL)
@@ -2587,21 +1166,544 @@ def freelance_directory(files_read, company_name):
                             'Duration': duration,
                             'start': 'ASAP',
                             'rate': 'Not mentioned',
-                            'Hours': 'Field3',
+                    'Hours': 'Not mentioned',
                                                     'Company': 'InterimNetwerk',
                         'Source': 'InterimNetwerk',
         'Type source': 'Job board',
+                    'date': timestamp(),
+                    'UNIQUE_ID': generate_unique_id(title, url, 'InterimNetwerk')
                         })
                     
                     # Convert to DataFrame
-                    files_read = pd.DataFrame(processed_data)
-                    logging.info(f"InterimNetwerk special processing: Created {len(files_read)} rows from {len(jobs)} job blocks")
+            df = pd.DataFrame(processed_data)
+            logging.info(f"InterimNetwerk special processing: Created {len(df)} rows from {len(jobs)} job blocks")
                 else:
-                    logging.warning("InterimNetwerk: No data found in CSV file")
-                    files_read = pd.DataFrame()
+            logging.warning(f"🔧 {company_name}: No data found in CSV file")
+            df = pd.DataFrame()
             else:
-                logging.warning("InterimNetwerk: Required columns 'Text' and 'Field1_links' not found")
-                files_read = pd.DataFrame()
+        logging.warning(f"🔧 {company_name}: Required columns 'Text' and 'Field1_links' not found")
+        df = pd.DataFrame()
+    return df
+
+def process_location_tennet(location_str):
+    """Process location for tennet - remove everything after '/'"""
+    if pd.isna(location_str) or location_str == '':
+        return 'Not mentioned'
+    
+    location_clean = str(location_str).strip()
+    
+    # Remove everything after "/" (including the "/" itself)
+    if '/' in location_clean:
+        location_clean = location_clean.split('/')[0].strip()
+    
+    return location_clean if location_clean else 'Not mentioned'
+
+def combine_summary_fields_tennet(index, files_read):
+    """Combine summary fields for tennet - combine Field5 through Field14"""
+    # Get the original row from the input DataFrame
+    if index >= len(files_read):
+                        return 'Not mentioned'
+                    
+    row = files_read.iloc[index]
+    
+    # List of field names to combine
+    field_names = ['Field5', 'Field6', 'Field7', 'Field8', 'Field9', 'Field10', 'Field11', 'Field12', 'Field13', 'Field14']
+    
+    # Collect non-empty values
+    values = []
+    for field_name in field_names:
+        if field_name in files_read.columns:
+            value = row[field_name]
+            if not pd.isna(value) and str(value).strip():
+                values.append(str(value).strip())
+    
+    # Combine with spaces, or return default if no content
+    return ' '.join(values) if values else 'See Vacancy'
+
+def process_summary_circle8(summary_str):
+    """Process summary for Circle8 - provide fallback text if no information is provided"""
+    if pd.isna(summary_str) or summary_str == '' or str(summary_str).strip() == '':
+        return 'We were not able to find description'
+    
+    summary_clean = str(summary_str).strip()
+    return summary_clean if summary_clean else 'We were not able to find description'
+
+def process_summary_flexvalue(summary_str):
+    """Process summary for FlexValue_B.V. - remove everything before 'opdrachtbeschrijving'"""
+    if pd.isna(summary_str) or summary_str == '':
+        return 'Not mentioned'
+    
+    summary_clean = str(summary_str).strip()
+    
+    # Find "opdrachtbeschrijving" and take everything after it
+    if 'opdrachtbeschrijving' in summary_clean.lower():
+        # Find the position of "opdrachtbeschrijving" (case insensitive)
+        import re
+        match = re.search(r'opdrachtbeschrijving', summary_clean, re.IGNORECASE)
+        if match:
+            # Take everything after the marker
+            summary_clean = summary_clean[match.end():].strip()
+    
+    return summary_clean if summary_clean else 'Not mentioned'
+
+def process_rate_flexvalue(rate_str):
+    """Process rate for FlexValue_B.V. - extract text between 'Tarief' and 'all-in'"""
+    if pd.isna(rate_str) or rate_str == '':
+                    return 'Not mentioned'
+                
+    rate_clean = str(rate_str).strip()
+    
+    # Find text between "Tarief" and "all-in"
+    import re
+    tarief_match = re.search(r'tarief', rate_clean, re.IGNORECASE)
+    allin_match = re.search(r'all-in', rate_clean, re.IGNORECASE)
+    
+    if tarief_match and allin_match and allin_match.start() > tarief_match.end():
+        # Extract text between the markers
+        extracted_text = rate_clean[tarief_match.end():allin_match.start()].strip()
+        return extracted_text if extracted_text else 'Not mentioned'
+    
+    return 'Not mentioned'
+
+def process_hours_flexvalue(hours_str):
+    """Process hours for FlexValue_B.V. - extract number after 'Uren per week'"""
+    if pd.isna(hours_str) or hours_str == '':
+        return 'Not mentioned'
+    
+    hours_clean = str(hours_str).strip()
+    
+    # Find "Uren per week" and extract the number after it
+    import re
+    match = re.search(r'uren per week\s*(\d+)', hours_clean, re.IGNORECASE)
+    if match:
+        number = match.group(1)
+        return number
+    
+                        return 'Not mentioned'
+                    
+def process_title_amstelveenhuurtin(title_str):
+    """Process title for Amstelveenhuurtin - remove words in brackets and words starting with 'SO' followed by a number"""
+    if pd.isna(title_str) or title_str == '':
+        return 'Not mentioned'
+    
+    # Convert to string and clean up
+    title_clean = str(title_str).strip()
+    
+    # Remove words in brackets (including nested brackets)
+    title_clean = re.sub(r'\([^)]*\)', '', title_clean)
+    
+    # Remove words that start with "SO" followed by a number
+    title_clean = re.sub(r'\bSO\d+\b', '', title_clean, flags=re.IGNORECASE)
+    
+    # Clean up extra spaces
+    title_clean = re.sub(r'\s+', ' ', title_clean).strip()
+    
+    # Return "Not mentioned" if empty after cleaning
+    if not title_clean:
+                    return 'Not mentioned'
+                
+    return title_clean
+
+def process_location_amstelveenhuurtin(location_str):
+    """Process location for Amstelveenhuurtin - extract text between 'standplaats:' and '|'"""
+                    if pd.isna(location_str) or location_str == '':
+                        return 'Not mentioned'
+                    
+                    location_clean = str(location_str).strip()
+                    
+    # Find text between "standplaats:" and "|"
+    import re
+    match = re.search(r'standplaats:\s*(.*?)\s*\|', location_clean, re.IGNORECASE)
+    if match:
+        extracted_text = match.group(1).strip()
+        return extracted_text if extracted_text else 'Not mentioned'
+    
+    return 'Not mentioned'
+
+def process_hours_amstelveenhuurtin(hours_str):
+    """Process hours for Amstelveenhuurtin - extract text between 'Uren:' and '|'"""
+    if pd.isna(hours_str) or hours_str == '':
+                        return 'Not mentioned'
+                    
+    hours_clean = str(hours_str).strip()
+    
+    # Find text between "Uren:" and "|"
+    import re
+    match = re.search(r'uren:\s*(.*?)\s*\|', hours_clean, re.IGNORECASE)
+    if match:
+        extracted_text = match.group(1).strip()
+        return extracted_text if extracted_text else 'Not mentioned'
+    
+    return 'Not mentioned'
+
+def process_start_amstelveenhuurtin(start_str):
+    """Process start for Amstelveenhuurtin - extract everything before 't/m'"""
+    if pd.isna(start_str) or start_str == '':
+        return 'Not mentioned'
+    
+    start_clean = str(start_str).strip()
+    
+    # Find everything before "t/m" (case insensitive)
+    import re
+    match = re.search(r'^(.*?)\s*t/m', start_clean, re.IGNORECASE)
+    if match:
+        extracted_text = match.group(1).strip()
+        return extracted_text if extracted_text else 'Not mentioned'
+    
+    return start_clean if start_clean else 'Not mentioned'
+
+def process_hours_hinttech(hours_str):
+    """Process hours for HintTech - remove 'per week' and keep only numbers"""
+    if pd.isna(hours_str) or hours_str == '':
+        return 'Not mentioned'
+    # Remove "per week" (case insensitive) and extract numbers
+    hours_clean = str(hours_str).lower().replace('per week', '').replace('perweek', '').strip()
+    # Extract numbers using regex
+    import re
+    numbers = re.findall(r'\d+', hours_clean)
+    if numbers:
+        return numbers[0]  # Return the first number found
+    return 'Not mentioned'
+
+def process_duration_hinttech(duration_str):
+    """Process duration for HintTech - calculate difference between start and end dates"""
+                    if pd.isna(duration_str) or duration_str == '':
+                        return 'Not mentioned'
+                    
+                    try:
+        # Parse date range (assuming format like "2024-01-01 to 2024-06-30" or similar)
+                        duration_clean = str(duration_str).strip()
+                        
+        # Common separators for date ranges
+        separators = [' to ', ' - ', ' tot ', ' t/m ', ' until ', ' through ']
+                        
+                        for sep in separators:
+                            if sep in duration_clean.lower():
+                                parts = duration_clean.lower().split(sep)
+                                if len(parts) == 2:
+                                    start_date_str = parts[0].strip()
+                                    end_date_str = parts[1].strip()
+                                    
+                                    # Try to parse dates with common formats
+                                    from datetime import datetime
+                    date_formats = ['%Y-%m-%d', '%d-%m-%Y', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d']
+                                    
+                                    start_date = None
+                                    end_date = None
+                                    
+                                    for fmt in date_formats:
+                                        try:
+                                            start_date = datetime.strptime(start_date_str, fmt)
+                                            end_date = datetime.strptime(end_date_str, fmt)
+                                            break
+                                        except ValueError:
+                                            continue
+                                    
+                                    if start_date and end_date:
+                                        # Calculate difference in days
+                                        diff_days = (end_date - start_date).days
+                                        if diff_days > 0:
+                                            # Convert to months/weeks if appropriate
+                            if diff_days >= 30:
+                                                months = diff_days // 30
+                                                return f"{months} months"
+                                            elif diff_days >= 7:
+                                                weeks = diff_days // 7
+                                                return f"{weeks} weeks"
+                                            else:
+                                                return f"{diff_days} days"
+                                    break
+                        
+                        return duration_clean  # Return original if can't parse
+                    except Exception:
+                        return 'Not mentioned'
+                
+def process_location_indeed(index, files_read):
+    """Process location for indeed - extract location from Field2 column"""
+                    import re
+                    
+                    # Get the Field2 value from the original input DataFrame
+                    field2_val = files_read.iloc[index]['Field2'] if 'Field2' in files_read.columns else None
+                    
+                    if pd.isna(field2_val) or field2_val == '':
+                        return 'Not mentioned'
+                    
+                    field2_str = str(field2_val)
+                    
+                    # Search for the exact word "Locatie" and extract everything after it until "&" marker
+                    locatie_pattern = r'Locatie([^&]*)'
+                    locatie_match = re.search(locatie_pattern, field2_str)
+                    
+                    if locatie_match:
+                        location = locatie_match.group(1).strip()
+                        return location if location else 'Not mentioned'
+                    
+                    return 'Not mentioned'
+                
+def process_rate_indeed(index, files_read):
+    """Process rate for indeed - extract rate from Field2 column"""
+                    import re
+                    # Get the Field2 value from the original input DataFrame
+                    field2_val = files_read.iloc[index]['Field2'] if 'Field2' in files_read.columns else None
+                    if pd.isna(field2_val) or field2_val == '':
+                        return None
+                    field2_str = str(field2_val)
+                    # Search for rate information in Field2 (look for patterns like "€", "EUR", "euro", etc.)
+                    rate_patterns = [
+                        r'€\s*(\d+(?:[.,]\d+)?)',        # € 50 or € 50,00
+                        r'(\d+(?:[.,]\d+)?)\s*€',        # 50 € or 50,00 €
+                        r'EUR\s*(\d+(?:[.,]\d+)?)',      # EUR 50
+                        r'(\d+(?:[.,]\d+)?)\s*EUR',      # 50 EUR
+                        r'euro\s*(\d+(?:[.,]\d+)?)',     # euro 50
+                        r'(\d+(?:[.,]\d+)?)\s*euro',     # 50 euro
+                        r'(\d+(?:[.,]\d+)?)\s*per\s*uur',   # 50 per uur
+                        r'(\d+(?:[.,]\d+)?)\s*per\s*day',   # 50 per day
+                        r'(\d+(?:[.,]\d+)?)\s*per\s*week',  # 50 per week
+                        r'(\d+(?:[.,]\d+)?)\s*per\s*month'  # 50 per month
+                    ]
+                    for pattern in rate_patterns:
+                        rate_match = re.search(pattern, field2_str, re.IGNORECASE)
+                        if rate_match:
+                            rate = rate_match.group(1).replace(',', '.')
+                            return rate
+                    return None
+
+def process_summary_indeed(index, files_read, result):
+    """Process summary for indeed - use Field2 but remove the first line"""
+                    try:
+                        source_val = None
+                        if 'Field2' in files_read.columns:
+                            source_val = files_read.iloc[index]['Field2']
+                        if pd.isna(source_val) or source_val == '':
+                            source_val = result.iloc[index]['Summary'] if index < len(result) else ''
+                        summary_str = str(source_val)
+                        # Normalize line breaks and split
+                        summary_str = summary_str.replace('\r\n', '\n').replace('\r', '\n')
+                        lines = summary_str.split('\n')
+                        if len(lines) <= 1:
+                            cleaned = summary_str.strip()
+                        else:
+                            cleaned = ' '.join([ln.strip() for ln in lines[1:] if ln.strip()])
+                        return cleaned if cleaned else 'See Vacancy'
+                    except Exception:
+                        return 'See Vacancy'
+
+def extract_strict_rate(text_str):
+    """Extract strict rate for werk.nl - extract only relevant numbers (rates/salaries) from Text column"""
+    if pd.isna(text_str) or text_str == '':
+                    return 'Not mentioned'
+                
+    text_clean = str(text_str).strip()
+    
+    # Look for specific rate/salary patterns only
+                    import re
+    
+    # Pattern for "€X/hour" or "€X per hour" or "€X/uur"
+    euro_per_hour = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:per\s+hour|/hour|/uur)', text_clean, re.IGNORECASE)
+    if euro_per_hour:
+        amount = float(euro_per_hour.group(1))
+        return f'€{amount:.0f}/hour'
+    
+    # Pattern for "€X/day" or "€X per day" or "€X/dag"
+    euro_per_day = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:per\s+day|/day|/dag)', text_clean, re.IGNORECASE)
+    if euro_per_day:
+        amount = float(euro_per_day.group(1))
+        return f'€{amount:.0f}/day'
+    
+    # Pattern for "€X/month" or "€X per month" or "€X/maand"
+    euro_per_month = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:per\s+month|/month|/maand)', text_clean, re.IGNORECASE)
+    if euro_per_month:
+        amount = float(euro_per_month.group(1))
+        return f'€{amount:.0f}/month'
+    
+    # Pattern for "€X/year" or "€X per year" or "€X/jaar"
+    euro_per_year = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:per\s+year|/year|/jaar)', text_clean, re.IGNORECASE)
+    if euro_per_year:
+        amount = float(euro_per_year.group(1))
+        return f'€{amount:.0f}/year'
+    
+    # Pattern for salary ranges "€X - €Y" or "€X tot €Y"
+    salary_range = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:-|tot)\s*€\s*(\d+(?:\.\d+)?)', text_clean)
+    if salary_range:
+        min_amount = float(salary_range.group(1))
+        max_amount = float(salary_range.group(2))
+        return f'€{min_amount:.0f} - €{max_amount:.0f}'
+    
+    # Pattern for standalone "€X" (but avoid phone numbers, dates, etc.)
+    # Look for € followed by number but not in phone/date contexts
+    euro_standalone = re.search(r'(?<![\d\w])\€\s*(\d{2,5}(?:\.\d+)?)(?![\d\w])', text_clean)
+    if euro_standalone:
+        amount = float(euro_standalone.group(1))
+        # Only accept reasonable salary amounts (€20-€1000)
+        if 20 <= amount <= 1000:
+            return f'€{amount:.0f}'
+    
+    # Pattern for "X euro" or "X EUR" (but avoid phone numbers)
+    euro_text = re.search(r'(?<![\d\w])(\d{2,5}(?:\.\d+)?)\s*(?:euro|EUR)(?![\d\w])', text_clean, re.IGNORECASE)
+    if euro_text:
+        amount = float(euro_text.group(1))
+        # Only accept reasonable salary amounts (€20-€1000)
+        if 20 <= amount <= 1000:
+            return f'€{amount:.0f}'
+    
+                        return 'Not mentioned'
+
+def process_title_twine(title_str):
+    """Process title for twine - remove 'Easy Apply ' text"""
+                    if pd.isna(title_str) or title_str == '':
+                        return 'Not mentioned'
+                    
+    title_clean = str(title_str).strip()
+                    
+    # Remove "Easy Apply " (case insensitive)
+    title_clean = title_clean.replace('Easy Apply ', '').replace('easy apply ', '')
+                    
+                    # Clean up extra spaces
+                    title_clean = ' '.join(title_clean.split()).strip()
+                    
+                    return title_clean if title_clean else 'Not mentioned'
+                
+def process_rate_haarlemmermeer(rate_str):
+    """Process rate for haarlemmermeerhuurtin - remove 'per uur' and keep only the amount"""
+                    if pd.isna(rate_str) or rate_str == '':
+                        return 'Not mentioned'
+    # Remove "per uur" (case insensitive) and clean up
+    rate_clean = str(rate_str).lower().replace('per uur', '').replace('peruur', '').strip()
+    # Remove extra spaces and return
+    rate_clean = ' '.join(rate_clean.split())
+    return rate_clean if rate_clean else 'Not mentioned'
+
+def process_duration_haarlemmermeer(duration_str):
+    """Process duration for haarlemmermeerhuurtin - calculate difference between start and end dates"""
+                    if pd.isna(duration_str) or duration_str == '':
+                        return 'Not mentioned'
+                    
+                    try:
+        # Parse date range (assuming format like "01-07-2025 t/m 01-01-2026" or similar)
+                        duration_clean = str(duration_str).strip()
+                        
+        # Common separators for date ranges (including Dutch separators)
+        separators = [' t/m ', ' to ', ' - ', ' tot ', ' until ', ' through ', ' tm ']
+        
+        for sep in separators:
+            if sep in duration_clean.lower():
+                parts = duration_clean.lower().split(sep)
+                if len(parts) == 2:
+                    start_date_str = parts[0].strip()
+                    end_date_str = parts[1].strip()
+
+                    # Try to parse dates with common formats
+                        from datetime import datetime
+                    date_formats = ['%d-%m-%Y', '%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d']
+
+                    start_date = None
+                    end_date = None
+                    
+                    for fmt in date_formats:
+                        try:
+                            start_date = datetime.strptime(start_date_str, fmt)
+                            end_date = datetime.strptime(end_date_str, fmt)
+                            break
+                            except ValueError:
+                            continue
+                    
+                    if start_date and end_date:
+                        # Calculate difference in days
+                        diff_days = (end_date - start_date).days
+                        if diff_days > 0:
+                            # Convert to months/weeks if appropriate
+                            if diff_days >= 30:
+                                months = diff_days // 30
+                                return f"{months} months"
+                            elif diff_days >= 7:
+                                weeks = diff_days // 7
+                                return f"{weeks} weeks"
+                        else:
+                                return f"{diff_days} days"
+                break
+                            
+        return duration_clean  # Return original if can't parse
+                    except Exception:
+        return 'Not mentioned'
+
+def process_rate_werk(rate_str):
+    """Process rate for werk.nl - extract rate information"""
+                    if pd.isna(rate_str) or rate_str == '':
+                        return 'Not mentioned'
+                    
+                        rate_clean = str(rate_str).strip()
+    # Extract rate information - this is a placeholder function
+    # You may need to implement specific logic based on werk.nl's rate format
+    return rate_clean if rate_clean else 'Not mentioned'
+
+def process_location_tennet(location_str):
+    """Process location for tennet - clean location information"""
+    if pd.isna(location_str) or location_str == '':
+                        return 'Not mentioned'
+                        
+    location_clean = str(location_str).strip()
+    # Clean up location information - this is a placeholder function
+    # You may need to implement specific logic based on tennet's location format
+    return location_clean if location_clean else 'Not mentioned'
+
+def process_hours_freelance_nl(hours_str):
+    """Process hours for freelance.nl - extract hours information"""
+                    if pd.isna(hours_str) or hours_str == '':
+                        return 'Not mentioned'
+                    
+                    hours_clean = str(hours_str).strip()
+    # Extract hours information - this is a placeholder function
+    # You may need to implement specific logic based on freelance.nl's hours format
+                    return hours_clean if hours_clean else 'Not mentioned'
+                
+def apply_special_processing(df, company_name):
+    """Apply special processing based on company name"""
+    try:
+        # Load special processing configuration
+        with open('special_processing.json', 'r') as f:
+            special_processing = json.load(f)
+        
+        if company_name in special_processing:
+            processing_type = special_processing[company_name].get('type')
+            
+            # Map processing types to functions
+            processing_functions = {
+                'special_freelance_processing': special_freelance_processing,
+                'special_hoofdkraan_processing': special_hoofdkraan_processing,
+                'special_harvey_nash_processing': special_harvey_nash_processing,
+                'special_linkedin_processing': special_linkedin_processing,
+                'special_umc_processing': special_umc_processing,
+                'special_interimnetwerk_processing': special_interimnetwerk_processing,
+            }
+            
+            if processing_type in processing_functions:
+                df = processing_functions[processing_type](df, company_name)
+                logging.info(f"🔧 {company_name}: Applied {processing_type}")
+                            else:
+                logging.warning(f"🔧 {company_name}: Processing type {processing_type} not implemented")
+        
+        return df
+        
+    except FileNotFoundError:
+        logging.warning(f"🔧 {company_name}: special_processing.json not found, skipping special processing")
+        return df
+                    except Exception as e:
+        logging.error(f"🔧 {company_name}: Error in special processing: {e}")
+        return df
+
+def freelance_directory(files_read, company_name):
+    """Process and standardize job listings from different sources."""
+    try:
+        # Get the mapping for this company
+        mapping = COMPANY_MAPPINGS.get(company_name)
+        if not mapping:
+            logging.warning(f"No mapping found for company {company_name}")
+            return pd.DataFrame()
+        
+        # First replace all NaN/None values with empty strings in the input DataFrame
+        files_read = files_read.fillna('')
+        
+        # COMPANY-SPECIFIC PRE-MAPPING FILTERS
         
         # Create a new DataFrame with standardized columns
         result = pd.DataFrame()
@@ -2612,7 +1714,7 @@ def freelance_directory(files_read, company_name):
                 if company_name == 'werk.nl' and std_col == 'Company' and src_col_mapping_value == 'Description':
                     # Special handling for werk.nl: split Description on "-" and use first part as Company
                     result[std_col] = files_read['Description'].str.split('-').str[0].str.strip()
-                else:
+                            else:
                     result[std_col] = files_read[src_col_mapping_value]
             elif '+' in src_col_mapping_value or ',' in src_col_mapping_value:
                 # Handle column merging (e.g., 'col1+col2+col3' or 'col1, col2, col3')
@@ -2629,17 +1731,17 @@ def freelance_directory(files_read, company_name):
                     for col in existing_columns[1:]:
                         merged_data = merged_data + ' ' + files_read[col].astype(str)
                     result[std_col] = merged_data
-                else:
+                        else:
                     # No columns found, assign empty string
                     result[std_col] = pd.Series([''] * len(files_read), index=files_read.index)
-            else:
+                    else:
                 # If the mapping value is not a column name, assign the mapping value itself.
                 # This handles literal defaults like 'Company': 'LinkIT' or 'start': 'ASAP'.
                 # If files_read is empty (e.g. due to pre-mapping filter), ensure Series is not created with wrong length.
                 if files_read.empty:
                     # Create an empty series of appropriate type if result is also going to be empty for this column
                     result[std_col] = pd.Series(dtype='object') 
-                else:
+                    else:
                     result[std_col] = src_col_mapping_value
 
         # PLACEHOLDER DETECTION DISABLED per user request
@@ -2672,175 +1774,9 @@ def freelance_directory(files_read, company_name):
         if 'Company' in result.columns:
             result.loc[result['Company'] == '', 'Company'] = company_name
 
-        # WERK.NL POST-MAPPING PROCESSING
-        if company_name == 'werk.nl':
-            # Process rate field - extract only relevant numbers (rates/salaries) from Text column
-            if 'rate' in result.columns:
-                def extract_strict_rate(text_str):
-                    if pd.isna(text_str) or text_str == '':
-                        return 'Not mentioned'
-                    
-                    text_clean = str(text_str).strip()
-                    
-                    # Look for specific rate/salary patterns only
-                    import re
-                    
-                    # Pattern for "€X/hour" or "€X per hour" or "€X/uur"
-                    euro_per_hour = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:per\s+hour|/hour|/uur)', text_clean, re.IGNORECASE)
-                    if euro_per_hour:
-                        amount = float(euro_per_hour.group(1))
-                        return f'€{amount:.0f}/hour'
-                    
-                    # Pattern for "€X/day" or "€X per day" or "€X/dag"
-                    euro_per_day = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:per\s+day|/day|/dag)', text_clean, re.IGNORECASE)
-                    if euro_per_day:
-                        amount = float(euro_per_day.group(1))
-                        return f'€{amount:.0f}/day'
-                    
-                    # Pattern for "€X/month" or "€X per month" or "€X/maand"
-                    euro_per_month = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:per\s+month|/month|/maand)', text_clean, re.IGNORECASE)
-                    if euro_per_month:
-                        amount = float(euro_per_month.group(1))
-                        return f'€{amount:.0f}/month'
-                    
-                    # Pattern for "€X/year" or "€X per year" or "€X/jaar"
-                    euro_per_year = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:per\s+year|/year|/jaar)', text_clean, re.IGNORECASE)
-                    if euro_per_year:
-                        amount = float(euro_per_year.group(1))
-                        return f'€{amount:.0f}/year'
-                    
-                    # Pattern for salary ranges "€X - €Y" or "€X tot €Y"
-                    salary_range = re.search(r'€\s*(\d+(?:\.\d+)?)\s*(?:-|tot)\s*€\s*(\d+(?:\.\d+)?)', text_clean)
-                    if salary_range:
-                        min_amount = float(salary_range.group(1))
-                        max_amount = float(salary_range.group(2))
-                        return f'€{min_amount:.0f} - €{max_amount:.0f}'
-                    
-                    # Pattern for standalone "€X" (but avoid phone numbers, dates, etc.)
-                    # Look for € followed by number but not in phone/date contexts
-                    euro_standalone = re.search(r'(?<![\d\w])\€\s*(\d{2,5}(?:\.\d+)?)(?![\d\w])', text_clean)
-                    if euro_standalone:
-                        amount = float(euro_standalone.group(1))
-                        # Only accept reasonable salary amounts (€20-€1000)
-                        if 20 <= amount <= 1000:
-                            return f'€{amount:.0f}'
-                    
-                    # Pattern for "X euro" or "X EUR" (but avoid phone numbers)
-                    euro_text = re.search(r'(?<![\d\w])(\d{2,5}(?:\.\d+)?)\s*(?:euro|EUR)(?![\d\w])', text_clean, re.IGNORECASE)
-                    if euro_text:
-                        amount = float(euro_text.group(1))
-                        # Only accept reasonable salary amounts (€20-€1000)
-                        if 20 <= amount <= 1000:
-                            return f'€{amount:.0f}'
-                    
-                    return 'Not mentioned'
-                
-                result['rate'] = result['rate'].apply(extract_strict_rate)
-                logging.info(f"werk.nl post-mapping: Processed rate field with strict number filtering")
         
-        # TWINE POST-MAPPING PROCESSING
-        if company_name == 'twine':
-            # Process Title field - remove "Easy Apply " text
-            if 'Title' in result.columns:
-                def process_title_twine(title_str):
-                    if pd.isna(title_str) or title_str == '':
-                        return 'Not mentioned'
-                    
-                    title_clean = str(title_str).strip()
-                    
-                    # Remove "Easy Apply " (case insensitive)
-                    title_clean = title_clean.replace('Easy Apply ', '').replace('easy apply ', '')
-                    
-                    # Clean up extra spaces
-                    title_clean = ' '.join(title_clean.split()).strip()
-                    
-                    return title_clean if title_clean else 'Not mentioned'
-                
-                result['Title'] = result['Title'].apply(process_title_twine)
-                logging.info(f"twine post-mapping: Processed Title field to remove 'Easy Apply ' text")
         
-        # GEMEENTE PROJECTEN POST-MAPPING PROCESSING
-        if company_name == 'gemeente-projecten':
-            # Process rate field - extract currency from Field4
-            if 'rate' in result.columns:
-                def extract_currency_from_field4(text_str):
-                    if pd.isna(text_str) or text_str == '':
-                        return 'Not mentioned'
-                    
-                    text_clean = str(text_str).strip()
-                    
-                    # Look for currency patterns
-                    import re
-                    
-                    # Pattern for "€X" or "€ X"
-                    euro_pattern = re.search(r'€\s*(\d+(?:\.\d+)?)', text_clean)
-                    if euro_pattern:
-                        amount = float(euro_pattern.group(1))
-                        return f'€{amount:.0f}'
-                    
-                    # Pattern for "X euro" or "X EUR"
-                    euro_text_pattern = re.search(r'(\d+(?:\.\d+)?)\s*(?:euro|EUR)', text_clean, re.IGNORECASE)
-                    if euro_text_pattern:
-                        amount = float(euro_text_pattern.group(1))
-                        return f'€{amount:.0f}'
-                    
-                    # Pattern for "Tariefindicatie: €X" or similar
-                    tarief_pattern = re.search(r'tariefindicatie[:\s]*€\s*(\d+(?:\.\d+)?)', text_clean, re.IGNORECASE)
-                    if tarief_pattern:
-                        amount = float(tarief_pattern.group(1))
-                        return f'€{amount:.0f}'
-                    
-                    # If no currency found, return "Not mentioned"
-                    return 'Not mentioned'
-                
-                result['rate'] = result['rate'].apply(extract_currency_from_field4)
-                logging.info(f"gemeente-projecten post-mapping: Processed rate field to extract currency from Field4")
         
-        # TENNET POST-MAPPING PROCESSING
-        if company_name == 'tennet':
-            # Process location field - remove everything after "/"
-            if 'Location' in result.columns:
-                def clean_location_tennet(location_str):
-                    if pd.isna(location_str) or location_str == '':
-                        return 'Not mentioned'
-                    
-                    location_clean = str(location_str).strip()
-                    
-                    # Remove everything after "/" (including the "/" itself)
-                    if '/' in location_clean:
-                        location_clean = location_clean.split('/')[0].strip()
-                    
-                    return location_clean if location_clean else 'Not mentioned'
-                
-                result['Location'] = result['Location'].apply(clean_location_tennet)
-                logging.info(f"tennet post-mapping: Processed location field to remove content after '/'")
-            
-            # Process Summary field - combine Field5 through Field14
-            if 'Summary' in result.columns:
-                def combine_summary_fields_tennet(index):
-                    # Get the original row from the input DataFrame
-                    if index >= len(files_read):
-                        return 'Not mentioned'
-                    
-                    row = files_read.iloc[index]
-                    
-                    # List of field names to combine
-                    field_names = ['Field5', 'Field6', 'Field7', 'Field8', 'Field9', 'Field10', 'Field11', 'Field12', 'Field13', 'Field14']
-                    
-                    # Collect non-empty values
-                    values = []
-                    for field_name in field_names:
-                        if field_name in files_read.columns:
-                            value = row[field_name]
-                            if not pd.isna(value) and str(value).strip():
-                                values.append(str(value).strip())
-                    
-                    # Combine with spaces, or return default if no content
-                    return ' '.join(values) if values else 'See Vacancy'
-                
-                # Apply the processing to each row by index
-                result['Summary'] = [combine_summary_fields_tennet(i) for i in range(len(result))]
-                logging.info(f"tennet post-mapping: Combined Field5-Field14 into Summary field")
         
         # FIELD MERGING POST-MAPPING PROCESSING
         # Handle sources that use Field5|Field6|Field7|Field8|Field9|Field10|Field11|Field12|Field13|Field14 mapping
@@ -2872,175 +1808,6 @@ def freelance_directory(files_read, company_name):
                 result['Summary'] = [combine_summary_fields(i) for i in range(len(result))]
                 logging.info(f"{company_name} post-mapping: Combined Field5-Field14 into Summary field")
         
-        # CIRCLE8 POST-MAPPING PROCESSING
-        if company_name == 'Circle8':
-            # Process Summary field - provide fallback text if no information is provided
-            if 'Summary' in result.columns:
-                def process_summary_circle8(summary_str):
-                    if pd.isna(summary_str) or summary_str == '' or str(summary_str).strip() == '':
-                        return 'We were not able to find description'
-                    
-                    summary_clean = str(summary_str).strip()
-                    return summary_clean if summary_clean else 'We were not able to find description'
-                
-                result['Summary'] = result['Summary'].apply(process_summary_circle8)
-                logging.info(f"Circle8 post-mapping: Processed Summary field to provide fallback text when empty")
-        
-        # FLEXVALUE POST-MAPPING PROCESSING
-        if company_name == 'FlexValue_B.V.':
-            # Process Summary field - remove everything before "opdrachtbeschrijving"
-            if 'Summary' in result.columns:
-                def process_summary_flexvalue(summary_str):
-                    if pd.isna(summary_str) or summary_str == '':
-                        return 'Not mentioned'
-                    
-                    summary_clean = str(summary_str).strip()
-                    
-                    # Find "opdrachtbeschrijving" and take everything after it
-                    if 'opdrachtbeschrijving' in summary_clean.lower():
-                        # Find the position of "opdrachtbeschrijving" (case insensitive)
-                        import re
-                        match = re.search(r'opdrachtbeschrijving', summary_clean, re.IGNORECASE)
-                        if match:
-                            # Take everything after the marker
-                            summary_clean = summary_clean[match.end():].strip()
-                    
-                    return summary_clean if summary_clean else 'Not mentioned'
-                
-                result['Summary'] = result['Summary'].apply(process_summary_flexvalue)
-                logging.info(f"FlexValue post-mapping: Processed Summary field to remove content before 'opdrachtbeschrijving'")
-            
-            # Process rate field - extract text between "Tarief" and "all-in"
-            if 'rate' in result.columns:
-                def process_rate_flexvalue(rate_str):
-                    if pd.isna(rate_str) or rate_str == '':
-                        return 'Not mentioned'
-                    
-                    rate_clean = str(rate_str).strip()
-                    
-                    # Find text between "Tarief" and "all-in"
-                    import re
-                    tarief_match = re.search(r'tarief', rate_clean, re.IGNORECASE)
-                    allin_match = re.search(r'all-in', rate_clean, re.IGNORECASE)
-                    
-                    if tarief_match and allin_match and allin_match.start() > tarief_match.end():
-                        # Extract text between the markers
-                        extracted_text = rate_clean[tarief_match.end():allin_match.start()].strip()
-                        return extracted_text if extracted_text else 'Not mentioned'
-                    
-                    return 'Not mentioned'
-                
-                result['rate'] = result['rate'].apply(process_rate_flexvalue)
-                logging.info(f"FlexValue post-mapping: Processed rate field to extract text between 'Tarief' and 'all-in'")
-            
-            # Process Hours field - extract number after "Uren per week"
-            if 'Hours' in result.columns:
-                def process_hours_flexvalue(hours_str):
-                    if pd.isna(hours_str) or hours_str == '':
-                        return 'Not mentioned'
-                    
-                    hours_clean = str(hours_str).strip()
-                    
-                    # Find "Uren per week" and extract the number after it
-                    import re
-                    match = re.search(r'uren per week\s*(\d+)', hours_clean, re.IGNORECASE)
-                    if match:
-                        number = match.group(1)
-                        return number
-                    
-                    return 'Not mentioned'
-                
-                result['Hours'] = result['Hours'].apply(process_hours_flexvalue)
-                logging.info(f"FlexValue post-mapping: Processed Hours field to extract number after 'Uren per week'")
-        
-        # AMSTELVEENHUURTIN POST-MAPPING PROCESSING
-        if company_name == 'Amstelveenhuurtin':
-            # Process Title field - remove words in brackets and words starting with "SO" followed by a number
-            if 'Title' in result.columns:
-                def process_title_amstelveenhuurtin(title_str):
-                    if pd.isna(title_str) or title_str == '':
-                        return 'Not mentioned'
-                    
-                    # Convert to string and clean up
-                    title_clean = str(title_str).strip()
-                    
-                    # Remove words in brackets (including nested brackets)
-                    title_clean = re.sub(r'\([^)]*\)', '', title_clean)
-                    
-                    # Remove words that start with "SO" followed by a number
-                    title_clean = re.sub(r'\bSO\d+\b', '', title_clean, flags=re.IGNORECASE)
-                    
-                    # Clean up extra spaces
-                    title_clean = re.sub(r'\s+', ' ', title_clean).strip()
-                    
-                    # Return "Not mentioned" if empty after cleaning
-                    if not title_clean:
-                        return 'Not mentioned'
-                    
-                    return title_clean
-                
-                result['Title'] = result['Title'].apply(process_title_amstelveenhuurtin)
-                logging.info(f"Amstelveenhuurtin post-mapping: Processed Title field to remove words in brackets and SO-number patterns")
-            
-            # Process Location field - extract text between "standplaats:" and "|"
-            if 'Location' in result.columns:
-                def process_location_amstelveenhuurtin(location_str):
-                    if pd.isna(location_str) or location_str == '':
-                        return 'Not mentioned'
-                    
-                    location_clean = str(location_str).strip()
-                    
-                    # Find text between "standplaats:" and "|"
-                    import re
-                    match = re.search(r'standplaats:\s*(.*?)\s*\|', location_clean, re.IGNORECASE)
-                    if match:
-                        extracted_text = match.group(1).strip()
-                        return extracted_text if extracted_text else 'Not mentioned'
-                    
-                    return 'Not mentioned'
-                
-                result['Location'] = result['Location'].apply(process_location_amstelveenhuurtin)
-                logging.info(f"Amstelveenhuurtin post-mapping: Processed Location field to extract text between 'standplaats:' and '|'")
-            
-            # Process Hours field - extract text between "Uren:" and "|"
-            if 'Hours' in result.columns:
-                def process_hours_amstelveenhuurtin(hours_str):
-                    if pd.isna(hours_str) or hours_str == '':
-                        return 'Not mentioned'
-                    
-                    hours_clean = str(hours_str).strip()
-                    
-                    # Find text between "Uren:" and "|"
-                    import re
-                    match = re.search(r'uren:\s*(.*?)\s*\|', hours_clean, re.IGNORECASE)
-                    if match:
-                        extracted_text = match.group(1).strip()
-                        return extracted_text if extracted_text else 'Not mentioned'
-                    
-                    return 'Not mentioned'
-                
-                result['Hours'] = result['Hours'].apply(process_hours_amstelveenhuurtin)
-                logging.info(f"Amstelveenhuurtin post-mapping: Processed Hours field to extract text between 'Uren:' and '|'")
-            
-            # Process start field - extract everything before "t/m"
-            if 'start' in result.columns:
-                def process_start_amstelveenhuurtin(start_str):
-                    if pd.isna(start_str) or start_str == '':
-                        return 'Not mentioned'
-                    
-                    start_clean = str(start_str).strip()
-                    
-                    # Find everything before "t/m" (case insensitive)
-                    import re
-                    match = re.search(r'^(.*?)\s*t/m', start_clean, re.IGNORECASE)
-                    if match:
-                        extracted_text = match.group(1).strip()
-                        return extracted_text if extracted_text else 'Not mentioned'
-                    
-                    return start_clean if start_clean else 'Not mentioned'
-                
-                result['start'] = result['start'].apply(process_start_amstelveenhuurtin)
-                logging.info(f"Amstelveenhuurtin post-mapping: Processed start field to extract everything before 't/m'")
 
         # Drop rows where Title or URL is empty
         before_drop = len(result)
@@ -3057,1830 +1824,42 @@ def freelance_directory(files_read, company_name):
         if duplicates_removed > 0:
             logging.info(f"Removed {duplicates_removed} duplicate entries from {company_name}")
         
-        # Specific filtering for freelancer.com - REMOVED per user request
-        # if company_name == 'freelancer.com':
-        #     if 'Title' in result.columns:
-        #         result = result[~result['Title'].str.contains('--', na=False)]
         
         # COMPANY-SPECIFIC POST-MAPPING PROCESSING
-        if company_name == 'HintTech':
-            # Process Hours field - remove "per week" and keep only numbers
-            if 'Hours' in result.columns:
-                def process_hours(hours_str):
-                    if pd.isna(hours_str) or hours_str == '':
-                        return 'Not mentioned'
-                    # Remove "per week" (case insensitive) and extract numbers
-                    hours_clean = str(hours_str).lower().replace('per week', '').replace('perweek', '').strip()
-                    # Extract numbers using regex
-                    import re
-                    numbers = re.findall(r'\d+', hours_clean)
-                    if numbers:
-                        return numbers[0]  # Return the first number found
-                    return 'Not mentioned'
-                
-                result['Hours'] = result['Hours'].apply(process_hours)
-                logging.info(f"HintTech post-mapping: Processed Hours field to extract numbers and remove 'per week'")
-            
-            # Process Duration field - calculate difference between start and end dates
-            if 'Duration' in result.columns:
-                def process_duration(duration_str):
-                    if pd.isna(duration_str) or duration_str == '':
-                        return 'Not mentioned'
-                    
-                    try:
-                        # Parse date range (assuming format like "2024-01-01 to 2024-06-30" or similar)
-                        duration_clean = str(duration_str).strip()
-                        
-                        # Common separators for date ranges
-                        separators = [' to ', ' - ', ' tot ', ' t/m ', ' until ', ' through ']
-                        
-                        for sep in separators:
-                            if sep in duration_clean.lower():
-                                parts = duration_clean.lower().split(sep)
-                                if len(parts) == 2:
-                                    start_date_str = parts[0].strip()
-                                    end_date_str = parts[1].strip()
-                                    
-                                    # Try to parse dates with common formats
-                                    from datetime import datetime
-                                    date_formats = ['%Y-%m-%d', '%d-%m-%Y', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d']
-                                    
-                                    start_date = None
-                                    end_date = None
-                                    
-                                    for fmt in date_formats:
-                                        try:
-                                            start_date = datetime.strptime(start_date_str, fmt)
-                                            end_date = datetime.strptime(end_date_str, fmt)
-                                            break
-                                        except ValueError:
-                                            continue
-                                    
-                                    if start_date and end_date:
-                                        # Calculate difference in days
-                                        diff_days = (end_date - start_date).days
-                                        if diff_days > 0:
-                                            # Convert to months/weeks if appropriate
-                                            if diff_days >= 30:
-                                                months = diff_days // 30
-                                                return f"{months} months"
-                                            elif diff_days >= 7:
-                                                weeks = diff_days // 7
-                                                return f"{weeks} weeks"
-                                            else:
-                                                return f"{diff_days} days"
-                                    break
-                        
-                        return duration_clean  # Return original if can't parse
-                    except Exception:
-                        return 'Not mentioned'
-                
-                result['Duration'] = result['Duration'].apply(process_duration)
-                logging.info(f"HintTech post-mapping: Processed Duration field to calculate date differences")
         
-        # HAARLEMMERMEERHUURTIN POST-MAPPING PROCESSING
-        if company_name == 'haarlemmermeerhuurtin':
-            # Process rate field - remove "per uur" and keep only the amount
-            if 'rate' in result.columns:
-                def process_rate(rate_str):
-                    if pd.isna(rate_str) or rate_str == '':
-                        return 'Not mentioned'
-                    # Remove "per uur" (case insensitive) and clean up
-                    rate_clean = str(rate_str).lower().replace('per uur', '').replace('peruur', '').strip()
-                    # Remove extra spaces and return
-                    rate_clean = ' '.join(rate_clean.split())
-                    return rate_clean if rate_clean else 'Not mentioned'
-                
-                result['rate'] = result['rate'].apply(process_rate)
-                logging.info(f"haarlemmermeerhuurtin post-mapping: Processed rate field to remove 'per uur'")
-            
-            # Process Duration field - calculate difference between start and end dates
-            if 'Duration' in result.columns:
-                def process_duration_haarlemmermeer(duration_str):
-                    if pd.isna(duration_str) or duration_str == '':
-                        return 'Not mentioned'
-                    
-                    try:
-                        # Parse date range (assuming format like "01-07-2025 t/m 01-01-2026" or similar)
-                        duration_clean = str(duration_str).strip()
-                        
-                        # Common separators for date ranges (including Dutch separators)
-                        separators = [' t/m ', ' to ', ' - ', ' tot ', ' until ', ' through ', ' tm ']
-                        
-                        for sep in separators:
-                            if sep in duration_clean.lower():
-                                parts = duration_clean.lower().split(sep)
-                                if len(parts) == 2:
-                                    start_date_str = parts[0].strip()
-                                    end_date_str = parts[1].strip()
-                                    
-                                    # Try to parse dates with common formats
-                                    from datetime import datetime
-                                    date_formats = ['%d-%m-%Y', '%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d']
-                                    
-                                    start_date = None
-                                    end_date = None
-                                    
-                                    for fmt in date_formats:
-                                        try:
-                                            start_date = datetime.strptime(start_date_str, fmt)
-                                            end_date = datetime.strptime(end_date_str, fmt)
-                                            break
-                                        except ValueError:
-                                            continue
-                                    
-                                    if start_date and end_date:
-                                        # Calculate difference in days
-                                        diff_days = (end_date - start_date).days
-                                        if diff_days > 0:
-                                            # Convert to months/weeks if appropriate
-                                            if diff_days >= 365:
-                                                years = diff_days // 365
-                                                months = (diff_days % 365) // 30
-                                                if months > 0:
-                                                    return f"{years} years {months} months"
-                                                else:
-                                                    return f"{years} years"
-                                            elif diff_days >= 30:
-                                                months = diff_days // 30
-                                                return f"{months} months"
-                                            elif diff_days >= 7:
-                                                weeks = diff_days // 7
-                                                return f"{weeks} weeks"
-                                            else:
-                                                return f"{diff_days} days"
-                                    break
-                        
-                        return duration_clean  # Return original if can't parse
-                    except Exception:
-                        return 'Not mentioned'
-                
-                result['Duration'] = result['Duration'].apply(process_duration_haarlemmermeer)
-                logging.info(f"haarlemmermeerhuurtin post-mapping: Processed Duration field to calculate date differences")
         
-        # HOOFDKRAAN POST-MAPPING PROCESSING
-        if company_name == 'hoofdkraan':
-            # Process Location field - remove "Locatie:" prefix
-            if 'Location' in result.columns:
-                def process_location(location_str):
-                    if pd.isna(location_str) or location_str == '':
-                        return 'Not mentioned'
-                    # Remove "Locatie:" (case insensitive) and clean up
-                    location_clean = str(location_str).replace('Locatie:', '').replace('locatie:', '').strip()
-                    # Remove extra spaces and return
-                    location_clean = ' '.join(location_clean.split())
-                    return location_clean if location_clean else 'Not mentioned'
-                
-                result['Location'] = result['Location'].apply(process_location)
-                logging.info(f"hoofdkraan post-mapping: Processed Location field to remove 'Locatie:' prefix")
         
-        # HARVEY NASH POST-MAPPING PROCESSING
-        if company_name == 'Harvey Nash':
-            # Process Title field - remove words in parentheses and words starting with "JP"
-            if 'Title' in result.columns:
-                def process_title(title_str):
-                    if pd.isna(title_str) or title_str == '':
-                        return 'Not mentioned'
-                    
-                    import re
-                    title_clean = str(title_str)
-                    
-                    # Remove everything in parentheses (including the parentheses)
-                    title_clean = re.sub(r'\([^)]*\)', '', title_clean)
-                    
-                    # Split into words and remove words starting with "JP" (case insensitive)
-                    words = title_clean.split()
-                    filtered_words = [word for word in words if not word.upper().startswith('JP')]
-                    
-                    # Join back and clean up extra spaces
-                    title_clean = ' '.join(filtered_words).strip()
-                    # Remove multiple spaces
-                    title_clean = ' '.join(title_clean.split())
-                    
-                    return title_clean if title_clean else 'Not mentioned'
-                
-                result['Title'] = result['Title'].apply(process_title)
-                logging.info(f"Harvey Nash post-mapping: Processed Title field to remove words in parentheses and words starting with 'JP'")
         
-        # KVK POST-MAPPING PROCESSING
-        if company_name == 'KVK':
-            # Process Duration field - remove text and calculate date difference
-            if 'Duration' in result.columns:
-                def process_duration_kvk(duration_str):
-                    if pd.isna(duration_str) or duration_str == '':
-                        return 'Not mentioned'
-                    
-                    try:
-                        # Remove the specific text
-                        duration_clean = str(duration_str).replace('De looptijd van de opdracht is van', '').strip()
-                        
-                        # Extract dates using regex - look for date patterns
-                        import re
-                        from datetime import datetime
-                        
-                        # Common date patterns (DD-MM-YYYY, DD/MM/YYYY, YYYY-MM-DD, etc.)
-                        date_patterns = [
-                            r'\b(\d{1,2}[-/]\d{1,2}[-/]\d{4})\b',  # DD-MM-YYYY or DD/MM/YYYY
-                            r'\b(\d{4}[-/]\d{1,2}[-/]\d{1,2})\b',  # YYYY-MM-DD or YYYY/MM/DD
-                            r'\b(\d{1,2}\s+\w+\s+\d{4})\b',       # DD Month YYYY
-                            r'\b(\w+\s+\d{1,2},?\s+\d{4})\b'      # Month DD, YYYY
-                        ]
-                        
-                        found_dates = []
-                        for pattern in date_patterns:
-                            matches = re.findall(pattern, duration_clean)
-                            found_dates.extend(matches)
-                        
-                        if len(found_dates) >= 2:
-                            # Try to parse the first and last dates found
-                            first_date_str = found_dates[0]
-                            last_date_str = found_dates[-1]
-                            
-                            # Try different date formats
-                            date_formats = [
-                                '%d-%m-%Y', '%d/%m/%Y', '%Y-%m-%d', '%Y/%m/%d',
-                                '%d %B %Y', '%d %b %Y', '%B %d, %Y', '%b %d, %Y',
-                                '%B %d %Y', '%b %d %Y'
-                            ]
-                            
-                            start_date = None
-                            end_date = None
-                            
-                            for fmt in date_formats:
-                                try:
-                                    start_date = datetime.strptime(first_date_str, fmt)
-                                    break
-                                except ValueError:
-                                    continue
-                            
-                            for fmt in date_formats:
-                                try:
-                                    end_date = datetime.strptime(last_date_str, fmt)
-                                    break
-                                except ValueError:
-                                    continue
-                            
-                            if start_date and end_date:
-                                # Calculate difference in days
-                                diff_days = abs((end_date - start_date).days)
-                                if diff_days > 0:
-                                    # Convert to appropriate units
-                                    if diff_days >= 365:
-                                        years = diff_days // 365
-                                        months = (diff_days % 365) // 30
-                                        if months > 0:
-                                            return f"{years} years {months} months"
-                                        else:
-                                            return f"{years} years"
-                                    elif diff_days >= 30:
-                                        months = diff_days // 30
-                                        return f"{months} months"
-                                    elif diff_days >= 7:
-                                        weeks = diff_days // 7
-                                        return f"{weeks} weeks"
-                                    else:
-                                        return f"{diff_days} days"
-                        
-                        return duration_clean  # Return cleaned text if can't parse dates
-                    except Exception:
-                        return 'Not mentioned'
-                
-                result['Duration'] = result['Duration'].apply(process_duration_kvk)
-                logging.info(f"KVK post-mapping: Processed Duration field to remove text and calculate date differences")
-            
-            # Process rate field - remove "per uur"
-            if 'rate' in result.columns:
-                def process_rate_kvk(rate_str):
-                    if pd.isna(rate_str) or rate_str == '':
-                        return 'Not mentioned'
-                    # Remove "per uur" (case insensitive) and clean up
-                    rate_clean = str(rate_str).lower().replace('per uur', '').replace('peruur', '').strip()
-                    # Remove extra spaces and return
-                    rate_clean = ' '.join(rate_clean.split())
-                    return rate_clean if rate_clean else 'Not mentioned'
-                
-                result['rate'] = result['rate'].apply(process_rate_kvk)
-                logging.info(f"KVK post-mapping: Processed rate field to remove 'per uur'")
         
-        # LINKEDIN POST-MAPPING PROCESSING
-        if company_name == 'LinkedIn':
-            # Process Summary field - remove all whitelines to make text more compact
-            if 'Summary' in result.columns:
-                def process_summary_linkedin(summary_str):
-                    if pd.isna(summary_str) or summary_str == '':
-                        return 'See Vacancy'
-                    
-                    # Convert to string and remove all types of line breaks and extra whitespace
-                    summary_clean = str(summary_str)
-                    
-                    # Remove various types of line breaks and whitespace
-                    summary_clean = summary_clean.replace('\n', ' ')  # Remove newlines
-                    summary_clean = summary_clean.replace('\r', ' ')  # Remove carriage returns
-                    summary_clean = summary_clean.replace('\t', ' ')  # Remove tabs
-                    
-                    # Remove multiple spaces and clean up
-                    summary_clean = ' '.join(summary_clean.split())
-                    
-                    return summary_clean if summary_clean else 'See Vacancy'
-                
-                result['Summary'] = result['Summary'].apply(process_summary_linkedin)
-                logging.info(f"LinkedIn post-mapping: Processed Summary field to remove whitelines and make text compact")
         
-        # INDEED POST-MAPPING PROCESSING
-        if company_name == 'indeed':
-            # Process Location field - extract location from Field2 column
-            if 'Location' in result.columns and 'Field2' in files_read.columns:
-                def process_location_indeed(index):
-                    import re
-                    
-                    # Get the Field2 value from the original input DataFrame
-                    field2_val = files_read.iloc[index]['Field2'] if 'Field2' in files_read.columns else None
-                    
-                    if pd.isna(field2_val) or field2_val == '':
-                        return 'Not mentioned'
-                    
-                    field2_str = str(field2_val)
-                    
-                    # Search for the exact word "Locatie" and extract everything after it until "&" marker
-                    locatie_pattern = r'Locatie([^&]*)'
-                    locatie_match = re.search(locatie_pattern, field2_str)
-                    
-                    if locatie_match:
-                        location = locatie_match.group(1).strip()
-                        return location if location else 'Not mentioned'
-                    
-                    return 'Not mentioned'
-                
-                # Apply the processing to each row
-                result['Location'] = [process_location_indeed(i) for i in range(len(result))]
-                logging.info(f"Indeed post-mapping: Processed Location field to extract location from Field2 column using 'Locatie' pattern")
-            
-            # Process Rate field - extract rate from Field2 column (only overwrite if a value is found)
-            if 'rate' in result.columns and 'Field2' in files_read.columns:
-                def process_rate_indeed(index):
-                    import re
-                    # Get the Field2 value from the original input DataFrame
-                    field2_val = files_read.iloc[index]['Field2'] if 'Field2' in files_read.columns else None
-                    if pd.isna(field2_val) or field2_val == '':
-                        return None
-                    field2_str = str(field2_val)
-                    # Search for rate information in Field2 (look for patterns like "€", "EUR", "euro", etc.)
-                    rate_patterns = [
-                        r'€\s*(\d+(?:[.,]\d+)?)',        # € 50 or € 50,00
-                        r'(\d+(?:[.,]\d+)?)\s*€',        # 50 € or 50,00 €
-                        r'EUR\s*(\d+(?:[.,]\d+)?)',      # EUR 50
-                        r'(\d+(?:[.,]\d+)?)\s*EUR',      # 50 EUR
-                        r'euro\s*(\d+(?:[.,]\d+)?)',     # euro 50
-                        r'(\d+(?:[.,]\d+)?)\s*euro',     # 50 euro
-                        r'(\d+(?:[.,]\d+)?)\s*per\s*uur',   # 50 per uur
-                        r'(\d+(?:[.,]\d+)?)\s*per\s*day',   # 50 per day
-                        r'(\d+(?:[.,]\d+)?)\s*per\s*week',  # 50 per week
-                        r'(\d+(?:[.,]\d+)?)\s*per\s*month'  # 50 per month
-                    ]
-                    for pattern in rate_patterns:
-                        rate_match = re.search(pattern, field2_str, re.IGNORECASE)
-                        if rate_match:
-                            rate = rate_match.group(1).replace(',', '.')
-                            return rate
-                    return None
-                # Compute extracted rates and only overwrite existing when found
-                extracted_rates = [process_rate_indeed(i) for i in range(len(result))]
-                for i, extracted in enumerate(extracted_rates):
-                    if extracted is not None and extracted != '':
-                        result.at[i, 'rate'] = extracted
-                logging.info(f"Indeed post-mapping: Processed Rate field (conditional overwrite) from Field2 column")
-
-            # Process Summary field - use Field2 but remove the first line
-            if 'Summary' in result.columns:
-                def process_summary_indeed(index):
-                    try:
-                        source_val = None
-                        if 'Field2' in files_read.columns:
-                            source_val = files_read.iloc[index]['Field2']
-                        if pd.isna(source_val) or source_val == '':
-                            source_val = result.iloc[index]['Summary'] if index < len(result) else ''
-                        summary_str = str(source_val)
-                        # Normalize line breaks and split
-                        summary_str = summary_str.replace('\r\n', '\n').replace('\r', '\n')
-                        lines = summary_str.split('\n')
-                        if len(lines) <= 1:
-                            cleaned = summary_str.strip()
-                        else:
-                            cleaned = ' '.join([ln.strip() for ln in lines[1:] if ln.strip()])
-                        return cleaned if cleaned else 'See Vacancy'
-                    except Exception:
-                        return 'See Vacancy'
-
-                result['Summary'] = [process_summary_indeed(i) for i in range(len(result))]
-                logging.info(f"Indeed post-mapping: Processed Summary to drop first line from Field2")
         
-        # SCHIPHOL POST-MAPPING PROCESSING
-        if company_name == 'Schiphol':
-            # Process rate field - check both Text2 and Text4, use whichever contains a number
-            if 'rate' in result.columns and ('Text2' in files_read.columns or 'Text4' in files_read.columns):
-                def process_rate_schiphol(index):
-                    import re
-                    
-                    # Get values from both Text2 and Text4 columns if they exist
-                    text2_val = files_read.iloc[index]['Text2'] if 'Text2' in files_read.columns else None
-                    text4_val = files_read.iloc[index]['Text4'] if 'Text4' in files_read.columns else None
-                    
-                    # Function to extract numbers from text
-                    def extract_number(text):
-                        if pd.isna(text) or text == '':
-                            return None
-                        # Look for numbers (including decimals) in the text
-                        number_match = re.search(r'\d+(?:\.\d+)?', str(text))
-                        return number_match.group() if number_match else None
-                    
-                    # Check Text2 first
-                    if text2_val is not None:
-                        number_from_text2 = extract_number(text2_val)
-                        if number_from_text2:
-                            return str(text2_val)
-                    
-                    # Check Text4 if Text2 doesn't contain a number
-                    if text4_val is not None:
-                        number_from_text4 = extract_number(text4_val)
-                        if number_from_text4:
-                            return str(text4_val)
-                    
-                    return 'Not mentioned'
-                
-                # Apply the processing to each row
-                result['rate'] = [process_rate_schiphol(i) for i in range(len(result))]
-                logging.info(f"Schiphol post-mapping: Processed rate field to check both Text2 and Text4 columns")
-        
-        # WERKZOEKEN.NL POST-MAPPING PROCESSING
-        if company_name == 'werkzoeken.nl':
-            # Process Company field - remove everything before "• "
-            if 'Company' in result.columns:
-                def process_company_werkzoeken(company_str):
-                    if pd.isna(company_str) or company_str == '':
-                        return 'werkzoeken.nl'
-                    
-                    company_clean = str(company_str)
-                    
-                    # Find "• " and take everything after it
-                    if '• ' in company_clean:
-                        company_clean = company_clean.split('• ', 1)[1]  # Split on first occurrence and take second part
-                    
-                    # Clean up extra spaces
-                    company_clean = company_clean.strip()
-                    
-                    return company_clean if company_clean else 'werkzoeken.nl'
-                
-                result['Company'] = result['Company'].apply(process_company_werkzoeken)
-                logging.info(f"werkzoeken.nl post-mapping: Processed Company field to remove everything before '• '")
-            
-            # Remove entire rows where rate field contains "p/m" (indicates permanent employment, not freelance)
-            if 'rate' in result.columns:
-                initial_rows = len(result)
-                # Filter out rows where rate contains "p/m" (case insensitive)
-                result = result[~result['rate'].astype(str).str.contains('p/m', case=False, na=False)]
-                removed_rows = initial_rows - len(result)
-                if removed_rows > 0:
-                    logging.info(f"werkzoeken.nl post-mapping: Removed {removed_rows} rows containing 'p/m' in rate field (permanent employment jobs)")
-                else:
-                    logging.info(f"werkzoeken.nl post-mapping: No rows contained 'p/m' in rate field")
 
         # OVERHEIDZZP POST-MAPPING PROCESSING
-        if company_name == 'overheidzzp':
-            # Hours: remove the words "per week"
-            if 'Hours' in result.columns:
-                def process_hours_overheidzzp(hours_str):
-                    if pd.isna(hours_str) or hours_str == '':
-                        return 'Not mentioned'
-                    cleaned = str(hours_str).replace('per week', '').replace('Per week', '')
-                    cleaned = ' '.join(cleaned.split())
-                    return cleaned if cleaned else 'Not mentioned'
-                result['Hours'] = result['Hours'].apply(process_hours_overheidzzp)
-                logging.info(f"overheidzzp post-mapping: Processed Hours to remove 'per week'")
-
-            # Duration: remove anything in brackets ()
-            if 'Duration' in result.columns:
-                def process_duration_overheidzzp(duration_str):
-                    if pd.isna(duration_str) or duration_str == '':
-                        return 'Not mentioned'
-                    import re
-                    cleaned = re.sub(r'\([^)]*\)', '', str(duration_str)).strip()
-                    cleaned = ' '.join(cleaned.split())
-                    return cleaned if cleaned else 'Not mentioned'
-                result['Duration'] = result['Duration'].apply(process_duration_overheidzzp)
-                logging.info(f"overheidzzp post-mapping: Processed Duration to remove bracketed text")
-
-            # Summary: extract text between 'Over de opdracht\t' and 'Let op' (case-insensitive)
-            if 'Summary' in result.columns:
-                def process_summary_overheidzzp(index):
-                    try:
-                        source_val = None
-                        if 'Text' in files_read.columns:
-                            source_val = files_read.iloc[index]['Text']
-                        if pd.isna(source_val) or source_val == '':
-                            source_val = result.iloc[index]['Summary'] if index < len(result) else ''
-                        s = str(source_val)
-                        import re
-                        # Normalize spaces and tabs
-                        s_norm = s.replace('\r\n', '\n').replace('\r', '\n')
-                        # Find markers case-insensitive
-                        m1 = re.search(r'over de opdracht\t', s_norm, re.IGNORECASE)
-                        m2 = re.search(r'document\.addEventListener', s_norm, re.IGNORECASE)
-                        if m1 and m2 and m2.start() > m1.end():
-                            mid = s_norm[m1.end():m2.start()].strip()
-                            mid = ' '.join(mid.split())
-                            return mid if mid else 'See Vacancy'
-                        # Fallback: return original cleaned summary
-                        fallback = ' '.join(s_norm.split())
-                        return fallback if fallback else 'See Vacancy'
-                    except Exception:
-                        return 'See Vacancy'
-                result['Summary'] = [process_summary_overheidzzp(i) for i in range(len(result))]
-                logging.info(f"overheidzzp post-mapping: Extracted Summary between 'Over de opdracht' and 'document.addEventListener'")
         
-        # UMC POST-MAPPING PROCESSING
-        if company_name == 'UMC':
-            # Process Hours field - remove "p.w." (per week)
-            if 'Hours' in result.columns:
-                def process_hours_umc(hours_str):
-                    if pd.isna(hours_str) or hours_str == '':
-                        return 'Not mentioned'
-                    
-                    hours_clean = str(hours_str)
-                    
-                    # Remove "p.w." (per week) - case insensitive
-                    hours_clean = hours_clean.replace('p.w.', '').replace('P.W.', '').replace('P.w.', '').replace('p.W.', '')
-                    
-                    # Clean up extra spaces
-                    hours_clean = hours_clean.strip()
-                    
-                    return hours_clean if hours_clean else 'Not mentioned'
-                
-                result['Hours'] = result['Hours'].apply(process_hours_umc)
-                logging.info(f"UMC post-mapping: Processed Hours field to remove 'p.w.' (per week)")
         
-        # YACHT POST-MAPPING PROCESSING
-        if company_name == 'Yacht':
-            # Process Duration field - remove "Voor" prefix
-            if 'Duration' in result.columns:
-                def process_duration_yacht(duration_str):
-                    if pd.isna(duration_str) or duration_str == '':
-                        return 'Not mentioned'
-                    # Remove "Voor" (case insensitive) and clean up
-                    duration_clean = str(duration_str).replace('Voor', '').replace('voor', '').strip()
-                    # Remove extra spaces and return
-                    duration_clean = ' '.join(duration_clean.split())
-                    return duration_clean if duration_clean else 'Not mentioned'
-                
-                result['Duration'] = result['Duration'].apply(process_duration_yacht)
-                logging.info(f"Yacht post-mapping: Processed Duration field to remove 'Voor' prefix")
         
-        # ZZP OPDRACHTEN POST-MAPPING PROCESSING
-        if company_name == 'zzp opdrachten':
-            # Process rate field - remove "Max." prefix
-            if 'rate' in result.columns:
-                def process_rate_zzp(rate_str):
-                    if pd.isna(rate_str) or rate_str == '':
-                        return 'Not mentioned'
-                    # Remove "Max." (case insensitive) and clean up
-                    rate_clean = str(rate_str).replace('Max.', '').replace('max.', '').strip()
-                    # Remove extra spaces and return
-                    rate_clean = ' '.join(rate_clean.split())
-                    return rate_clean if rate_clean else 'Not mentioned'
-                
-                result['rate'] = result['rate'].apply(process_rate_zzp)
-                logging.info(f"zzp opdrachten post-mapping: Processed rate field to remove 'Max.' prefix")
-            
-            # Process Hours and Duration fields - split jobdetails4 by comma
-            if 'Hours' in result.columns and 'Duration' in result.columns:
-                def process_hours_duration_zzp(index):
-                    # Get the original jobdetails4 value from the input DataFrame
-                    jobdetails4_val = files_read.iloc[index]['jobdetails4'] if 'jobdetails4' in files_read.columns else None
-                    
-                    if pd.isna(jobdetails4_val) or jobdetails4_val == '':
-                        return 'Not mentioned', 'Not mentioned'
-                    
-                    jobdetails4_str = str(jobdetails4_val).strip()
-                    
-                    # Split by comma
-                    if ',' in jobdetails4_str:
-                        parts = jobdetails4_str.split(',', 1)  # Split only on first comma
-                        hours_part = parts[0].strip()
-                        duration_part = parts[1].strip() if len(parts) > 1 else ''
-                        
-                        return hours_part if hours_part else 'Not mentioned', duration_part if duration_part else 'Not mentioned'
-                    else:
-                        # If no comma, use the whole value for hours
-                        return jobdetails4_str if jobdetails4_str else 'Not mentioned', 'Not mentioned'
-                
-                # Apply the processing to each row
-                processed_data = [process_hours_duration_zzp(i) for i in range(len(result))]
-                hours_values = [item[0] for item in processed_data]
-                duration_values = [item[1] for item in processed_data]
-                
-                result['Hours'] = hours_values
-                result['Duration'] = duration_values
-                logging.info(f"zzp opdrachten post-mapping: Processed Hours and Duration fields from jobdetails4 (split by comma)")
-            
-            # Process Summary field - remove white lines with no text
-            if 'Summary' in result.columns:
-                def process_summary_zzp(summary_str):
-                    if pd.isna(summary_str) or summary_str == '':
-                        return 'See Vacancy'
-                    
-                    # Convert to string and split by lines
-                    summary_clean = str(summary_str)
-                    
-                    # Split by various line break types and filter out empty/whitespace-only lines
-                    lines = summary_clean.replace('\r\n', '\n').replace('\r', '\n').split('\n')
-                    filtered_lines = [line.strip() for line in lines if line.strip()]
-                    
-                    # Join the non-empty lines back together
-                    summary_clean = ' '.join(filtered_lines)
-                    
-                    return summary_clean if summary_clean else 'See Vacancy'
-                
-                result['Summary'] = result['Summary'].apply(process_summary_zzp)
-                logging.info(f"zzp opdrachten post-mapping: Processed Summary field to remove white lines with no text")
-        
-        # GEMEENTE PROJECTEN POST-MAPPING PROCESSING
-        if company_name == 'gemeente-projecten':
-            # Process Title field - remove text in () and the () themselves
-            if 'Title' in result.columns:
-                def process_title_gemeente(title_str):
-                    if pd.isna(title_str) or title_str == '':
-                        return 'Not mentioned'
-                    
-                    import re
-                    title_clean = str(title_str)
-                    
-                    # Remove everything in parentheses (including the parentheses)
-                    title_clean = re.sub(r'\([^)]*\)', '', title_clean)
-                    
-                    # Clean up extra spaces
-                    title_clean = ' '.join(title_clean.split()).strip()
-                    
-                    return title_clean if title_clean else 'Not mentioned'
-                
-                result['Title'] = result['Title'].apply(process_title_gemeente)
-                logging.info(f"gemeente-projecten post-mapping: Processed Title field to remove text in parentheses")
-            
-            # Process Location field - remove text in () and the () themselves
-            if 'Location' in result.columns:
-                def process_location_gemeente(location_str):
-                    if pd.isna(location_str) or location_str == '':
-                        return 'Not mentioned'
-                    
-                    import re
-                    location_clean = str(location_str)
-                    
-                    # Remove everything in parentheses (including the parentheses)
-                    location_clean = re.sub(r'\([^)]*\)', '', location_clean)
-                    
-                    # Clean up extra spaces
-                    location_clean = ' '.join(location_clean.split()).strip()
-                    
-                    return location_clean if location_clean else 'Not mentioned'
-                
-                result['Location'] = result['Location'].apply(process_location_gemeente)
-                logging.info(f"gemeente-projecten post-mapping: Processed Location field to remove text in parentheses")
-            
-            # Process rate field - extract euro amount from Field10 (e.g., "€50" or "€ 50,00").
-            if 'rate' in result.columns:
-                def process_rate_gemeente(rate_str):
-                    if pd.isna(rate_str) or rate_str == '':
-                        return 'Not mentioned'
-                    import re
-                    s = str(rate_str)
-                    m = re.search(r'€\s*([0-9]+(?:[.,][0-9]{1,2})?)', s)
-                    if m:
-                        val = m.group(1).replace(',', '.')
-                        return f"€ {val}"
-                    return 'Not mentioned'
-                result['rate'] = result['rate'].apply(process_rate_gemeente)
-                logging.info(f"gemeente-projecten post-mapping: Extracted euro amount from Field10 into rate")
-
-            # Process Duration field - remove the word "Voor" (case-insensitive) and clean up
-            if 'Duration' in result.columns:
-                def process_duration_gemeente(duration_str):
-                    if pd.isna(duration_str) or duration_str == '':
-                        return 'Not mentioned'
-                    import re
-                    cleaned = re.sub(r'\bvoor\b', '', str(duration_str), flags=re.IGNORECASE)
-                    cleaned = ' '.join(cleaned.split()).strip()
-                    return cleaned if cleaned else 'Not mentioned'
-                result['Duration'] = result['Duration'].apply(process_duration_gemeente)
-                logging.info(f"gemeente-projecten post-mapping: Removed 'Voor' from Duration")
         
         # GGDZWHUURTIN.NL POST-MAPPING PROCESSING
-        if company_name == 'ggdzwhuurtin.nl':
-            # Process Duration field - find 2 dates in DD-MM-YYYY format and calculate months between them
-            if 'Duration' in result.columns:
-                def process_duration_ggdz(duration_str):
-                    if pd.isna(duration_str) or duration_str == '':
-                        return 'Not mentioned'
-                    
-                    try:
-                        import re
-                        from datetime import datetime
-                        
-                        duration_clean = str(duration_str).strip()
-                        
-                        # Look for DD-MM-YYYY date patterns
-                        date_pattern = r'(\d{1,2})-(\d{1,2})-(\d{4})'
-                        dates_found = re.findall(date_pattern, duration_clean)
-                        
-                        if len(dates_found) >= 2:
-                            # Get the first two dates
-                            date1_parts = dates_found[0]
-                            date2_parts = dates_found[1]
-                            
-                            try:
-                                date1 = datetime(int(date1_parts[2]), int(date1_parts[1]), int(date1_parts[0]))
-                                date2 = datetime(int(date2_parts[2]), int(date2_parts[1]), int(date2_parts[0]))
-                                
-                                # Calculate difference in months
-                                months_diff = (date2.year - date1.year) * 12 + (date2.month - date1.month)
-                                
-                                if months_diff > 0:
-                                    return f"{months_diff} months"
-                                else:
-                                    return "Less than 1 month"
-                                    
-                            except ValueError:
-                                return duration_clean
-                        else:
-                            return duration_clean
-                            
-                    except Exception:
-                        return 'Not mentioned'
-                
-                result['Duration'] = result['Duration'].apply(process_duration_ggdz)
-                logging.info(f"ggdzwhuurtin.nl post-mapping: Processed Duration field to calculate months between DD-MM-YYYY dates")
-            
-            # Process start field - find first date in DD-MM-YYYY format
-            if 'start' in result.columns:
-                def process_start_ggdz(start_str):
-                    if pd.isna(start_str) or start_str == '':
-                        return 'ASAP'
-                    
-                    try:
-                        import re
-                        from datetime import datetime
-                        
-                        start_clean = str(start_str).strip()
-                        
-                        # Look for DD-MM-YYYY date pattern
-                        date_pattern = r'(\d{1,2})-(\d{1,2})-(\d{4})'
-                        date_match = re.search(date_pattern, start_clean)
-                        
-                        if date_match:
-                            day, month, year = date_match.groups()
-                            try:
-                                date_obj = datetime(int(year), int(month), int(day))
-                                return date_obj.strftime('%Y-%m-%d')
-                            except ValueError:
-                                return 'ASAP'
-                        else:
-                            return 'ASAP'
-                            
-                    except Exception:
-                        return 'ASAP'
-                
-                result['start'] = result['start'].apply(process_start_ggdz)
-                logging.info(f"ggdzwhuurtin.nl post-mapping: Processed start field to extract first DD-MM-YYYY date")
-            
-            # Process rate field - find currency symbol €
-            if 'rate' in result.columns:
-                def process_rate_ggdz(rate_str):
-                    if pd.isna(rate_str) or rate_str == '':
-                        return 'Not mentioned'
-                    
-                    try:
-                        import re
-                        rate_clean = str(rate_str).strip()
-                        
-                        # Look for currency pattern with € symbol
-                        rate_match = re.search(r'€\s*(\d+(?:,\d+)?(?:\.\d+)?)', rate_clean)
-                        if rate_match:
-                            return rate_match.group(1)
-                        
-                        # Look for rate without € symbol but with numbers
-                        number_match = re.search(r'(\d+(?:,\d+)?(?:\.\d+)?)', rate_clean)
-                        if number_match:
-                            return number_match.group(1)
-                        
-                        return 'Not mentioned'
-                        
-                    except Exception:
-                        return 'Not mentioned'
-                
-                result['rate'] = result['rate'].apply(process_rate_ggdz)
-                logging.info(f"ggdzwhuurtin.nl post-mapping: Processed rate field to extract currency from € symbol")
         
         # 4 FREELANCERS POST-MAPPING PROCESSING
-        if company_name == '4-Freelancers.nl':
-            # Process Title field - remove text in () and the () themselves
-            if 'Title' in result.columns:
-                def process_title_4freelancers(title_str):
-                    if pd.isna(title_str) or title_str == '':
-                        return 'Not mentioned'
-                    
-                    import re
-                    title_clean = str(title_str)
-                    
-                    # Remove everything in parentheses (including the parentheses)
-                    title_clean = re.sub(r'\([^)]*\)', '', title_clean)
-                    
-                    # Clean up extra spaces
-                    title_clean = ' '.join(title_clean.split()).strip()
-                    
-                    return title_clean if title_clean else 'Not mentioned'
-                
-                result['Title'] = result['Title'].apply(process_title_4freelancers)
-                logging.info(f"4 Freelancers post-mapping: Processed Title field to remove text in parentheses")
-
-            # Pre-mapping-like filter: drop rows mentioning 'Detachering' in Text (case-insensitive)
-            if 'Text' in files_read.columns and len(result) == len(files_read):
-                try:
-                    initial_count = len(result)
-                    mask = ~files_read['whitespacenowrap'].astype(str).str.contains('Detachering', case=False, na=False)
-                    result = result[mask.reset_index(drop=True)]
-                    filtered = initial_count - len(result)
-                    if filtered > 0:
-                        logging.info(f"4-Freelancers.nl filter: removed {filtered} rows mentioning 'Detachering' in Text")
-                except Exception:
-                    pass
         
-        # ASNBANK POST-MAPPING PROCESSING
-        if company_name == 'ASNBank':
-            # Process Text column to extract Location, Hours, and Rate
-            if 'Location' in result.columns and 'Hours' in result.columns and 'rate' in result.columns:
-                def process_text_asnbank(index):
-                    # Get the original Text value from the input DataFrame
-                    text_val = files_read.iloc[index]['Text'] if 'Text' in files_read.columns else None
-                    
-                    if pd.isna(text_val) or text_val == '':
-                        return 'Not mentioned', 'Not mentioned', 'Not mentioned'
-                    
-                    text_str = str(text_val).strip()
-                    
-                    # Split on spaces
-                    parts = text_str.split(' ')
-                    
-                    if len(parts) == 0:
-                        return 'Not mentioned', 'Not mentioned', 'Not mentioned'
-                    
-                    # First part is Location
-                    location = parts[0] if len(parts) > 0 else 'Not mentioned'
-                    
-                    # Find Hours (remove "uur")
-                    hours = 'Not mentioned'
-                    for part in parts:
-                        if 'uur' in part.lower():
-                            hours = part.lower().replace('uur', '').strip()
-                            break
-                    
-                    # Find Rate (everything from "€" onwards)
-                    rate = 'Not mentioned'
-                    euro_found = False
-                    rate_parts = []
-                    for part in parts:
-                        if '€' in part:
-                            euro_found = True
-                        if euro_found:
-                            rate_parts.append(part)
-                    
-                    if rate_parts:
-                        rate = ' '.join(rate_parts)
-                    
-                    return location, hours, rate
-                
-                # Apply the processing to each row
-                processed_data = [process_text_asnbank(i) for i in range(len(result))]
-                location_values = [item[0] for item in processed_data]
-                hours_values = [item[1] for item in processed_data]
-                rate_values = [item[2] for item in processed_data]
-                
-                result['Location'] = location_values
-                result['Hours'] = hours_values
-                result['rate'] = rate_values
-                logging.info(f"ASNBank post-mapping: Processed Text field to extract Location, Hours, and Rate")
         
-        # CENTRIC POST-MAPPING PROCESSING
-        if company_name == 'Centric':
-            # Process Title field - remove words starting with "OP-" and words in brackets
-            if 'Title' in result.columns:
-                def process_title_centric(title_str):
-                    if pd.isna(title_str) or title_str == '':
-                        return 'Not mentioned'
-                    
-                    import re
-                    title_clean = str(title_str)
-                    
-                    # Remove words starting with "OP-"
-                    title_clean = re.sub(r'\bOP-\w+\b', '', title_clean)
-                    
-                    # Remove words in brackets (including the brackets)
-                    title_clean = re.sub(r'\([^)]*\)', '', title_clean)
-                    
-                    # Clean up extra spaces and return
-                    title_clean = ' '.join(title_clean.split())
-                    return title_clean if title_clean else 'Not mentioned'
-                
-                result['Title'] = result['Title'].apply(process_title_centric)
-                logging.info(f"Centric post-mapping: Processed Title field to remove words starting with 'OP-' and words in brackets")
-            
-            # Process Hours field - extract text
-            if 'Hours' in result.columns:
-                def process_hours_centric(hours_str):
-                    if pd.isna(hours_str) or hours_str == '':
-                        return 'Not mentioned'
-                    
-                    hours_clean = str(hours_str).strip()
-                    return hours_clean if hours_clean else 'Not mentioned'
-                
-                result['Hours'] = result['Hours'].apply(process_hours_centric)
-                logging.info(f"Centric post-mapping: Processed Hours field to extract text")
-            
-            # Process Summary field - extract text
-            if 'Summary' in result.columns:
-                def process_summary_centric(summary_str):
-                    if pd.isna(summary_str) or summary_str == '':
-                        return 'Not mentioned'
-                    
-                    summary_clean = str(summary_str).strip()
-                    return summary_clean if summary_clean else 'Not mentioned'
-                
-                result['Summary'] = result['Summary'].apply(process_summary_centric)
-                logging.info(f"Centric post-mapping: Processed Summary field to extract text")
-            
-            # Process rate field - extract text between "maximum rate:" and "working distance" (case insensitive)
-            if 'rate' in result.columns:
-                def process_rate_centric(rate_str):
-                    if pd.isna(rate_str) or rate_str == '':
-                        return 'Not mentioned'
-                    
-                    rate_clean = str(rate_str).strip()
-                    
-                    # Find text between "maximum rate:" and "working distance" (case insensitive)
-                    import re
-                    max_rate_match = re.search(r'maximum rate:', rate_clean, re.IGNORECASE)
-                    working_distance_match = re.search(r'working distance', rate_clean, re.IGNORECASE)
-                    
-                    if max_rate_match and working_distance_match and working_distance_match.start() > max_rate_match.end():
-                        # Extract text between the markers
-                        extracted_text = rate_clean[max_rate_match.end():working_distance_match.start()].strip()
-                        return extracted_text if extracted_text else 'Not mentioned'
-                    
-                    return 'Not mentioned'
-                
-                result['rate'] = result['rate'].apply(process_rate_centric)
-                logging.info(f"Centric post-mapping: Processed rate field to extract text between 'maximum rate:' and 'working distance'")
         
-        # RIJKSWATERSTAAT POST-MAPPING PROCESSING
-        if company_name == 'rijkswaterstaat':
-            # Remove rows that contain specific markers in the Text column
-            if 'Text' in result.columns:
-                initial_count = len(result)
-                
-                # Create a mask to identify rows to keep (exclude rows with unwanted markers)
-                mask = ~result['Text'].astype(str).str.contains(
-                    r'ZZP niet toegestaan|geen ZZP|Detachering', 
-                    case=False, 
-                    na=False
-                )
-                
-                # Apply the mask to filter out unwanted rows
-                result = result[mask].reset_index(drop=True)
-                
-                removed_count = initial_count - len(result)
-                if removed_count > 0:
-                    logging.info(f"Rijkswaterstaat post-mapping: Removed {removed_count} rows containing 'ZZP niet toegestaan', 'geen ZZP', or 'Detachering' markers")
-                else:
-                    logging.info(f"Rijkswaterstaat post-mapping: No rows found with unwanted markers")
         
-        # SALTA GROUP POST-MAPPING PROCESSING
-        if company_name == 'Salta Group':
-            # Process Title field - remove the first word "Freelance"
-            if 'Title' in result.columns:
-                def process_title_salta(title_str):
-                    if pd.isna(title_str) or title_str == '':
-                        return 'Not mentioned'
-                    
-                    title_clean = str(title_str).strip()
-                    
-                    # Remove only the first occurrence of "Freelance" (case insensitive)
-                    words = title_clean.split()
-                    if words and words[0].lower() == 'freelance':
-                        title_clean = ' '.join(words[1:])
-                    else:
-                        # If "Freelance" is not the first word, look for it anywhere and remove only the first occurrence
-                        title_lower = title_clean.lower()
-                        freelance_index = title_lower.find('freelance')
-                        if freelance_index != -1:
-                            # Remove only the first occurrence of "Freelance"
-                            before_freelance = title_clean[:freelance_index].strip()
-                            after_freelance = title_clean[freelance_index + 9:].strip()  # 9 is length of "freelance"
-                            title_clean = f"{before_freelance} {after_freelance}".strip()
-                    
-                    # Clean up extra spaces and return
-                    title_clean = ' '.join(title_clean.split())
-                    return title_clean if title_clean else 'Not mentioned'
-                
-                result['Title'] = result['Title'].apply(process_title_salta)
-                logging.info(f"Salta Group post-mapping: Processed Title field to remove the first word 'Freelance'")
         
-        # NOORDOOSTBRABANT POST-MAPPING PROCESSING
-        if company_name == 'noordoostbrabant':
-            # Process Duration field - calculate months between first and second date
-            if 'Duration' in result.columns:
-                def process_duration_noordoostbrabant(duration_str):
-                    if pd.isna(duration_str) or duration_str == '':
-                        return 'Not mentioned'
-                    
-                    try:
-                        # Convert to string and clean up
-                        duration_clean = str(duration_str).strip()
-                        
-                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
-                        date_patterns = [
-                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
-                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
-                        ]
-                        
-                        dates_found = []
-                        for pattern in date_patterns:
-                            matches = re.findall(pattern, duration_clean)
-                            for match in matches:
-                                if len(match) == 3:
-                                    if len(match[0]) == 4:  # YYYY-MM-DD format
-                                        year, month, day = match
-                                    else:  # DD-MM-YYYY format
-                                        day, month, year = match
-                                    try:
-                                        date_obj = datetime(int(year), int(month), int(day))
-                                        dates_found.append(date_obj)
-                                    except ValueError:
-                                        continue
-                        
-                        # If we found at least 2 dates, calculate the difference in months
-                        if len(dates_found) >= 2:
-                            # Sort dates to ensure first date is earlier
-                            dates_found.sort()
-                            start_date = dates_found[0]
-                            end_date = dates_found[1]
-                            
-                            # Calculate difference in months
-                            months_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
-                            
-                            if months_diff > 0:
-                                return f"{months_diff} months"
-                            else:
-                                return "Less than 1 month"
-                        else:
-                            return duration_clean
-                            
-                    except Exception as e:
-                        logging.warning(f"Error processing noordoostbrabant duration '{duration_str}': {e}")
-                        return duration_clean
-                
-                result['Duration'] = result['Duration'].apply(process_duration_noordoostbrabant)
-                logging.info(f"noordoostbrabant post-mapping: Processed Duration field to calculate months between dates")
-            
-            # Process start field - extract the first date from Field11
-            if 'start' in result.columns:
-                def process_start_noordoostbrabant(start_str):
-                    if pd.isna(start_str) or start_str == '':
-                        return 'ASAP'
-                    
-                    try:
-                        # Convert to string and clean up
-                        start_clean = str(start_str).strip()
-                        
-                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
-                        date_patterns = [
-                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
-                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
-                        ]
-                        
-                        dates_found = []
-                        for pattern in date_patterns:
-                            matches = re.findall(pattern, start_clean)
-                            for match in matches:
-                                if len(match) == 3:
-                                    if len(match[0]) == 4:  # YYYY-MM-DD format
-                                        year, month, day = match
-                                    else:  # DD-MM-YYYY format
-                                        day, month, year = match
-                                    try:
-                                        date_obj = datetime(int(year), int(month), int(day))
-                                        dates_found.append(date_obj)
-                                    except ValueError:
-                                        continue
-                        
-                        # Return the first date found, or ASAP if no dates
-                        if dates_found:
-                            # Sort dates and return the earliest one
-                            dates_found.sort()
-                            first_date = dates_found[0]
-                            return first_date.strftime('%Y-%m-%d')
-                        else:
-                            return 'ASAP'
-                            
-                    except Exception as e:
-                        logging.warning(f"Error processing noordoostbrabant start date '{start_str}': {e}")
-                        return 'ASAP'
-                
-                result['start'] = result['start'].apply(process_start_noordoostbrabant)
-                logging.info(f"noordoostbrabant post-mapping: Processed start field to extract first date from Text")
-            
-            # Process Hours field - extract number between "Uren:" and "|" from Location field
-            if 'Hours' in result.columns and 'Location' in result.columns:
-                def process_hours_noordoostbrabant(row):
-                    location_str = row.get('Location', '')
-                    if pd.isna(location_str) or location_str == '':
-                        return 'Not mentioned'
-                    
-                    try:
-                        import re
-                        location_clean = str(location_str).strip()
-                        
-                        # Look for pattern "Uren:" followed by number and "|"
-                        hours_match = re.search(r'uren:\s*(\d+)\s*\|', location_clean, re.IGNORECASE)
-                        if hours_match:
-                            return hours_match.group(1)
-                        
-                        return 'Not mentioned'
-                        
-                    except Exception:
-                        return 'Not mentioned'
-                
-                result['Hours'] = result.apply(process_hours_noordoostbrabant, axis=1)
-                logging.info(f"noordoostbrabant post-mapping: Processed Hours field to extract from Location using 'Uren:' marker")
         
-        # GRONINGENHUURTIN POST-MAPPING PROCESSING
-        if company_name == 'groningenhuurtin':
-            # Process Duration field - calculate months between the two dates
-            if 'Duration' in result.columns:
-                def process_duration_groningenhuurtin(duration_str):
-                    if pd.isna(duration_str) or duration_str == '':
-                        return 'Not mentioned'
-                    
-                    try:
-                        # Convert to string and clean up
-                        duration_clean = str(duration_str).strip()
-                        
-                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
-                        date_patterns = [
-                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
-                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
-                        ]
-                        
-                        dates_found = []
-                        for pattern in date_patterns:
-                            matches = re.findall(pattern, duration_clean)
-                            for match in matches:
-                                if len(match) == 3:
-                                    if len(match[0]) == 4:  # YYYY-MM-DD format
-                                        year, month, day = match
-                                    else:  # DD-MM-YYYY format
-                                        day, month, year = match
-                                    try:
-                                        date_obj = datetime(int(year), int(month), int(day))
-                                        dates_found.append(date_obj)
-                                    except ValueError:
-                                        continue
-                        
-                        # If we found at least 2 dates, calculate the difference in months
-                        if len(dates_found) >= 2:
-                            # Sort dates to ensure first date is earlier
-                            dates_found.sort()
-                            start_date = dates_found[0]
-                            end_date = dates_found[1]
-                            
-                            # Calculate difference in months
-                            months_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
-                            
-                            if months_diff > 0:
-                                return f"{months_diff} months"
-                            else:
-                                return "Less than 1 month"
-                        else:
-                            return duration_clean
-                            
-                    except Exception as e:
-                        logging.warning(f"Error processing groningenhuurtin duration '{duration_str}': {e}")
-                        return duration_clean
-                
-                result['Duration'] = result['Duration'].apply(process_duration_groningenhuurtin)
-                logging.info(f"groningenhuurtin post-mapping: Processed Duration field to calculate months between dates")
-            
-            # Process start field - extract the first date from Title5
-            if 'start' in result.columns:
-                def process_start_groningenhuurtin(start_str):
-                    if pd.isna(start_str) or start_str == '':
-                        return 'ASAP'
-                    
-                    try:
-                        # Convert to string and clean up
-                        start_clean = str(start_str).strip()
-                        
-                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
-                        date_patterns = [
-                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
-                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
-                        ]
-                        
-                        dates_found = []
-                        for pattern in date_patterns:
-                            matches = re.findall(pattern, start_clean)
-                            for match in matches:
-                                if len(match) == 3:
-                                    if len(match[0]) == 4:  # YYYY-MM-DD format
-                                        year, month, day = match
-                                    else:  # DD-MM-YYYY format
-                                        day, month, year = match
-                                    try:
-                                        date_obj = datetime(int(year), int(month), int(day))
-                                        dates_found.append(date_obj)
-                                    except ValueError:
-                                        continue
-                        
-                        # Return the first date found, or ASAP if no dates
-                        if dates_found:
-                            # Sort dates and return the earliest one
-                            dates_found.sort()
-                            first_date = dates_found[0]
-                            return first_date.strftime('%Y-%m-%d')
-                        else:
-                            return 'ASAP'
-                            
-                    except Exception as e:
-                        logging.warning(f"Error processing groningenhuurtin start date '{start_str}': {e}")
-                        return 'ASAP'
-                
-                result['start'] = result['start'].apply(process_start_groningenhuurtin)
-                logging.info(f"groningenhuurtin post-mapping: Processed start field to extract first date from Title5")
-            
-            # Process Location field - extract text between "Standplaats:" and "|"
-            if 'Location' in result.columns:
-                def process_location_groningenhuurtin(location_str):
-                    if pd.isna(location_str) or location_str == '':
-                        return 'Not mentioned'
-                    
-                    location_clean = str(location_str).strip()
-                    
-                    # Find text between "Standplaats:" and "|"
-                    import re
-                    match = re.search(r'standplaats:\s*(.*?)\s*\|', location_clean, re.IGNORECASE)
-                    if match:
-                        extracted_text = match.group(1).strip()
-                        return extracted_text if extracted_text else 'Not mentioned'
-                    
-                    return 'Not mentioned'
-                
-                result['Location'] = result['Location'].apply(process_location_groningenhuurtin)
-                logging.info(f"groningenhuurtin post-mapping: Processed Location field to extract text between 'Standplaats:' and '|'")
-            
-            # Process Hours field - extract number between "uren" and "|"
-            if 'Hours' in result.columns:
-                def process_hours_groningenhuurtin(hours_str):
-                    if pd.isna(hours_str) or hours_str == '':
-                        return 'Not mentioned'
-                    
-                    hours_clean = str(hours_str).strip()
-                    
-                    # Find number between "uren" and "|"
-                    import re
-                    match = re.search(r'uren\s*(\d+)\s*\|', hours_clean, re.IGNORECASE)
-                    if match:
-                        number = match.group(1)
-                        return number
-                    
-                    return 'Not mentioned'
-                
-                result['Hours'] = result['Hours'].apply(process_hours_groningenhuurtin)
-                logging.info(f"groningenhuurtin post-mapping: Processed Hours field to extract number between 'uren' and '|'")
-            
-            # Process rate field - extract number after "€"
-            if 'rate' in result.columns:
-                def process_rate_groningenhuurtin(rate_str):
-                    if pd.isna(rate_str) or rate_str == '':
-                        return 'Not mentioned'
-                    
-                    rate_clean = str(rate_str).strip()
-                    
-                    # Find number after "€"
-                    import re
-                    match = re.search(r'€\s*(\d+(?:,\d+)?)', rate_clean, re.IGNORECASE)
-                    if match:
-                        number = match.group(1)
-                        # Remove commas from numbers like "1,500"
-                        number = number.replace(',', '')
-                        return number
-                    
-                    return 'Not mentioned'
-                
-                result['rate'] = result['rate'].apply(process_rate_groningenhuurtin)
-                logging.info(f"groningenhuurtin post-mapping: Processed rate field to extract number after '€'")
         
         # FLEVOLAND POST-MAPPING PROCESSING
-        if company_name == 'flevoland':
-            # Process Location field - remove the word "location" (case insensitive)
-            if 'Location' in result.columns:
-                def process_location_flevoland(location_str):
-                    if pd.isna(location_str) or location_str == '':
-                        return 'Not mentioned'
-                    
-                    # Convert to string and remove "location" (case insensitive)
-                    location_clean = str(location_str)
-                    location_clean = re.sub(r'\blocation\b', '', location_clean, flags=re.IGNORECASE)
-                    
-                    # Clean up extra spaces
-                    location_clean = re.sub(r'\s+', ' ', location_clean).strip()
-                    
-                    # Return "Not mentioned" if empty after cleaning
-                    if not location_clean:
-                        return 'Not mentioned'
-                    
-                    return location_clean
-                
-                result['Location'] = result['Location'].apply(process_location_flevoland)
-                logging.info(f"flevoland post-mapping: Processed Location field to remove 'location' word")
-            
-            # Process start field - remove the words "start date" (case insensitive)
-            if 'start' in result.columns:
-                def process_start_flevoland(start_str):
-                    if pd.isna(start_str) or start_str == '':
-                        return 'ASAP'
-                    
-                    # Convert to string and remove "start date" (case insensitive)
-                    start_clean = str(start_str)
-                    start_clean = re.sub(r'\bstart date\b', '', start_clean, flags=re.IGNORECASE)
-                    
-                    # Clean up extra spaces
-                    start_clean = re.sub(r'\s+', ' ', start_clean).strip()
-                    
-                    # Return "ASAP" if empty after cleaning
-                    if not start_clean:
-                        return 'ASAP'
-                    
-                    return start_clean
-                
-                result['start'] = result['start'].apply(process_start_flevoland)
-                logging.info(f"flevoland post-mapping: Processed start field to remove 'start date' words")
-            
-            # Process Hours field - remove the word "hours" (case insensitive)
-            if 'Hours' in result.columns:
-                def process_hours_flevoland(hours_str):
-                    if pd.isna(hours_str) or hours_str == '':
-                        return 'Not mentioned'
-                    
-                    # Convert to string and remove "hours" (case insensitive)
-                    hours_clean = str(hours_str)
-                    hours_clean = re.sub(r'\bhours\b', '', hours_clean, flags=re.IGNORECASE)
-                    
-                    # Clean up extra spaces
-                    hours_clean = re.sub(r'\s+', ' ', hours_clean).strip()
-                    
-                    # Return "Not mentioned" if empty after cleaning
-                    if not hours_clean:
-                        return 'Not mentioned'
-                    
-                    return hours_clean
-                
-                result['Hours'] = result['Hours'].apply(process_hours_flevoland)
-                logging.info(f"flevoland post-mapping: Processed Hours field to remove 'hours' word")
-            
-            # Process Summary field - merge Field7 and Field8
-            if 'Summary' in result.columns:
-                def process_summary_flevoland(row):
-                    # Get Field7 and Field8 values from the original data
-                    field7_value = row.get('Field7', '') if 'Field7' in row else ''
-                    field8_value = row.get('Field8', '') if 'Field8' in row else ''
-                    
-                    # Convert to strings and clean up
-                    field7_clean = str(field7_value).strip() if field7_value else ''
-                    field8_clean = str(field8_value).strip() if field8_value else ''
-                    
-                    # Combine the fields with a space separator
-                    if field7_clean and field8_clean:
-                        combined_summary = f"{field7_clean} {field8_clean}"
-                    elif field7_clean:
-                        combined_summary = field7_clean
-                    elif field8_clean:
-                        combined_summary = field8_clean
-                    else:
-                        combined_summary = 'Not mentioned'
-                    
-                    # Clean up extra spaces
-                    combined_summary = re.sub(r'\s+', ' ', combined_summary).strip()
-                    
-                    return combined_summary if combined_summary else 'Not mentioned'
-                
-                result['Summary'] = result.apply(process_summary_flevoland, axis=1)
-                logging.info(f"flevoland post-mapping: Processed Summary field to merge Field7 and Field8")
         
-        # TALENTENREGIO POST-MAPPING PROCESSING
-        if company_name == 'TalentenRegio':
-            # Process Summary field - merge Text4 and Text5
-            if 'Summary' in result.columns:
-                def process_summary_talentenregio(row):
-                    # Get Text4 and Text5 values from the original data
-                    text4_value = row.get('Text4', '') if 'Text4' in row else ''
-                    text5_value = row.get('Text5', '') if 'Text5' in row else ''
-                    
-                    # Convert to strings and clean up
-                    text4_clean = str(text4_value).strip() if text4_value else ''
-                    text5_clean = str(text5_value).strip() if text5_value else ''
-                    
-                    # Combine the fields with a space separator
-                    if text4_clean and text5_clean:
-                        combined_summary = f"{text4_clean} {text5_clean}"
-                    elif text4_clean:
-                        combined_summary = text4_clean
-                    elif text5_clean:
-                        combined_summary = text5_clean
-                    else:
-                        combined_summary = 'Not mentioned'
-                    
-                    # Clean up extra spaces
-                    combined_summary = re.sub(r'\s+', ' ', combined_summary).strip()
-                    
-                    return combined_summary if combined_summary else 'Not mentioned'
-                
-                result['Summary'] = result.apply(process_summary_talentenregio, axis=1)
-                logging.info(f"TalentenRegio post-mapping: Processed Summary field to merge Text4 and Text5")
         
-        # POLITIE POST-MAPPING PROCESSING
-        if company_name == 'politie':
-            # Process Summary field - merge Text5 and Text6
-            if 'Summary' in result.columns:
-                def process_summary_politie(row):
-                    # Get Text5 and Text6 values from the original data
-                    text5_value = row.get('Text5', '') if 'Text5' in row else ''
-                    text6_value = row.get('Text6', '') if 'Text6' in row else ''
-                    
-                    # Convert to strings and clean up
-                    text5_clean = str(text5_value).strip() if text5_value else ''
-                    text6_clean = str(text6_value).strip() if text6_value else ''
-                    
-                    # Combine the fields with a space separator
-                    if text5_clean and text6_clean:
-                        combined_summary = f"{text5_clean} {text6_clean}"
-                    elif text5_clean:
-                        combined_summary = text5_clean
-                    elif text6_clean:
-                        combined_summary = text6_clean
-                    else:
-                        combined_summary = 'Not mentioned'
-                    
-                    # Clean up extra spaces
-                    combined_summary = re.sub(r'\s+', ' ', combined_summary).strip()
-                    
-                    return combined_summary if combined_summary else 'Not mentioned'
-                
-                result['Summary'] = result.apply(process_summary_politie, axis=1)
-                logging.info(f"Politie post-mapping: Processed Summary field to merge Text5 and Text6")
         
 
         
-        # NOORD-HOLLAND POST-MAPPING PROCESSING
-        if company_name == 'Noord-Holland':
-            # Process Duration field - calculate months between the first and second date from Title5
-            if 'Duration' in result.columns:
-                def process_duration_noordholland(duration_str):
-                    if pd.isna(duration_str) or duration_str == '':
-                        return 'Not mentioned'
-                    
-                    try:
-                        # Convert to string and clean up
-                        duration_clean = str(duration_str).strip()
-                        
-                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
-                        date_patterns = [
-                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
-                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
-                        ]
-                        
-                        dates_found = []
-                        for pattern in date_patterns:
-                            matches = re.findall(pattern, duration_clean)
-                            for match in matches:
-                                if len(match) == 3:
-                                    if len(match[0]) == 4:  # YYYY-MM-DD format
-                                        year, month, day = match
-                                    else:  # DD-MM-YYYY format
-                                        day, month, year = match
-                                    try:
-                                        date_obj = datetime(int(year), int(month), int(day))
-                                        dates_found.append(date_obj)
-                                    except ValueError:
-                                        continue
-                        
-                        # If we found at least 2 dates, calculate the difference in months
-                        if len(dates_found) >= 2:
-                            # Sort dates to ensure first date is earlier
-                            dates_found.sort()
-                            start_date = dates_found[0]
-                            end_date = dates_found[1]
-                            
-                            # Calculate difference in months
-                            months_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
-                            
-                            if months_diff > 0:
-                                return f"{months_diff} months"
-                            else:
-                                return "Less than 1 month"
-                        else:
-                            return duration_clean
-                            
-                    except Exception as e:
-                        logging.warning(f"Error processing Noord-Holland duration '{duration_str}': {e}")
-                        return duration_clean
-                
-                result['Duration'] = result['Duration'].apply(process_duration_noordholland)
-                logging.info(f"Noord-Holland post-mapping: Processed Duration field to calculate months between dates from Title5")
-            
-            # Process start field - extract the first date from Title5
-            if 'start' in result.columns:
-                def process_start_noordholland(start_str):
-                    if pd.isna(start_str) or start_str == '':
-                        return 'ASAP'
-                    
-                    try:
-                        # Convert to string and clean up
-                        start_clean = str(start_str).strip()
-                        
-                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
-                        date_patterns = [
-                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
-                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
-                        ]
-                        
-                        dates_found = []
-                        for pattern in date_patterns:
-                            matches = re.findall(pattern, start_clean)
-                            for match in matches:
-                                if len(match) == 3:
-                                    if len(match[0]) == 4:  # YYYY-MM-DD format
-                                        year, month, day = match
-                                    else:  # DD-MM-YYYY format
-                                        day, month, year = match
-                                    try:
-                                        date_obj = datetime(int(year), int(month), int(day))
-                                        dates_found.append(date_obj)
-                                    except ValueError:
-                                        continue
-                        
-                        # Return the first date found, or ASAP if no dates
-                        if dates_found:
-                            # Sort dates and return the earliest one
-                            dates_found.sort()
-                            first_date = dates_found[0]
-                            return first_date.strftime('%Y-%m-%d')
-                        else:
-                            return 'ASAP'
-                            
-                    except Exception as e:
-                        logging.warning(f"Error processing Noord-Holland start date '{start_str}': {e}")
-                        return 'ASAP'
-                
-                result['start'] = result['start'].apply(process_start_noordholland)
-                logging.info(f"Noord-Holland post-mapping: Processed start field to extract first date from Title5")
-        
-        # HAARLEMMERMEERHUURTIN POST-MAPPING PROCESSING
-        if company_name == 'haarlemmermeerhuurtin':
-            # Process Duration field - extract from Summary field
-            if 'Duration' in result.columns and 'Summary' in result.columns:
-                def process_duration_from_summary(row):
-                    summary_str = row.get('Summary', '')
-                    if pd.isna(summary_str) or summary_str == '':
-                        return 'Not mentioned'
-                    
-                    try:
-                        # Convert to string and clean up
-                        summary_clean = str(summary_str).strip()
-                        
-                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
-                        date_patterns = [
-                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
-                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
-                        ]
-                        
-                        dates_found = []
-                        for pattern in date_patterns:
-                            matches = re.findall(pattern, summary_clean)
-                            for match in matches:
-                                if len(match) == 3:
-                                    if len(match[0]) == 4:  # YYYY-MM-DD format
-                                        year, month, day = match
-                                    else:  # DD-MM-YYYY format
-                                        day, month, year = match
-                                    try:
-                                        date_obj = datetime(int(year), int(month), int(day))
-                                        dates_found.append(date_obj)
-                                    except ValueError:
-                                        continue
-                        
-                        # If we found at least 2 dates, calculate the difference in months
-                        if len(dates_found) >= 2:
-                            # Sort dates to ensure first date is earlier
-                            dates_found.sort()
-                            start_date = dates_found[0]
-                            end_date = dates_found[1]
-                            
-                            # Calculate difference in months
-                            months_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
-                            
-                            if months_diff > 0:
-                                return f"{months_diff} months"
-                            else:
-                                return "Less than 1 month"
-                        else:
-                            return 'Not mentioned'
-                            
-                    except Exception as e:
-                        logging.warning(f"Error processing haarlemmermeerhuurtin duration from summary '{summary_str}': {e}")
-                        return 'Not mentioned'
-                
-                result['Duration'] = result.apply(process_duration_from_summary, axis=1)
-                logging.info(f"haarlemmermeerhuurtin post-mapping: Processed Duration field to extract from Summary")
-            
-            # Process fields that are set to "See Summary" - extract from Pub_Time field
-            if 'rate' in result.columns and 'Summary' in result.columns:
-                def process_rate_from_summary(row):
-                    summary_str = row.get('Summary', '')
-                    if pd.isna(summary_str) or summary_str == '':
-                        return 'Not mentioned'
-                    
-                    summary_clean = str(summary_str).strip()
-                    # Look for rate patterns in the summary
-                    import re
-                    # Look for currency patterns like €50, €50.00, 50€, etc.
-                    rate_match = re.search(r'€\s*(\d+(?:,\d+)?(?:\.\d+)?)', summary_clean, re.IGNORECASE)
-                    if rate_match:
-                        return rate_match.group(1)
-                    
-                    # Look for "per uur" patterns
-                    per_uur_match = re.search(r'(\d+(?:,\d+)?(?:\.\d+)?)\s*per\s*uur', summary_clean, re.IGNORECASE)
-                    if per_uur_match:
-                        return per_uur_match.group(1)
-                    
-                    return 'Not mentioned'
-                
-                result['rate'] = result.apply(process_rate_from_summary, axis=1)
-                logging.info(f"haarlemmermeerhuurtin post-mapping: Processed rate field to extract from Summary")
-            
-            if 'Hours' in result.columns and 'Summary' in result.columns:
-                def process_hours_from_summary(row):
-                    summary_str = row.get('Summary', '')
-                    if pd.isna(summary_str) or summary_str == '':
-                        return 'Not mentioned'
-                    
-                    summary_clean = str(summary_str).strip()
-                    # Look for hours patterns in the summary
-                    import re
-                    # Look for patterns like "40 uur", "40 uren", "40h", etc.
-                    hours_match = re.search(r'(\d+)\s*(?:uur|uren|h|hours?)', summary_clean, re.IGNORECASE)
-                    if hours_match:
-                        return hours_match.group(1)
-                    
-                    return 'Not mentioned'
-                
-                result['Hours'] = result.apply(process_hours_from_summary, axis=1)
-                logging.info(f"haarlemmermeerhuurtin post-mapping: Processed Hours field to extract from Summary")
-            
-            # Process start field - extract from Summary field
-            if 'start' in result.columns and 'Summary' in result.columns:
-                def process_start_from_summary(row):
-                    summary_str = row.get('Summary', '')
-                    if pd.isna(summary_str) or summary_str == '':
-                        return 'ASAP'
-                    
-                    try:
-                        # Convert to string and clean up
-                        summary_clean = str(summary_str).strip()
-                        
-                        # Look for date patterns (DD-MM-YYYY or DD/MM/YYYY)
-                        date_patterns = [
-                            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # DD-MM-YYYY or DD/MM/YYYY
-                            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
-                        ]
-                        
-                        dates_found = []
-                        for pattern in date_patterns:
-                            matches = re.findall(pattern, summary_clean)
-                            for match in matches:
-                                if len(match) == 3:
-                                    if len(match[0]) == 4:  # YYYY-MM-DD format
-                                        year, month, day = match
-                                    else:  # DD-MM-YYYY format
-                                        day, month, year = match
-                                    try:
-                                        date_obj = datetime(int(year), int(month), int(day))
-                                        dates_found.append(date_obj)
-                                    except ValueError:
-                                        continue
-                        
-                        # Return the first date found, or ASAP if no dates
-                        if dates_found:
-                            # Sort dates and return the earliest one
-                            dates_found.sort()
-                            first_date = dates_found[0]
-                            return first_date.strftime('%Y-%m-%d')
-                        else:
-                            return 'ASAP'
-                            
-                    except Exception as e:
-                        logging.warning(f"Error processing Haarlemmermeerhuurtin start date from summary '{summary_str}': {e}")
-                        return 'ASAP'
-                
-                result['start'] = result.apply(process_start_from_summary, axis=1)
-                logging.info(f"haarlemmermeerhuurtin post-mapping: Processed start field to extract from Summary")
         
 
         
-
         
-        # LINKIT POST-MAPPING PROCESSING
-        elif company_name == 'LinkIT':
-            if 'Duration' in result.columns:
-                def process_duration_linkit(duration_value):
-                    """Process LinkIT Duration field to check for 'months' marker"""
-                    if pd.isna(duration_value) or duration_value == '':
-                        return 'Not mentioned'
-                    
-                    duration_str = str(duration_value).lower()
-                    if 'months' in duration_str:
-                        return duration_str
-                    else:
-                        return 'Not mentioned'
-                
-                result['Duration'] = result['Duration'].apply(process_duration_linkit)
-                logging.info(f"LinkIT post-mapping: Processed Duration field to check for 'months' marker")
         
-        # FREELANCE.NL POST-MAPPING PROCESSING
-        if company_name == 'freelance.nl':
-            if 'Hours' in result.columns:
-                def extract_hours_freelance_nl(index):
-                    if index >= len(files_read):
-                        return 'Not mentioned'
-                    field2_val = files_read.iloc[index]['Field2'] if 'Field2' in files_read.columns else None
-                    if pd.isna(field2_val) or field2_val == '':
-                        return 'Not mentioned'
-                    field2_str = str(field2_val).lower()
-                    import re
-                    patterns = [r'aantal uur per week[:s]*(d+)', r'(d+)s*uurs*pers*week', r'hours[:s]*.*?(d+)s*hourss*pers*week', r'(d+)s*hours?s*pers*week', r'full-times*((d+)s*hours?s*pers*week)']
-                    for pattern in patterns:
-                        match = re.search(pattern, field2_str)
-                        if match:
-                            return match.group(1)
-                    return 'Not mentioned'
-                result['Hours'] = [extract_hours_freelance_nl(i) for i in range(len(result))]
-                logging.info(f"freelance.nl post-mapping: Extracted hours information from Field2")
-        
-        # CONSULTANT.NL POST-MAPPING PROCESSING
-        if company_name == 'Consultant.nl':
-            # Process Summary field - merge Field6, Field7, Field8, Field9, Field10
-            if 'Summary' in result.columns:
-                def process_summary_consultant_nl(index):
-                    if index >= len(files_read):
-                        return 'Not mentioned'
-                    
-                    row = files_read.iloc[index]
-                    
-                    # Get Field6, Field7, Field8, Field9, Field10 values from the original data
-                    field6_value = row.get('Field6', '') if 'Field6' in files_read.columns else ''
-                    field7_value = row.get('Field7', '') if 'Field7' in files_read.columns else ''
-                    field8_value = row.get('Field8', '') if 'Field8' in files_read.columns else ''
-                    field9_value = row.get('Field9', '') if 'Field9' in files_read.columns else ''
-                    field10_value = row.get('Field10', '') if 'Field10' in files_read.columns else ''
-                    
-                    # Convert to strings and clean up
-                    field6_clean = str(field6_value).strip() if field6_value else ''
-                    field7_clean = str(field7_value).strip() if field7_value else ''
-                    field8_clean = str(field8_value).strip() if field8_value else ''
-                    field9_clean = str(field9_value).strip() if field9_value else ''
-                    field10_clean = str(field10_value).strip() if field10_value else ''
-                    
-                    # Combine all fields with space separators
-                    fields_to_merge = [field6_clean, field7_clean, field8_clean, field9_clean, field10_clean]
-                    non_empty_fields = [field for field in fields_to_merge if field]
-                    
-                    if non_empty_fields:
-                        combined_summary = ' '.join(non_empty_fields)
-                    else:
-                        combined_summary = 'Not mentioned'
-                    
-                    # Clean up extra spaces
-                    combined_summary = re.sub(r'\s+', ' ', combined_summary).strip()
-                    
-                    return combined_summary if combined_summary else 'Not mentioned'
-                
-                # Apply the processing to each row by index
-                result['Summary'] = [process_summary_consultant_nl(i) for i in range(len(result))]
-                logging.info(f"Consultant.nl post-mapping: Processed Summary field to merge Field6, Field7, Field8, Field9, Field10")
         
         # INDUSTRY CLASSIFICATION - Apply to all jobs
         # Create Industry column for all jobs
@@ -4914,6 +1893,9 @@ def freelance_directory(files_read, company_name):
         eu_count = result['EU'].sum()
         rest_count = result['Rest_of_World'].sum()
         logging.info(f"Regional categorization complete: Dutch={dutch_count}, French={french_count}, EU={eu_count}, Rest_of_World={rest_count}")
+        
+        # Apply special processing if configured
+        result = apply_special_processing(result, company_name)
         
         # Remove validation and cleaning logic - just return the processed data
         return result
@@ -6047,8 +3029,8 @@ def main():
         # SIMPLE FRENCH JOB SPLIT
         logging.info("Splitting data between French and non-French sources...")
         
-        # French sources list
-        french_sources = ['404Works', 'Codeur.com', 'Welcome to the Jungle', 'comet', 'Freelance-Informatique']
+        # French sources list from config
+        french_sources = FRENCH_SOURCES
         
         # Split the data - handle case sensitivity robustly
         # Normalize both the data and the source list for comparison

@@ -1,0 +1,54 @@
+{
+  "dutch_cities_regions": [
+    "amsterdam", "rotterdam", "den haag", "the hague", "utrecht", "eindhoven",
+    "tilburg", "groningen", "almere", "breda", "nijmegen", "enschede",
+    "haarlem", "arnhem", "zaanstad", "amersfoort", "apeldoorn", "s hoeswijk-dinther",
+    "s-hertogenbosch", "zoetermeer", "maastricht", "leiden", "dordrecht",
+    "zwolle", "deventer", "born", "oss", "alkmaar", "purmerend", "hilversum",
+    "amstelveen", "velsen-noord", "delfshaven", "spijkenisse", "schiedam",
+    "vlaardingen", "ijmuiden", "capelle aan den ijssel", "nieuw-vossemeer",
+    "oudekerk", "barendrecht", "nieuw-vennep", "alphen aan den rijn",
+    "albergen", "hoogeveen", "noord-scharwoude", "heerhugowaard",
+    "kampen", "weesp", "cuijk", "veenendaal", "doetinchem", "katwijk",
+    "roermond", "venlo", "zeist", "hardenberg", "bergen op zoom",
+    "nijverdal", "waalwijk", "castricum", "helmond", "hulst", "dronten",
+    "nuenen", "gemert-bakel", "best", "geldrop-mierlo", "laarbeek",
+    "son en breugel", "oud-beijerland", "goes", "terneuzen", "hulst",
+    "sas van gent", "sluis", "terneuzen", "axel", "westdorpe", "zaamslag",
+    "koewacht", "schoondijke", "ijzendijke", "groede", "nieuwvliet",
+    "cadzand", "retranchement", "aardenburg", "sint anna ter mucke",
+    "waterlandkerkje", "oudenburg", "sint jansteen", "heille",
+    "nieuw namen", "clinge", "graauw", "lamswaarde", "hengstdijk",
+    "paal", "kloosterzande", "zuiddorpe", "westdorpe", "sasput",
+    "westkapelle", "domburg", "grijpskerke", "meliskerke", "biggekerke",
+    "koudekerke", "zoutelande", "dishoek", "vlissingen", "middelburg",
+    "veere", "vrouwenpolder", "serooskerke", "gapinge", "vredehof",
+    "noord-holland", "zuid-holland", "noord-brabant", "gelderland",
+    "overijssel", "drenthe", "flevoland", "zeeland", "limburg",
+    "groningen", "friesland", "utrecht", "netherlands", "holland",
+    "nederland", "nl"
+  ],
+  "eu_countries_excluding_nl_fr": [
+    "germany", "deutschland", "italy", "italia", "spain", "españa", "poland", "polska",
+    "belgium", "belgië", "austria", "österreich", "sweden", "sverige", "denmark", "danmark",
+    "finland", "suomi", "portugal", "português", "greece", "ελλάδα", "czech republic", "česká republika",
+    "hungary", "magyarország", "slovakia", "slovensko", "slovenia", "slovenija",
+    "estonia", "eesti", "latvia", "latvija", "lithuania", "lietuva",
+    "luxembourg", "luxemburg", "malta", "malta", "cyprus", "κύπρος",
+    "bulgaria", "българия", "romania", "românia", "croatia", "hrvatska"
+  ],
+  "major_eu_cities": [
+    "berlin", "munich", "hamburg", "cologne", "frankfurt", "stuttgart", "düsseldorf", "dortmund", "essen", "leipzig", "bremen", "dresden", "hannover", "nuremberg", "duisburg",
+    "rome", "milan", "naples", "turin", "palermo", "genoa", "bologna", "florence", "catania", "bari", "messina", "verona", "padua", "trieste", "brescia", "parma",
+    "madrid", "barcelona", "valencia", "sevilla", "zaragoza", "málaga", "murcia", "palma", "las palmas", "bilbao", "alicante", "córdoba", "valladolid", "vigo", "gijón",
+    "warsaw", "krakow", "łódź", "wrocław", "poznań", "gdańsk", "szczecin", "bydgoszcz", "lublin", "katowice", "biała podlaska", "gorzów wielkopolski", "zielona góra", "włocławek", "toruń"
+  ],
+  "rest_of_world_countries": [
+    "united states", "usa", "america", "canada", "australia", "new zealand",
+    "india", "china", "japan", "singapore", "hong kong", "south korea",
+    "taiwan", "thailand", "vietnam", "malaysia", "indonesia", "philippines",
+    "brazil", "mexico", "argentina", "chile", "colombia", "peru",
+    "south africa", "egypt", "turkey", "israel", "uae", "saudi arabia",
+    "russia", "ukraine", "norway", "switzerland", "iceland"
+  ]
+}

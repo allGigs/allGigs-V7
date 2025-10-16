@@ -1,0 +1,270 @@
+{
+  "twine": {
+    "type": "none",
+    "_company_number": 59
+  },
+  "freelance.nl": {
+    "type": "none",
+    "_company_number": 3
+  },
+  "KVK": {
+    "type": "none",
+    "_company_number": 6
+  },
+  "politie": {
+    "type": "none",
+    "_company_number": 15
+  },
+  "werk.nl": {
+    "type": "complex_processing",
+    "_company_number": 17
+  },
+  "indeed": {
+    "type": "none",
+    "_company_number": 7
+  },
+  "hoofdkraan": {
+    "type": "none",
+    "_company_number": 1
+  },
+  "rijkswaterstaat": {
+    "type": "simple_filter",
+    "column": "Text",
+    "condition": "not_contains",
+    "value": "ZZP niet toegestaan|geen ZZP|Detachering",
+    "case_sensitive": false,
+    "_company_number": 27
+  },
+  "werkzoeken.nl": {
+    "type": "simple_filter",
+    "column": "rate",
+    "condition": "not_contains",
+    "value": "p/m",
+    "case_sensitive": false,
+    "_company_number": 18
+  },
+  "UMC": {
+    "type": "none",
+    "_company_number": 25
+  },
+  "noordoostbrabant": {
+    "type": "none",
+    "_company_number": 37
+  },
+  "flevoland": {
+    "type": "none",
+    "_company_number": 35
+  },
+  "groningenhuurtin": {
+    "type": "none",
+    "_company_number": 40
+  },
+  "overheidzzp": {
+    "type": "none",
+    "_company_number": 44
+  },
+  "gemeente-projecten": {
+    "type": "none",
+    "_company_number": 43
+  },
+  "ggdzwhuurtin.nl": {
+    "type": "none",
+    "_company_number": 47
+  },
+  "freep": {
+    "type": "none",
+    "_company_number": 45
+  },
+  "onlyhuman": {
+    "type": "none",
+    "_company_number": 46
+  },
+  "tennet": {
+    "type": "none",
+    "_company_number": 54
+  },
+  "haarlemmermeerhuurtin": {
+    "type": "none",
+    "_company_number": 61
+  },
+  "hays": {
+    "type": "none",
+    "_company_number": 58
+  },
+  "HintTech": {
+    "type": "none",
+    "_company_number": 39
+  },
+  "LinkedIn": {
+    "type": "none",
+    "_company_number": 64
+  },
+  "Behance": {
+    "type": "none",
+    "_company_number": 5
+  },
+  "Bebee": {
+    "type": "none",
+    "_company_number": 7
+  },
+  "Codeur.com": {
+    "type": "none",
+    "_company_number": 24
+  },
+  "Welcome to the Jungle": {
+    "type": "none",
+    "_company_number": 64
+  },
+  "Overheid": {
+    "type": "none",
+    "_company_number": 16
+  },
+  "flexSpot.io": {
+    "type": "none",
+    "_company_number": 10
+  },
+  "404Works": {
+    "type": "none",
+    "_company_number": 57
+  },
+  "InterimNetwerk": {
+    "type": "none",
+    "_company_number": 52
+  },
+  "ProLinker.com": {
+    "type": "none",
+    "_company_number": 31
+  },
+  "Circle8": {
+    "type": "none",
+    "_company_number": 63
+  },
+  "FlexValue_B.V.": {
+    "type": "none",
+    "_company_number": 26
+  },
+  "Harvey Nash": {
+    "type": "none",
+    "_company_number": 19
+  },
+  "Schiphol": {
+    "type": "none",
+    "_company_number": 21
+  },
+  "Yacht": {
+    "type": "none",
+    "_company_number": 4
+  },
+  "zzp opdrachten": {
+    "type": "none",
+    "_company_number": 20
+  },
+  "4-Freelancers.nl": {
+    "type": "simple_filter",
+    "column": "whitespacenowrap",
+    "condition": "not_contains",
+    "value": "Detachering",
+    "case_sensitive": false,
+    "_company_number": 22
+  },
+  "ASNBank": {
+    "type": "none",
+    "_company_number": 50
+  },
+  "Centric": {
+    "type": "none",
+    "_company_number": 27
+  },
+  "Salta Group": {
+    "type": "none",
+    "_company_number": 30
+  },
+  "TalentenRegio": {
+    "type": "none",
+    "_company_number": 13
+  },
+  "Noord-Holland": {
+    "type": "none",
+    "_company_number": 36
+  },
+  "LinkIT": {
+    "type": "none",
+    "_company_number": 2
+  },
+  "Consultant.nl": {
+    "type": "none",
+    "_company_number": 60
+  },
+  "Amstelveenhuurtin": {
+    "type": "none",
+    "_company_number": 34
+  },
+  "Flex West-Brabant": {
+    "type": "none",
+    "_company_number": 33
+  },
+  "Flextender": {
+    "type": "none",
+    "_company_number": 32
+  },
+  "Freelance-Informatique": {
+    "type": "none",
+    "_company_number": 35
+  },
+  "Freelancer.nl": {
+    "type": "none",
+    "_company_number": 42
+  },
+  "Friesland": {
+    "type": "none",
+    "_company_number": 45
+  },
+  "Jooble": {
+    "type": "none",
+    "_company_number": 23
+  },
+  "LinkedInInterim": {
+    "type": "none",
+    "_company_number": 9
+  },
+  "LinkedInZZP": {
+    "type": "none",
+    "_company_number": 58
+  },
+  "NS": {
+    "type": "none",
+    "_company_number": 12
+  },
+  "POOQ": {
+    "type": "none",
+    "_company_number": 43
+  },
+  "Planet Interim": {
+    "type": "none",
+    "_company_number": 53
+  },
+  "Select": {
+    "type": "none",
+    "_company_number": 41
+  },
+  "StaffingMS": {
+    "type": "none",
+    "_company_number": 58
+  },
+  "Zuid-Holland": {
+    "type": "none",
+    "_company_number": 55
+  },
+  "comet": {
+    "type": "none",
+    "_company_number": 56
+  },
+  "freelancer.com": {
+    "type": "none",
+    "_company_number": 29
+  },
+  "gelderland": {
+    "type": "none",
+    "_company_number": 11
+  },
+}

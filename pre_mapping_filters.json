@@ -1,0 +1,308 @@
+{
+  "twine": {
+    "type": "none",
+    "_company_number": 59
+  },
+  "freelance.nl": {
+    "type": "none",
+    "_company_number": 3
+  },
+  "KVK": {
+    "type": "none",
+    "_company_number": 6
+  },
+  "politie": {
+    "type": "none",
+    "_company_number": 9
+  },
+  "werkzoeken.nl": {
+    "type": "dual_filter",
+    "keep_condition": "contains",
+    "keep_value": "freelance",
+    "remove_condition": "contains",
+    "remove_value": "salaris|base salary|startersbaan|salary|salarisrange|baan|maandsalaris|monthly salary|loon|wage|permanent|vast contract|vast dienstverband|fulltime|full-time",
+    "case_sensitive": false,
+    "_company_number": 18
+  },
+  "HintTech": {
+    "type": "simple_filter",
+    "column": "Title",
+    "condition": "not_contains",
+    "value": "gesloten",
+    "case_sensitive": false,
+    "_company_number": 39
+  },
+  "Behance": {
+    "type": "simple_filter",
+    "column": "Text4",
+    "condition": "not_empty",
+    "case_sensitive": false,
+    "_company_number": 20
+  },
+  "Bebee": {
+    "type": "dual_filter",
+    "keep_condition": "contains",
+    "keep_value": "freelance",
+    "remove_condition": "contains",
+    "remove_value": "salaris|base salary|startersbaan|salary|salarisrange|baan|maandsalaris|monthly salary|loon|wage|permanent|vast contract|vast dienstverband",
+    "case_sensitive": false,
+    "_company_number": 62
+  },
+  "hays": {
+    "type": "simple_filter",
+    "column": "Description",
+    "condition": "not_contains",
+    "value": "Permanent",
+    "case_sensitive": false,
+    "_company_number": 58
+  },
+  "Codeur.com": {
+    "type": "none",
+    "_company_number": 24
+  },
+  "Welcome to the Jungle": {
+    "type": "simple_filter",
+    "column": "scfibhhp",
+    "condition": "contains",
+    "value": "freelance",
+    "case_sensitive": false,
+    "_company_number": 64
+  },
+  "Overheid": {
+    "type": "simple_filter",
+    "column": "Field3",
+    "condition": "not_contains",
+    "value": "Loondienst",
+    "case_sensitive": false,
+    "_company_number": 16
+  },
+  "onlyhuman": {
+    "type": "simple_filter",
+    "column": "px2",
+    "condition": "contains",
+    "value": "Actueel",
+    "case_sensitive": false,
+    "_company_number": 46
+  },
+  "404Works": {
+    "type": "simple_filter",
+    "column": "Field6",
+    "condition": "not_contains",
+    "value": "Status Closed",
+    "case_sensitive": false,
+    "_company_number": 57
+  },
+  "werk.nl": {
+    "type": "simple_filter",
+    "column": "requestedwrapper2",
+    "condition": "contains",
+    "value": "Freelance",
+    "case_sensitive": false,
+    "_company_number": 17
+  },
+  "indeed": {
+    "type": "dual_filter",
+    "keep_condition": "not_contains",
+    "keep_value": "Permanent",
+    "remove_condition": "contains",
+    "remove_value": "Permanent",
+    "case_sensitive": false,
+    "_company_number": 7
+  },
+  "hoofdkraan": {
+    "type": "none",
+    "_company_number": 1
+  },
+  "rijkswaterstaat": {
+    "type": "none",
+    "_company_number": 17
+  },
+  "UMC": {
+    "type": "none",
+    "_company_number": 25
+  },
+  "noordoostbrabant": {
+    "type": "none",
+    "_company_number": 34
+  },
+  "flevoland": {
+    "type": "none",
+    "_company_number": 35
+  },
+  "groningenhuurtin": {
+    "type": "none",
+    "_company_number": 37
+  },
+  "overheidzzp": {
+    "type": "none",
+    "_company_number": 44
+  },
+  "gemeente-projecten": {
+    "type": "none",
+    "_company_number": 43
+  },
+  "ggdzwhuurtin.nl": {
+    "type": "none",
+    "_company_number": 69
+  },
+  "freep": {
+    "type": "simple_filter",
+    "column": "flex1",
+    "condition": "contains",
+    "value": "freelance",
+    "case_sensitive": false,
+    "_company_number": 45
+  },
+  "tennet": {
+    "type": "none",
+    "_company_number": 51
+  },
+  "InterimNetwerk": {
+    "type": "none",
+    "_company_number": 52
+  },
+  "ProLinker.com": {
+    "type": "none",
+    "_company_number": 31
+  },
+  "Circle8": {
+    "type": "none",
+    "_company_number": 63
+  },
+  "FlexValue_B.V.": {
+    "type": "none",
+    "_company_number": 26
+  },
+  "Harvey Nash": {
+    "type": "none",
+    "_company_number": 19
+  },
+  "LinkedIn": {
+    "type": "none",
+    "_company_number": 67
+  },
+  "Schiphol": {
+    "type": "none",
+    "_company_number": 21
+  },
+  "Yacht": {
+    "type": "none",
+    "_company_number": 4
+  },
+  "zzp opdrachten": {
+    "type": "none",
+    "_company_number": 65
+  },
+  "4-Freelancers.nl": {
+    "type": "none",
+    "_company_number": 48
+  },
+  "ASNBank": {
+    "type": "none",
+    "_company_number": 50
+  },
+  "Centric": {
+    "type": "none",
+    "_company_number": 27
+  },
+  "Salta Group": {
+    "type": "none",
+    "_company_number": 30
+  },
+  "TalentenRegio": {
+    "type": "none",
+    "_company_number": 38
+  },
+  "Noord-Holland": {
+    "type": "none",
+    "_company_number": 36
+  },
+  "LinkIT": {
+    "type": "none",
+    "_company_number": 2
+  },
+  "Consultant.nl": {
+    "type": "none",
+    "_company_number": 60
+  },
+  "Amstelveenhuurtin": {
+    "type": "none",
+    "_company_number": 33
+  },
+  "Flex West-Brabant": {
+    "type": "none",
+    "_company_number": 32
+  },
+  "Flextender": {
+    "type": "none",
+    "_company_number": 5
+  },
+  "Freelance-Informatique": {
+    "type": "none",
+    "_company_number": 56
+  },
+  "Freelancer.nl": {
+    "type": "none",
+    "_company_number": 29
+  },
+  "Friesland": {
+    "type": "none",
+    "_company_number": 53
+  },
+  "Jooble": {
+    "type": "none",
+    "_company_number": 22
+  },
+  "LinkedInInterim": {
+    "type": "none",
+    "_company_number": 8
+  },
+  "LinkedInZZP": {
+    "type": "none",
+    "_company_number": 66
+  },
+  "NS": {
+    "type": "none",
+    "_company_number": 12
+  },
+  "POOQ": {
+    "type": "none",
+    "_company_number": 42
+  },
+  "Planet Interim": {
+    "type": "none",
+    "_company_number": 13
+  },
+  "Select": {
+    "type": "none",
+    "_company_number": 40
+  },
+  "StaffingMS": {
+    "type": "none",
+    "_company_number": 47
+  },
+  "Zuid-Holland": {
+    "type": "none",
+    "_company_number": 54
+  },
+  "comet": {
+    "type": "none",
+    "_company_number": 55
+  },
+  "freelancer.com": {
+    "type": "none",
+    "_company_number": 28
+  },
+  "gelderland": {
+    "type": "none",
+    "_company_number": 10
+  },
+  "flexSpot.io": {
+    "type": "simple_filter",
+    "column": "Text2",
+    "condition": "contains",
+    "value": "Freelance",
+    "case_sensitive": false,
+    "_company_number": 49
+  }
+}

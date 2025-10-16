@@ -1,0 +1,32 @@
+{
+  "remote_patterns": [
+    "remote",
+    "remote work",
+    "work from home",
+    "wfh",
+    "telecommute",
+    "home office",
+    "work remotely",
+    "remote position",
+    "virtual"
+  ],
+  "hybrid_patterns": [
+    "hybrid",
+    "hybrid work",
+    "office + remote",
+    "remote + office",
+    "mixed work",
+    "flexible location",
+    "blended"
+  ],
+  "onsite_patterns": [
+    "onsite",
+    "on-site",
+    "office based",
+    "office-based",
+    "in office",
+    "at office",
+    "office location",
+    "physical office"
+  ]
+}

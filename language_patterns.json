@@ -1,0 +1,35 @@
+{
+  "dutch_indicators": [
+    "ontwikkelaar", "programmeur", "ingenieur", "consultant", "freelancer",
+    "manager", "directeur", "medewerker", "assistent", "coördinator",
+    "specialist", "adviseur", "analist", "technicus", "designer",
+    "onderzoeker", "docent", "leraar", "trainer", "coach",
+    "verkoper", "vertegenwoordiger", "accountant", "boekhouder",
+    "jurist", "advocaat", "notaris", "fiscalist", "controller",
+    "planner", "coördinator", "beheerder", "operator", "monteur",
+    "lasser", "schilder", "timmerman", "elektricien", "loodgieter",
+    "kok", "ober", "receptionist", "secretaresse", "administratief",
+    "financieel", "commercieel", "technisch", "operationeel",
+    "strategisch", "tactisch", "uitvoerend", "leidinggevend",
+    "junior", "medior", "senior", "lead", "principal", "head",
+    "chef", "hoofd", "teamleider", "projectleider", "programmaleider",
+    "afdelingshoofd", "sectormanager", "businessmanager", "accountmanager",
+    "salesmanager", "marketingmanager", "productmanager", "hr-manager",
+    "it-manager", "finance-manager", "operations-manager", "general-manager"
+  ],
+  "currency_indicators": {
+    "usd_indicators": ["$", "usd", "dollar", "dollars", "$/hr", "$/hour", "$/day", "$/month", "$/week", "$/year"],
+    "eur_indicators": ["€", "eur", "euro", "euros", "€/hr", "€/hour", "€/day", "€/month", "€/week", "€/year"],
+    "gbp_indicators": ["£", "gbp", "pound", "pounds", "£/hr", "£/hour", "£/day", "£/month", "£/week", "£/year"]
+  },
+  "work_arrangement_patterns": {
+    "skip_patterns": [
+      "zzp", "aanbevolen", "tijdelijk", "fulltime", "parttime", "zelfstandig",
+      "opdracht", "uurloon", "langdurig", "stage", "weekendwerk", "avonddienst",
+      "ochtenddienst", "nachtdienst", "dagdienst", "frontoffice", "bijbaan",
+      "leerbaan", "tussenjaar", "fysiekwerk", "banenafspraak", "vast contract",
+      "jaarcontract", "ploegen"
+    ],
+    "hour_patterns": ["uur week", "uur per week", "dagen week"]
+  }
+}

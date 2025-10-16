@@ -1,4 +1,7 @@
 # Logs
+*.log
+*.out.log
+*.err.log
 allgigs_v7.out.log
 allgigs_v7.out.log.*
 allgigs_v7.err.log
@@ -7,15 +10,67 @@ allgigs.log
 # Generated CSV outputs
 allgigs_v7_processed.csv
 other_general_sample_100.csv
+allgigs_processed_*.csv
 
 # Environment and secrets
 dotenv
 .env
+*.env
 
 # Python cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Data files (if they contain sensitive information)
+# Uncomment if needed:
+# *.csv
+# *.json (except config files)
 
